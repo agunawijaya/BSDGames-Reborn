@@ -30,9 +30,15 @@ Below the theme picker: three speed modes.
 
 | Mode | Tick rate | Feel |
 |---|---|---|
-| **Classic  ·  1×** | 1 tick / sec (BSD verbatim) | Retro, deliberate, tense |
-| **Fast  ·  3×** | 3 ticks / sec | Modern arcade |
-| **Progressive  ·  1→4×** *(default)* | Starts 1 tick/sec at length 5, ramps to 4 ticks/sec at length 45+ | Natural difficulty curve |
+| **Classic  ·  3×** | 3 ticks / sec | Comfortable retro pace |
+| **Fast  ·  6×** | 6 ticks / sec | Modern arcade |
+| **Progressive  ·  3→6×** *(default)* | Starts at Classic (3/sec) when length = 5; ramps toward Fast (6/sec) at length 45+ | Natural difficulty curve |
+
+*BSD `worm(6)` originally ticked at exactly 1× (1 sec/tick). That
+felt uncomfortably slow in playtest, so the three modes here start
+at 3× and above. If you want the pure-original feel, edit
+`updateTickInterval` in [`index.html`](./index.html) — set
+`interval = 1000` in the `classic` branch.*
 
 Setting persists across sessions in localStorage.
 

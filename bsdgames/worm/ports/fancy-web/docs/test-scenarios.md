@@ -31,7 +31,7 @@ Verify port implements each:
 | C-07 | Wall = death | Worm head touching canvas edge triggers death overlay |
 | C-08 | Self-collision = death | Worm head into own body triggers death |
 | C-09 | Score displayed | HUD row shows `score N` |
-| C-10 | Fixed tick rate (Classic mode) | Worm advances exactly once per second |
+| C-10 | Fixed tick rate (Classic mode) | Worm advances at a consistent rate (in this port: ~333 ms/tick; deviates from BSD's 1 sec/tick — see fancy-web-001 §Deviation 4) |
 
 ## Port-specific scenarios (fancy-web additions)
 
@@ -62,32 +62,32 @@ Verify port implements each:
 ### T-03 Speed setting: Classic
 
 **Steps:**
-1. Click **Classic · 1×** pill.
+1. Click **Classic · 3×** pill.
 2. Observe worm motion.
 
 **Expected:**
-- Worm advances one cell per 1 second.
-- HUD tick label reads `1.00s`.
+- Worm advances one cell per ~333 ms.
+- HUD tick label reads `0.33s`.
 
 ### T-04 Speed setting: Fast
 
 **Steps:**
-1. Click **Fast · 3×** pill.
+1. Click **Fast · 6×** pill.
 
 **Expected:**
-- Worm advances one cell per ~333 ms (rapid).
-- HUD tick label reads `0.33s`.
+- Worm advances one cell per ~167 ms (rapid).
+- HUD tick label reads `0.17s`.
 
 ### T-05 Speed setting: Progressive
 
 **Steps:**
-1. Click **Progressive · 1→4×** pill.
+1. Click **Progressive · 3→6×** pill.
 2. Eat several apples to grow worm.
 3. Observe HUD tick label.
 
 **Expected:**
-- Starts at `1.00s` when length = 5.
-- Ticks toward `0.25s` as length approaches 45.
+- Starts at `0.33s` when length = 5.
+- Ticks toward `0.17s` as length approaches 45.
 - Linear interpolation, no jarring jumps.
 
 ### T-06 Speed setting persists across reload

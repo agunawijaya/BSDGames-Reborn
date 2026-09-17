@@ -76,10 +76,10 @@ Interpolation is purely visual.
 ### 4. Fixed 1 tick/sec → 3 user-selectable speed modes
 
 **What changed:** a settings picker below the theme picker offers:
-- **Classic  ·  1×** — 1000 ms per tick (BSD verbatim)
-- **Fast  ·  3×** — 333 ms per tick
-- **Progressive  ·  1→4×** *(default)* — 1000 ms at length 5
-  ramping to 250 ms at length 45+
+- **Classic  ·  3×** — 333 ms per tick (comfortable retro pace)
+- **Fast  ·  6×** — 167 ms per tick (modern arcade)
+- **Progressive  ·  3→6×** *(default)* — 333 ms at length 5
+  ramping to 167 ms at length 45+
 
 Persisted in localStorage.
 
@@ -88,10 +88,19 @@ speeds and player expectations. Modern arcade taste is faster; a
 single fixed choice would leave both retro and modern audiences
 unsatisfied.
 
+**Note on Classic:** the label evokes the retro feel, but the
+tick rate is *not* BSD verbatim (which would be 1×). Playtest
+established that even sympathetic "retro pace" players find 1
+tick/sec painfully slow on a 30-column grid — worm takes ~30
+seconds to traverse. 3× was chosen as the minimum that still
+reads as "slow / deliberate" without being unplayable. The pure-
+BSD rate is documented and available via a two-character edit
+to `updateTickInterval()`.
+
 Progressive is the default because it starts kind (fair curve for
 newcomers) and ramps with earned skill (rewards experienced
-players). Classic remains available for pure faithfulness. Fast
-serves modern-arcade preference.
+players). Classic remains available for those who prefer uniform
+pace. Fast serves modern-arcade preference.
 
 **Mechanically:** the tick semantics (movement, eat, growth,
 death checks) are unchanged — only the *interval* between ticks
@@ -130,6 +139,12 @@ settings-picker approach so the user picks.
 (modern, spec-preserving). Chose interpolated because it doesn't
 alter mechanics.
 
+**On Classic tick rate:** 1× BSD verbatim (glacial on modern
+hardware) vs faster minimum (~333 ms). Chose faster. The label
+"Classic" is preserved for retro feel; the underlying rate is
+adjusted to be playable. Documented explicitly rather than
+silently retained.
+
 **On HJKL running:** implement now vs defer. Chose defer to keep
 v1 scope tractable.
 
@@ -162,7 +177,10 @@ running canonical `worm` scenarios against this port.
   means most players never touch it.
 - Interpolated motion may feel less "retro-faithful" than pure
   grid-step in Classic mode. Mitigation: interpolation is subtle
-  at 1 tick/sec; feels natural not disruptive.
+  at 3× rate; feels natural not disruptive.
+- Some "true BSD faithful" players may want the exact 1 tick/sec
+  rate. Mitigation: documented one-line code edit in README to
+  restore original rate.
 
 ## References
 

@@ -538,9 +538,9 @@
 
     // ================= SPEED SETTINGS =================
     const SPEEDS = [
-      { key: 'classic',     label: 'Classic  ·  1×',    description: 'BSD faithful — 1 tick / sec' },
-      { key: 'fast',        label: 'Fast  ·  3×',       description: 'Modern arcade — 3 ticks / sec' },
-      { key: 'progressive', label: 'Progressive  ·  1→4×', description: 'Scales with length' },
+      { key: 'classic',     label: 'Classic  ·  3×',    description: 'Comfortable retro pace — 3 ticks / sec' },
+      { key: 'fast',        label: 'Fast  ·  6×',       description: 'Modern arcade — 6 ticks / sec' },
+      { key: 'progressive', label: 'Progressive  ·  3→6×', description: 'Starts at Classic, ramps to Fast as length grows' },
     ];
 
     SPEEDS.forEach(s => {
@@ -566,14 +566,15 @@
       const s = settings.speed;
       let interval;
       if (s === 'classic') {
-        interval = 1000;
+        interval = 333;                    // 3× — comfortable retro pace
       } else if (s === 'fast') {
-        interval = 333;
+        interval = 167;                    // 6× — modern arcade
       } else {
-        // Progressive: 1000ms (short worm) → 250ms (worm at 45+ segments)
+        // Progressive: 333ms at length 5 → 167ms at length 45+
+        // (starts at Classic, ramps to Fast as worm grows)
         const len = worm.segments.length;
         const t = Math.min(1, Math.max(0, (len - 5) / 40));
-        interval = Math.round(1000 - t * 750);
+        interval = Math.round(333 - t * 166);
       }
       worm.tickInterval = interval;
       tickLabel.textContent = `${(interval / 1000).toFixed(2)}s`;

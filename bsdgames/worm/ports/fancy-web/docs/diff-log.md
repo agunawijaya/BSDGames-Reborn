@@ -77,11 +77,16 @@ game logic + modern visual feel.
 Original: fixed 1 tick / sec via `alarm(1)`. Port offers three
 modes as a settings picker:
 
-- **Classic  ·  1×** — 1000 ms per tick (BSD verbatim)
-- **Fast  ·  3×** — 333 ms per tick
-- **Progressive  ·  1→4×** (default) — 1000 ms at length 5,
-  linearly ramping to 250 ms at length 45+; naturally scales
+- **Classic  ·  3×** — 333 ms per tick (comfortable retro pace)
+- **Fast  ·  6×** — 167 ms per tick (modern arcade)
+- **Progressive  ·  3→6×** (default) — 333 ms at length 5,
+  linearly ramping to 167 ms at length 45+; naturally scales
   difficulty as the worm grows
+
+**Note:** original BSD's 1 tick/sec felt uncomfortably slow in
+playtest, so even the "Classic" mode here starts at 3× that rate.
+The pure-BSD experience is documented in the ADR but not exposed
+as a picker option in v1 — accessible via one-line code edit.
 
 Persisted in localStorage. Rationale in
 [`decisions/fancy-web-001-spec-deviations.md`](./decisions/fancy-web-001-spec-deviations.md).
@@ -225,6 +230,13 @@ one-time.
 - **2026-09-17 late evening** — All 8 theme screenshots regen'd
   correctly. Docs written; renamed mockup.html → index.html;
   ADRs published; promoted to 🟢 Released.
+- **2026-09-17 post-release playtest** — User feedback: Classic
+  1× (1 tick/sec, BSD verbatim) felt uncomfortably slow, and
+  Progressive starting at 1× compounded the problem. Bumped all
+  three modes: Classic 1× → 3×, Fast 3× → 6×, Progressive 1→4× →
+  3→6×. Docs updated to note that "Classic" no longer means
+  "BSD verbatim" — pure-BSD rate is documented as a one-line
+  code edit for anyone who wants it.
 
 ## See also
 
