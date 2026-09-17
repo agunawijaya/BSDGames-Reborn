@@ -37,7 +37,7 @@ progress, or release a game.
 |---|:---:|:---:|:---:|---|
 | backgammon | 🟠 | AntiGravity & Agun | M | 30 checkers; doubling cube; teachgammon; odds engine |
 | dab | 🟠 | Agun (Kimi) | S | Docs done; ready to implement (ADR-005 accepted) |
-| gomoku | 🟠 | Agun | M | Docs done; ready to implement (ADR-005 accepted). AI + hot-seat |
+| gomoku | 🟢 | Agun | M | Released 2026-09-17 — canonical docs complete + `fancy-web` port at Released status (see Port Tracking). |
 | monop | 🟠 | Agun (Claude) | M | Docs done; ready to implement (ADR-005 accepted). Hot-seat 2–9 players (trademark rename required) |
 | sail | 🟠 | Agun (Claude) | L | Docs done; ready to implement (ADR-005 accepted). Multi-process fork(); consider network multiplayer redesign |
 
@@ -128,8 +128,8 @@ progress, or release a game.
 |---|---:|
 | 🔴 Unclaimed | 0 |
 | 🟡 Claimed | 0 |
-| 🟠 In Progress | 41 (documentation phase; `dm` is docs-only with port skipped per ADR) |
-| 🟢 Released | 2 (`robots` — `fancy-web` shipped 2026-09-17; `snake` — `fancy-web` shipped 2026-09-17) |
+| 🟠 In Progress | 40 (documentation phase; `dm` is docs-only with port skipped per ADR) |
+| 🟢 Released | 3 (`robots`, `snake`, `gomoku` — `fancy-web` shipped 2026-09-17) |
 | ✨ Complete | 0 |
 | **Total** | **43** |
 
@@ -156,6 +156,7 @@ for the naming rules and reserved slugs.
 | robots | classic-web | 🔴 | — | — | Reserved for delegation to another agent (Codex / Deepseek). TypeScript + Vite + PWA per ADR-005 reference stack. |
 | snake | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Single-file Canvas 2D + vanilla JS (~1900 LOC). 8 cosmetic themes, eagle/owl state-machine chaser, apple collection, edge escape, localStorage best-score. Vite + TS + PWA deferred to v2 per port ADR `fancy-web-003`. |
 | worm | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Growing worm (BSD spec faithful: progressive growth, chained score bonus, walls lethal). Numbered apples 1-9 with size+color+digit encoding. 8 themes reused from snake port. Settings row: Classic/Fast/Progressive tick rate. Single-file HTML ~1500 LOC. |
+| gomoku | fancy-web | 🟢 | Agun | *(pending deploy)* | **Released 2026-09-17.** React 18 + TypeScript + native SVG + Vite. 47/47 tests pass (11 coords + 22 engine + 14 AI); TypeScript strict; production bundle **49.67 KB gzipped** (no WebGL, no GPU required — playable on any modern browser incl. low-end mobile). Full 19×23 board, spec-compliant free-gomoku rules, heuristic AI (pattern scoring: five/open-four/closed-four/open-three) + hot-seat 2-player mode. Undo, resign, new game, swap sides, move history, SVG win-line pulse animation. One port ADR (001 tech stack). ✨ Complete pending: deploy live URL. |
 
 *(Other games' ports will appear here as they are claimed. No
 port row = no port started yet; canonical docs at
