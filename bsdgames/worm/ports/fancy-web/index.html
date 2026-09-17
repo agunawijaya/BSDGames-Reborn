@@ -348,30 +348,48 @@
     }
 
     function updateApplesLifecycle(now) {
-      // Rot check (Wild mode only)
-      if (settings.mode === 'wild') {
-        for (let i = apples.length - 1; i >= 0; i--) {
-          const a = apples[i];
+      if (settings.mode !== 'wild') return;
+
+      // BALANCE: at most ONE rotten apple + ONE wasp in the world at a time.
+      // Multi-wasp swarms proved unwinnable in playtest; sequential single
+      // threats keep the tension high but the game beatable.
+      const hasActiveWasp   = wasps.length > 0;
+      const hasRottenApple  = apples.some(a => a.state === 'rotten');
+
+      // ---- Rot transition: only ONE apple at a time ----
+      // Pick the oldest ripe apple that has aged past APPLE_RIPE_MS.
+      // Skip if there's already a rotten apple or an active wasp.
+      if (!hasActiveWasp && !hasRottenApple) {
+        let oldest = null;
+        for (const a of apples) {
           if (a.state === 'ripe' && (now - a.spawnTime > APPLE_RIPE_MS)) {
-            a.state = 'rotten';
-            a.rottenTime = now;
-          }
-          // Phase 2 — Wasp emergence: rotten apple + WASP_ROT_TO_SPAWN_MS more →
-          // wasp bursts from apple, apple disappears via delayed-respawn pipeline.
-          if (settings.enemyWasps && a.state === 'rotten' &&
-              a.rottenTime && (now - a.rottenTime > WASP_ROT_TO_SPAWN_MS)) {
-            spawnWasp(a.x, a.y, now);
-            spawnWaspEmergeBurst(a.x, a.y);
-            apples.splice(i, 1);
-            respawnAfterEat();
+            if (!oldest || a.spawnTime < oldest.spawnTime) oldest = a;
           }
         }
-        // Delayed respawn
-        for (let i = pendingApples.length - 1; i >= 0; i--) {
-          if (pendingApples[i].spawnAt <= now) {
-            apples.push(newApple());
-            pendingApples.splice(i, 1);
-          }
+        if (oldest) {
+          oldest.state = 'rotten';
+          oldest.rottenTime = now;
+        }
+      }
+
+      // ---- Wasp emergence: rotten apple aged WASP_ROT_TO_SPAWN_MS more ----
+      for (let i = apples.length - 1; i >= 0; i--) {
+        const a = apples[i];
+        if (settings.enemyWasps && a.state === 'rotten' &&
+            a.rottenTime && (now - a.rottenTime > WASP_ROT_TO_SPAWN_MS)) {
+          spawnWasp(a.x, a.y, now);
+          spawnWaspEmergeBurst(a.x, a.y);
+          apples.splice(i, 1);
+          respawnAfterEat();
+          break;   // one spawn per frame max (defensive)
+        }
+      }
+
+      // ---- Delayed apple respawn ----
+      for (let i = pendingApples.length - 1; i >= 0; i--) {
+        if (pendingApples[i].spawnAt <= now) {
+          apples.push(newApple());
+          pendingApples.splice(i, 1);
         }
       }
     }
@@ -778,7 +796,7 @@
     const WASP_KILL_RADIUS = 12;            // px from head cell center
     const WASP_LIFESPAN_MS = 30000;
     const WASP_HOVER_AMPLITUDE = 2.5;
-    const WASP_MAX_ACTIVE = 8;              // safety cap
+    const WASP_MAX_ACTIVE = 1;              // 1 wasp at a time (playtest balance)
 
     const wasps = [];
 
