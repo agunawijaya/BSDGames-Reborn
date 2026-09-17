@@ -1,0 +1,24 @@
+How many players? 2
+Player 1's name: Alice
+Player 2's name: Bob
+
+Alice (1) rolls 8
+Bob (2) rolls 10
+Bob (2) goes first
+
+Bob (2) (cash $1500) on === GO ===
+-- Command: roll
+roll is 5, 2
+That puts you on Chance i
+------------------------------
+You have been elected Chairman of the Board.
+Pay each player $50.
+------------------------------
+
+Alice (1) (cash $1550) on === GO ===
+-- Command: ?
+Valid inputs are: quit, print, where, own holdings, holdings, mortgage,
+        unmortgage, buy houses, sell houses, card, pay, trade, resign,
+        save, restore, roll, <RETURN>
+-- Command:
+

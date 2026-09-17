@@ -1,0 +1,24 @@
+2 @ . . * . . * . . . 2   position      5,1/0,9
+3 . . . . . . . . . . 3   warp factor   5.0
+4 . * . . . . . . . . 4   total energy  5000
+5 . . . . . . . . . . 5   torpedoes     10
+6 . . . . . . . . . . 6   shields       up, 100%
+7 * . . . . . . . . . 7   Klingons left 5
+8 . . . . . . . . . . 8   time left     8.00
+9 . . . . . . . * . . 9   life support  active
+  0 1 2 3 4 5 6 7 8 9
+Starsystem Arrikis
+
+Command: lrscan
+Long range scan for quadrant 5,1
+
+     0     1     2
+  -------------------
+4 !   4 !  15 !   3 !
+  -------------------
+5 !   6 !  16 !   3 !
+  -------------------
+6 !   2 !   6 !   1 !
+  -------------------
+
+Command:

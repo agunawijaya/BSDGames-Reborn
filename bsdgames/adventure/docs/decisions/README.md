@@ -1,0 +1,5 @@
+# Decisions Directory
+
+This directory holds Architecture Decision Records (ADRs) specific to `adventure` that override or supplement root ADRs.
+
+If no per-game overrides exist, this folder remains empty as per [ADR-004](../../../docs/decisions/004-per-game-doc-taxonomy.md).

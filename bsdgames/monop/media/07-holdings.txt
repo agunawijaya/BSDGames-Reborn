@@ -1,0 +1,24 @@
+Oriental a - Lt. Blue 100               Atlantic a - Yellow   260
+Chance i                                Ventnor av - Yellow   260
+Vermont av - Lt. Blue 100               Water Work -          150
+Connecticu - Lt. Blue 120               Marvin Gar - Yellow   280
+Just Visit                              GO TO JAIL
+St. Charle - Violet   140               Pacific av - Green    300
+Electric C -          150               N. Carolin - Green    300
+States ave - Violet   140               Community
+Virginia a - Violet   160               Pennsylvan - Green    320
+Pennsylvan - Railroad 200               Short Line - Railroad 200
+St. James  - Orange   180               Chance iii
+Community                               Park place - Dk. Blue 350
+Tennessee  - Orange   180               Luxury Tax
+New York a - Orange   200               Boardwalk  - Dk. Blue 400
+
+Alice (1) (cash $1550) on === GO ===
+-- Command: where
+Name      Own      Price Mg # Rent Player
+=== GO ===                         Alice (1) *
+Chance i                           Bob (2)
+
+Alice (1) (cash $1550) on === GO ===
+-- Command: holdings
+Whose holdings do you want to see?

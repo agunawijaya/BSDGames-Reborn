@@ -1,0 +1,24 @@
+_____________________________________________________
+| 12  11  10   9   8   7 |   |  6   5   4   3   2   1 |
+|                        |   |  w   w   w   w         |
+|                        |   |  w   w   w             |
+|                        |   |  w                     |
+|                        |BAR|                        |
+|                        |   |  r   r   r             |
+|                        |   |  r   r   r             |
+|                        |   |  r   r                 |
+| 13  14  15  16  17  18 |   | 19  20  21  22  23  24 |
+-----------------------------------------------------
+Red's score: 7   White's score: 4   Game value: 4
+Red has 12 men off.  White has 9 men off.
+Red rolls 6, 4.
+Move? 21/4 19/6
+Red has 14 men off.
+White rolls 3, 2.
+Move? 6/3 5/2
+Red rolls 5, 1.
+Move? 20/5
+Red has borne off all 15 men!
+Red wins a regular game (value: 4 points)!
+Red's total score: 11 points.  White's total score: 4 points.
+Do you want to play another game? [y/n]

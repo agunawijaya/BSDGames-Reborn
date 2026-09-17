@@ -1,0 +1,11 @@
+$ fortune -o
+A diplomat is someone who can tell you to go to hell in such a way
+that you actually look forward to the trip.
+	-- Caskie Stinnett
+
+$ cat /usr/share/games/fortune/fortunes-o | head -n 5
+N qvcybzng vf fbzrbar jub pna gryy lbh gb tb gb fury va fhpu n jnl
+gung lbh npghnyyl ybbx sbejneq gb gur gevc.
+	-- Pnfxvr Fgvaargg
+%
+[Note: On disk, fortunes-o is stored obfuscated with ROT13; fortune -o decodes on the fly!]

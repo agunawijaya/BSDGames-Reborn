@@ -1,0 +1,22 @@
+   +-------------------------------------------------------------------------+
+   |   MILLE BORNES -- 1000 MILE ROAD RACE             Match Target: 5000 pts|
+   +-------------------------------------------------------------------------+
+   |   COMPUTER:                                   YOU:                      |
+   |   Safeties: [Driving Ace   ]                  Safeties: [Extra Tank    ]|
+   |   Battle:   [  Stop      ]                    Battle:   [  Flat Tire ]  |
+   |   Speed:    [  Speed Limit]                   Speed:    [            ]  |
+   |   Mileage:   450 miles                        Mileage:   525 miles      |
+   +-------------------------------------------------------------------------+
+   |   MILEAGE COMPLETED:                                                    |
+   |   25: 1   50: 2   75: 0   100: 2   200: 1  |  TOTAL:   525 / 700 miles  |
+   +-------------------------------------------------------------------------+
+   |   Computer plays Flat Tire on your Battle pile!                         |
+   |   *** COUP-FOURRE! You hold Puncture Proof! ***                         |
+   |   Parrying attack! Flat Tire removed. +300 points! Take extra turn!     |
+   |                                                                         |
+   |   YOUR HAND:                                                            |
+   |   (1) 100 Miles    (2) 75 Miles     (3) Go           (4) Gasoline       |
+   |   (5) Out of Gas   (6) 25 Miles     (7) Spare Tire                      |
+   |                                                                         |
+   |   Move: [P]lay [D]iscard [O]rder [S]ave [Q]uit?                         |
+   +-------------------------------------------------------------------------+

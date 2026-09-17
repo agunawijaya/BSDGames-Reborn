@@ -1,0 +1,24 @@
++-----------------------------------------------------------+ Directions:
+|               Rank Score User               Level         |
+|                                                           | y k u
+|                                                           |  \|/
+|                                                           | h- -l
+|                                                           |  /|\
+|                                                           | b j n
+|                                                           |
+|                         +                                 | Commands:
+|                                                           |
+|                                                           | w:  wait for end
+|                                                           | t:  teleport
+|                                                           | q:  quit
+|                                                           | ^L: redraw screen
+|                                                           |
+|         +              AARRrrgghhhh....+    +             | Legend:
+|                                                           |
+|                                                           | +:  robot
+|                                                           | *:  junk heap
+|                                                           | @:  you
+|                                                           |
+|                                                           | Score: 0
+|                                                           | Another game?
++-----------------------------------------------------------+

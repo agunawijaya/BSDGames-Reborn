@@ -1,0 +1,9 @@
+Version 4.2, fall 1984.
+First Adventure game written by His Lordship, the honorable
+Admiral D.W. Riggle
+
+This is a luxurious stateroom.
+The walls are lined with fine tapestries, and a plush Persian rug covers the floor.
+An exit leads west.
+There is a pair of silk pajamas here.
+>--: 

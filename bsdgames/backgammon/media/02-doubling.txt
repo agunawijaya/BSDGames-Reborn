@@ -1,0 +1,18 @@
+_____________________________________________________
+| 12  11  10   9   8   7 |   |  6   5   4   3   2   1 |
+|  r                   w |   |  w                     |
+|  r                     |   |  w                     |
+|  r                     |   |  w                     |
+|                        |   |                        |
+|                        |BAR|                        |
+|  w                     | w |  r                     |
+|  w                     |   |  r                   r |
+|  w                   r |   |  r                   r |
+|  w                   r |   |  r                   r |
+| 13  14  15  16  17  18 |   | 19  20  21  22  23  24 |
+-----------------------------------------------------
+Red's score: 4   White's score: 2   Game value: 2
+Red doubles.  Does White accept? y
+Game value is now 4.
+Red rolls 6, 1.
+Move?

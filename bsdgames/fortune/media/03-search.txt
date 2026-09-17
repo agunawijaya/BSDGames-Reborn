@@ -1,0 +1,14 @@
+$ fortune -m "Ken Thompson"
+================
+(fortunes)
+%
+If you want to go somewhere, goto is the best way to get there.
+	-- Ken Thompson
+%
+================
+(fortunes)
+%
+You can't trust code that you did not totally create yourself.
+(Especially code that comes from companies that employ people like me.)
+	-- Ken Thompson, Reflections on Trusting Trust
+%

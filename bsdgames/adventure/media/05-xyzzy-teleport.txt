@@ -1,0 +1,24 @@
+You are inside a building, a well house for a large spring.
+
+There are some keys on the ground here.
+
+There is a shiny brass lamp nearby.
+
+There is food here.
+
+There is a bottle of water here.
+take keys
+
+OK
+take lantern
+
+OK
+inventory
+
+You are currently holding the following:
+Set of keys
+Brass lantern
+xyzzy
+
+It is now pitch dark.  If you proceed you will likely fall into a pit.
+

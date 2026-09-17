@@ -1,0 +1,24 @@
+This is the game of solitaire called Canfield.  Do
+you want instructions for the game?
+
+y or n?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

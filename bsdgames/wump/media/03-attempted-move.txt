@@ -1,0 +1,24 @@
+Instructions? (y-n) n
+
+You're in a cave with 20 rooms and 3 tunnels leading from each room.
+There are 3 bats and 3 pits scattered throughout the cave, and your
+quiver holds 5 custom super anti-evil Wumpus arrows.  Good luck.
+
+You are in room 8 of the cave, and have 5 arrows left.
+*rustle* *rustle* (must be bats nearby)
+There are tunnels to rooms 4, 17, and 19.
+Move or shoot? (m-s) m
+To which room do you wish to move? 1
+*Oof!*  (You hit the wall)
+
+You are in room 8 of the cave, and have 5 arrows left.
+*rustle* *rustle* (must be bats nearby)
+There are tunnels to rooms 4, 17, and 19.
+Move or shoot? (m-s)
+
+
+
+
+
+
+

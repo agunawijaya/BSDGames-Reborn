@@ -1,0 +1,24 @@
+
+   * * *   S T A R   T R E K   * * *
+
+Press return to continue.
+short
+What skill game: novice
+Enter a password: y
+5 Klingons
+4 starbases at 5,1, 6,6, 6,4, 4,1
+It takes 250 units to kill a Klingon
+
+Command:
+
+
+
+
+
+
+
+
+
+
+
+

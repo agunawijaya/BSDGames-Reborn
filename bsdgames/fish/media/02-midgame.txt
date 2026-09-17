@@ -1,0 +1,24 @@
+Would you like instructions (y or n)? n
+You get to start.
+
+Your hand is: A 3 3 5 7 8 10
+You ask me for: A
+I have 1 A.
+You get another guess!
+
+Your hand is: A A 3 3 5 7 8 10
+You ask me for: K
+You don't have any K's!
+Guess again.
+You ask me for:
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+
+
+  lqwqwqk                                                           S 0:    4
+  x0x1x0x                                                           S 1:    5
+  tqnqnqu
+  x1x1x0x                                                           T 0:    4
+  tqnqnqu                                                           T 1:    5
+  x1x1x0x
+  mqvqvqj                                                           G 0:    0
+                                                                    G 1:    1
+                                                                    G =:    0
+
+
+
+
+
+
+
+
+
+
+
+
+

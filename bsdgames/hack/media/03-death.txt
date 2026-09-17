@@ -1,0 +1,16 @@
+               ----------
+              /          \
+             /    REST    \
+            /      IN      \
+           /     PEACE      \
+          /                  \
+          |   RoguePlayer    |
+          |     4280 pts     |
+          |   killed by a    |
+          |    minotaur      |
+          |                  |
+          |                  |
+          |       1986       |
+         *|     *  *  *      | *
+        __|__________________|__
+Level 12  Gold: 1420  Hp: 0(72)  Ac: 2   Str: 18  Exp: 8  Dlvl: 15              

@@ -1,0 +1,20 @@
+   +-------------------------------------------------------------------------+
+   |   SCORE WINDOW -- HAND 3 COMPLETED                                      |
+   +-------------------------------------------------------------------------+
+   |   SCORING CATEGORY                    YOU                 COMPUTER      |
+   |   Milestones Played:                  700                      450      |
+   |   Each Safety (100 ea):               200                      100      |
+   |   All 4 Safeties Bonus:                 0                        0      |
+   |   Each Coup-Fourre (300 ea):          300                        0      |
+   |   Trip Completed Bonus:               400                        0      |
+   |   Safe Trip Bonus (No 200s):            0                        0      |
+   |   Delayed Action Bonus:                 0                        0      |
+   |   Extension Bonus:                      0                        0      |
+   |   Shut-Out Bonus:                       0                        0      |
+   +-------------------------------------------------------------------------+
+   |   HAND TOTAL:                        1600                      550      |
+   |   PREVIOUS TOTAL:                    1850                     1400      |
+   |   OVERALL MATCH TOTAL:               3450 / 5000              1950      |
+   +-------------------------------------------------------------------------+
+   |   Do you want to play another hand? [y/n]:                              |
+   +-------------------------------------------------------------------------+

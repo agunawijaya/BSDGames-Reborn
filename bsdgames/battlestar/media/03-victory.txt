@@ -1,0 +1,10 @@
+The three amulets glow and reenforce each other in power.
+You are now a wizard.
+
+	PLEASURE	POWER		EGO
+	 38		 28		 15
+
+This gives you the rating of Sauron the Great in 184 turns.
+You have visited 214 out of 275 rooms this run (77%).
+
+You win!

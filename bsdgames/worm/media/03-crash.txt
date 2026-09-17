@@ -1,0 +1,27 @@
+ Worm                                                               Score:  87
+*******************************************************************************
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                   oooooooooooooooo                                          *
+*                  o                o                                         *
+*                  o                 o                                        *
+*                  o  @oooooooo       o                                       *
+*                  o  o        o       o                                      *
+*                  o  o        o       o                                      *
+*                  o  o        o       o                                      *
+*                  ooooooooooooo       o                                      *
+*                                      o                                      *
+*                         oooooooooooooo                                      *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*                                                                             *
+*******************************************************************************
+CRASH! The worm ran into itself.
+Final Score: 87 points.
+Game over.

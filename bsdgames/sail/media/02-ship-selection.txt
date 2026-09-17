@@ -1,0 +1,24 @@
+        16):    3       no      Constitution vs. Cyane and Levant
+        17):    3       no      Pellew vs. Droits de L'Homme
+        18):    10      no      Algeciras
+        19):    7       no      Lake Champlain
+        20):    4       no      Last Voyage of the USS President
+        21):    2       no      Hornblower and the Natividad
+        22):    2       no      Curse of the Flying Dutchman
+        23):    4       no      The South Pacific
+        24):    5       no      Hornblower and the battle of Rosas bay
+        25):    5       no      Cape Horn
+        26):    3       no      New Orleans
+        27):    3       no      Botany Bay
+        28):    4       no      Voyage to the Bottom of the Sea
+        29):    3       no      Frigate Action
+        30):    6       no      The Battle of Midway
+        31):    8       no      Star Trek
+
+Scenario number? 21
+Hornblower and the Natividad
+
+   0:  British    Lydia            (13 pts)   (available)
+   1:  Spanish    Natividad        (14 pts)   (available)
+
+Which ship (0-1)?

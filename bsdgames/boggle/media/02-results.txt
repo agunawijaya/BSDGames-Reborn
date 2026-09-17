@@ -1,0 +1,15 @@
+Words you found (14):
+able       coat       east       lace       late
+nest       pace       port       post       seat
+spec       step       tale       test
+
+Words you missed (28):
+abet       aces       aloe       bate       beat
+beta       bloc       bolt       bota       cape
+cast       cate       cole       colt       cope
+lace       lose       lost       peat       pelt
+pest       plot       pole       pore       pose
+sole       stop       tole
+
+Percentage: 33.33% (33.33% over 1 game)
+Type <q>uit, <esc> locate, any other key to continue...
