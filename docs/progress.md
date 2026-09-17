@@ -1,0 +1,161 @@
+# Progress Dashboard
+
+Status of all 43 programs. Update this when you claim, start,
+progress, or release a game.
+
+**Status legend:**
+
+- 🔴 **Unclaimed** — no one working on it yet.
+- 🟡 **Claimed** — someone has claimed but not started work.
+- 🟠 **In Progress** — actively being worked on.
+- 🟢 **Released** — meets baseline: `README + about + how-to-play +
+  manpage + working src + tests`.
+- ✨ **Complete** — all 14 docs + full test coverage + polished.
+
+**Complexity (rough):**
+
+- **XS** — < 1 day
+- **S** — 1–3 days
+- **M** — 3–7 days
+- **L** — 1–3 weeks
+- **XL** — 3–6 weeks
+
+---
+
+## Adventure & RPG
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| adventure | 🟠 | AntiGravity & Agun | L | Fixed map — walkthrough + world-map required |
+| battlestar | 🟠 | AntiGravity & Agun | L | Fixed map — walkthrough + world-map required |
+| hack | 🟠 | AntiGravity & Agun | XL | Roguelike; procedural map; ancestor of NetHack |
+| phantasia | 🟠 | Agun (Claude) | XL | Docs done (screenshots pending). Multi-user persistent — networking design required |
+
+## Board Games
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| backgammon | 🟠 | AntiGravity & Agun | M | 30 checkers; doubling cube; teachgammon; odds engine |
+| dab | 🟠 | Agun (Kimi) | S | Docs done; ready to implement (ADR-005 accepted) |
+| gomoku | 🟠 | Agun | M | Docs done; ready to implement (ADR-005 accepted). AI + hot-seat |
+| monop | 🟠 | Agun (Claude) | M | Docs done; ready to implement (ADR-005 accepted). Hot-seat 2–9 players (trademark rename required) |
+| sail | 🟠 | Agun (Claude) | L | Docs done; ready to implement (ADR-005 accepted). Multi-process fork(); consider network multiplayer redesign |
+
+## Card Games
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| canfield | 🟠 | Agun (Claude) | S | Docs done; ready to implement (ADR-005 accepted). Curses solitaire with `cfscores` sidecar |
+| cribbage | 🟠 | AntiGravity & Agun | M | Card game; curses pegboard; AI heuristics |
+| fish | 🟠 | Agun (Kimi) | S | Docs done; ready to implement (ADR-005 accepted) |
+| mille | 🟠 | AntiGravity & Agun | M | Mille Bornes 101-card race; curses multi-window; AI |
+
+## Puzzle & Word Games
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| arithmetic | 🟠 | Agun (Kimi) | XS | Docs done; ready to implement (ADR-005 accepted) |
+| boggle | 🟠 | AntiGravity & Agun | M | Dictionary + word-find algorithm |
+| hangman | 🟠 | Kimi | XS | Docs done; ready to implement (ADR-005 accepted) |
+| quiz | 🟠 | Agun (Kimi) | S | Docs done; ready to implement (ADR-005 accepted) |
+| wump | 🟠 | AntiGravity & Agun | S | Hunt the Wumpus — procedural cave |
+
+## Arcade & Action
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| hunt | 🟠 | AntiGravity & Agun | XL | Real-time multiplayer; internet redesign |
+| robots | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted). Simple chase |
+| snake | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted). Classic chase (BSD variant) |
+| tetris | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted) |
+| worm | 🟠 | AntiGravity & Agun | S | Growing worm; Michael Toy (1980); digit food 1-9; SIGALRM |
+
+## Simulation & Strategy
+
+| Game | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| atc | 🟠 | Agun (Claude) | L | Docs in progress. Real-time simulation; multiple concurrent entities |
+| trek | 🟠 | Agun (Claude) | L | Docs in progress. Star Trek simulation; complex state |
+| wargames | 🟠 | Agun (Kimi) | XS | Docs done; ready to implement (ADR-005 accepted) |
+
+## Cryptography / Text-Transform
+
+| Utility | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| caesar | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| morse | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| pig | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| wtf | 🟠 | Agun (Kimi) | XS | Docs done; ready to implement (ADR-005 accepted) |
+
+## Math / Number
+
+| Utility | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| factor | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| number | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| primes | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| random | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+
+## Display Toys
+
+| Toy | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| banner | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| bcd | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| ppt | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| rain | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+| worms | 🟠 | Agun | XS | Docs done; ready to implement (ADR-005 accepted) |
+
+## Fun / Info
+
+| Utility | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| fortune | 🟠 | AntiGravity & Agun | S | Random quotes DB; strfile/unstr O(1) indexer; ROT13 |
+| countmail | 🟠 | Agun (Kimi) | XS | Docs done; ready to implement (ADR-005 accepted) |
+| pom | 🟠 | Agun (Kimi) | XS | Docs done; ready to implement (ADR-005 accepted) |
+
+## Administration
+
+| Program | Status | Owner | Complexity | Notes |
+|---|:---:|:---:|:---:|---|
+| dm | 🟠 | Agun (Claude) | S | Docs-only; port **skipped** by ADR `dm-001` (obsolete use case). Deep historical docs preserve the ideas |
+
+---
+
+## Summary
+
+| Status | Count |
+|---|---:|
+| 🔴 Unclaimed | 0 |
+| 🟡 Claimed | 0 |
+| 🟠 In Progress | 43 (all in documentation phase; `dm` is docs-only with port skipped per ADR) |
+| 🟢 Released | 0 |
+| ✨ Complete | 0 |
+| **Total** | **43** |
+
+---
+
+## Port Tracking (per [ADR-006](./decisions/006-multi-port-architecture.md))
+
+Ports use first-come-first-serve ownership. Claim a port here
+before starting implementation work. See
+[ADR-006 §Port Naming Conventions](./decisions/006-multi-port-architecture.md)
+for the naming rules and reserved slugs.
+
+**Legend:**
+
+- 🔴 **Unclaimed** — no one working on this port yet.
+- 🟡 **Claimed** — a contributor has reserved the slot but hasn't started.
+- 🟠 **In Progress** — active implementation.
+- 🟢 **Released** — meets the port baseline (README + AGENTS + CLAUDE + diff-log + working src + tests + port-specific media + passes canonical `test-scenarios.md`).
+- ✨ **Complete** — polished, live URL published, all optional docs filled.
+
+| Game | Port | Status | Owner | Live URL | Notes |
+|---|---|:---:|:---:|---|---|
+| robots | fancy-web | 🟠 | Agun | — | React 18 + react-konva + Vite. Walking skeleton scaffolded 2026-09-17; engine + rendering pending Phase 2. |
+| robots | classic-web | 🔴 | — | — | Reserved for delegation to another agent (Codex / Deepseek). TypeScript + Vite + PWA per ADR-005 reference stack. |
+| snake | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Single-file Canvas 2D + vanilla JS (~1900 LOC). 8 cosmetic themes, eagle/owl state-machine chaser, apple collection, edge escape, localStorage best-score. Vite + TS + PWA deferred to v2 per port ADR `fancy-web-003`. |
+
+*(Other games' ports will appear here as they are claimed. No
+port row = no port started yet; canonical docs at
+`bsdgames/<game>/docs/` may still be in progress independently.)*
