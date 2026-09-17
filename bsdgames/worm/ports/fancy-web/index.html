@@ -44,6 +44,14 @@
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       width: 100%;
     }
+    .picker-group-inline {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .picker-row-horizontal {
+      display: flex; gap: 22px;
+      flex-wrap: wrap; justify-content: center; align-items: flex-start;
+      max-width: 1100px;
+    }
     .picker-label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase;
@@ -143,19 +151,23 @@
     <div class="picker-row" id="themePicker"></div>
   </div>
 
-  <div class="picker-group">
-    <div class="picker-label">mode</div>
-    <div class="picker-row" id="modePicker"></div>
-  </div>
-
-  <div class="picker-group">
-    <div class="picker-label">speed</div>
-    <div class="picker-row" id="speedPicker"></div>
-  </div>
-
-  <div class="picker-group" id="wildBonusRow" style="display:none">
-    <div class="picker-label">bonus</div>
-    <div class="picker-row" id="bonusPicker"></div>
+  <div class="picker-row-horizontal">
+    <div class="picker-group-inline">
+      <div class="picker-label">mode</div>
+      <div class="picker-row" id="modePicker"></div>
+    </div>
+    <div class="picker-group-inline">
+      <div class="picker-label">speed</div>
+      <div class="picker-row" id="speedPicker"></div>
+    </div>
+    <div class="picker-group-inline" id="wildEnemiesGroup" style="display:none">
+      <div class="picker-label">enemies</div>
+      <div class="picker-row" id="enemyPicker"></div>
+    </div>
+    <div class="picker-group-inline" id="wildBonusGroup" style="display:none">
+      <div class="picker-label">bonus</div>
+      <div class="picker-row" id="bonusPicker"></div>
+    </div>
   </div>
 
   <div class="stage">
@@ -214,9 +226,11 @@
           theme: s.theme || 'neon-grid',
           mode: s.mode || 'pure',              // 'pure' (single apple, BSD) | 'wild' (multi-apple + bonuses)
           bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
+          enemyBird: !!s.enemyBird,             // Phase 1 enemy — default off
         };
       } catch (e) {
-        return { speed: 'progressive', theme: 'neon-grid', mode: 'pure', bonusFrog: true };
+        return { speed: 'progressive', theme: 'neon-grid', mode: 'pure',
+                 bonusFrog: true, enemyBird: false };
       }
     }
     function writeSettings() {
@@ -226,6 +240,7 @@
           theme: currentTheme,
           mode: settings.mode,
           bonusFrog: settings.bonusFrog,
+          enemyBird: settings.enemyBird,
         }));
       } catch (e) {}
     }
@@ -424,6 +439,281 @@
       // Check if jump animation completed
       if (now - frog.jumpStart >= FROG_JUMP_ARC_MS && frog.lastJumpEnd < frog.jumpStart) {
         frog.lastJumpEnd = frog.jumpStart + FROG_JUMP_ARC_MS;
+      }
+    }
+
+    // ================= BIRD ENEMY (Phase 1) =================
+    // Thief — flies onto the grid, races the player to the highest-value apple,
+    // grabs it if fast enough (or gives up after 8s), and flies off. Non-lethal:
+    // does not collide with the player. Only its shadow projects to the ground.
+    const BIRD_SPAWN_MIN_MS = 15000;
+    const BIRD_SPAWN_MAX_MS = 25000;
+    const BIRD_APPROACH_TIMEOUT_MS = 8000;
+    const BIRD_SPEED_PX_PER_SEC = 210;
+    const BIRD_RETREAT_SPEED = 320;
+
+    const bird = {
+      active: false,
+      state: 'inactive',    // 'inactive' | 'approach' | 'grab' | 'retreat'
+      x: 0, y: 0,            // pixel coords (aerial layer)
+      vx: 0, vy: 0,          // computed per frame for orientation
+      altitude: 0.85,        // 0 = on ground, 1 = high
+      targetIdx: -1,
+      stateStart: 0,
+      wingPhase: 0,
+      nextSpawnAt: 0,
+    };
+
+    function scheduleNextBird(now) {
+      bird.nextSpawnAt = now + BIRD_SPAWN_MIN_MS + Math.random() * (BIRD_SPAWN_MAX_MS - BIRD_SPAWN_MIN_MS);
+    }
+
+    function findRipeHighestApple() {
+      let best = -1, bestVal = 0;
+      for (let i = 0; i < apples.length; i++) {
+        const a = apples[i];
+        if (a.state === 'ripe' && a.value > bestVal) {
+          bestVal = a.value;
+          best = i;
+        }
+      }
+      return best;
+    }
+
+    function spawnBird(now) {
+      const idx = findRipeHighestApple();
+      if (idx < 0) { scheduleNextBird(now); return; }
+      const a = apples[idx];
+      const targetX = (a.x + 0.5) * GRID.cellSize;
+      // Enter from side opposite the target so it flies across the map
+      const fromLeft = targetX > W * 0.5;
+      bird.x = fromLeft ? -60 : W + 60;
+      bird.y = 60 + Math.random() * (H * 0.55);
+      bird.altitude = 0.85;
+      bird.targetIdx = idx;
+      bird.state = 'approach';
+      bird.stateStart = now;
+      bird.active = true;
+      bird.wingPhase = 0;
+    }
+
+    function updateBird(dt, now) {
+      if (!settings.enemyBird || settings.mode !== 'wild' || game.state !== 'playing') {
+        if (bird.active && (settings.mode !== 'wild' || !settings.enemyBird)) {
+          bird.active = false;
+        }
+        return;
+      }
+      if (!bird.active) {
+        if (now >= bird.nextSpawnAt) spawnBird(now);
+        return;
+      }
+
+      const dtSec = dt / 1000;
+      bird.wingPhase += dt * 0.007;
+      const prevX = bird.x, prevY = bird.y;
+
+      switch (bird.state) {
+        case 'approach': {
+          // Target may have been eaten by player — retreat if so
+          if (bird.targetIdx >= apples.length || bird.targetIdx < 0) {
+            bird.state = 'retreat';
+            bird.stateStart = now;
+            bird.targetIdx = -1;
+            break;
+          }
+          const a = apples[bird.targetIdx];
+          const targetX = (a.x + 0.5) * GRID.cellSize;
+          const targetY = (a.y + 0.5) * GRID.cellSize - bird.altitude * 55;
+          const dx = targetX - bird.x, dy = targetY - bird.y;
+          const d = Math.hypot(dx, dy);
+          const speed = BIRD_SPEED_PX_PER_SEC;
+          if (d < Math.max(4, speed * dtSec * 0.6)) {
+            bird.state = 'grab';
+            bird.stateStart = now;
+          } else {
+            bird.x += (dx / d) * speed * dtSec;
+            bird.y += (dy / d) * speed * dtSec;
+            bird.altitude = Math.max(0.30, bird.altitude - 0.00035 * dt);
+          }
+          // Timeout: give up if too long
+          if (now - bird.stateStart > BIRD_APPROACH_TIMEOUT_MS) {
+            bird.state = 'retreat';
+            bird.stateStart = now;
+          }
+          break;
+        }
+        case 'grab': {
+          // Snatch the apple (if still present) and retreat
+          if (bird.targetIdx >= 0 && bird.targetIdx < apples.length) {
+            const a = apples[bird.targetIdx];
+            spawnBirdGrabBurst(a.x, a.y);
+            apples.splice(bird.targetIdx, 1);
+            respawnAfterEat();   // 2.5s delayed respawn (Wild) — same pipeline
+          }
+          bird.targetIdx = -1;
+          bird.state = 'retreat';
+          bird.stateStart = now;
+          break;
+        }
+        case 'retreat': {
+          const outX = bird.x < W * 0.5 ? -200 : W + 200;
+          const outY = -100;
+          const dx = outX - bird.x, dy = outY - bird.y;
+          const d = Math.hypot(dx, dy) || 1;
+          bird.x += (dx / d) * BIRD_RETREAT_SPEED * dtSec;
+          bird.y += (dy / d) * BIRD_RETREAT_SPEED * dtSec;
+          bird.altitude = Math.min(0.95, bird.altitude + 0.001 * dt);
+          if (bird.x < -180 || bird.x > W + 180 || bird.y < -180) {
+            bird.active = false;
+            scheduleNextBird(now);
+          }
+          break;
+        }
+      }
+
+      // Compute velocity for orientation
+      bird.vx = bird.x - prevX;
+      bird.vy = bird.y - prevY;
+    }
+
+    function renderBird(now) {
+      if (!bird.active) return;
+      const cellSize = GRID.cellSize;
+
+      // Shadow projected on ground plane
+      const shadowX = bird.x;
+      const shadowY = bird.y + bird.altitude * 55;
+      const shadowScale = 0.5 + bird.altitude * 1.2;
+      const shadowAlpha = 0.18 + (1 - bird.altitude) * 0.45;
+      const grad = ctx.createRadialGradient(shadowX, shadowY, 0, shadowX, shadowY, 22 * shadowScale);
+      grad.addColorStop(0, `rgba(0,0,0,${shadowAlpha})`);
+      grad.addColorStop(0.7, `rgba(0,0,0,${shadowAlpha * 0.3})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(shadowX, shadowY, 22 * shadowScale, 11 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bird sprite (small, cute passerine)
+      const heading = Math.atan2(bird.vy || 0, bird.vx || (bird.x < W/2 ? 1 : -1));
+      const scale = 0.9 + (1 - bird.altitude) * 0.3;
+
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      ctx.rotate(heading);
+      ctx.scale(scale, scale);
+
+      // Wing flap
+      const wingF = Math.sin(bird.wingPhase * 8);
+      const wingAngle = wingF * 0.7;
+
+      // Body — brown / warm
+      const bodyGrad = ctx.createRadialGradient(-2, -2, 1, 0, 0, 10);
+      bodyGrad.addColorStop(0, '#a67242');
+      bodyGrad.addColorStop(1, '#5a3820');
+      ctx.fillStyle = bodyGrad;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'rgba(90,50,20,0.6)';
+
+      // Left wing
+      ctx.save();
+      ctx.rotate(-wingAngle);
+      ctx.beginPath();
+      ctx.moveTo(-1, -3);
+      ctx.quadraticCurveTo(-10, -14, -3, -16);
+      ctx.quadraticCurveTo(2, -12, 3, -5);
+      ctx.closePath();
+      ctx.fill();
+      // Wing tips (darker feather ends)
+      ctx.fillStyle = '#3a2410';
+      ctx.beginPath();
+      ctx.arc(-4, -15, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Right wing
+      ctx.save();
+      ctx.rotate(wingAngle);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(-1, 3);
+      ctx.quadraticCurveTo(-10, 14, -3, 16);
+      ctx.quadraticCurveTo(2, 12, 3, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a2410';
+      ctx.beginPath();
+      ctx.arc(-4, 15, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Body proper
+      ctx.fillStyle = bodyGrad;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 9, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly (lighter)
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#d8b090';
+      ctx.beginPath();
+      ctx.ellipse(0, 1.5, 5, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#5a3820';
+      ctx.beginPath();
+      ctx.arc(8, 0, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak (orange, pointed)
+      ctx.fillStyle = '#ff9a1a';
+      ctx.beginPath();
+      ctx.moveTo(10.5, -1);
+      ctx.lineTo(14, 0);
+      ctx.lineTo(10.5, 1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(9, -0.8, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.arc(9.2, -1, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tail
+      ctx.fillStyle = '#3a2410';
+      ctx.beginPath();
+      ctx.moveTo(-8, -2);
+      ctx.lineTo(-12, -3);
+      ctx.lineTo(-11, 0);
+      ctx.lineTo(-12, 3);
+      ctx.lineTo(-8, 2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function spawnBirdGrabBurst(gx, gy) {
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 + Math.random() * 0.4;
+        const s = 40 + Math.random() * 80;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40,
+          life: 400, maxLife: 400,
+          color: i % 2 === 0 ? '#a67242' : '#e8c090',
+          size: 1.5 + Math.random() * 0.8,
+        });
       }
     }
 
@@ -697,13 +987,15 @@
     // ================= MODE PICKER =================
     const modePicker = document.getElementById('modePicker');
     const bonusPicker = document.getElementById('bonusPicker');
-    const wildBonusRow = document.getElementById('wildBonusRow');
+    const enemyPicker = document.getElementById('enemyPicker');
+    const wildBonusGroup = document.getElementById('wildBonusGroup');
+    const wildEnemiesGroup = document.getElementById('wildEnemiesGroup');
 
     const MODES = [
       { key: 'pure', label: 'Pure',
         description: 'Single apple, no enemies, no bonuses — BSD spec faithful' },
       { key: 'wild', label: 'Wild',
-        description: 'Multi-apple pool, rot state, bonus frog. Enemies land iteratively.' },
+        description: 'Multi-apple pool, rot state, bonus frog, enemies. Arcade play.' },
     ];
 
     MODES.forEach(m => {
@@ -716,16 +1008,50 @@
       modePicker.appendChild(btn);
     });
 
+    function updateWildGroupVisibility() {
+      const show = settings.mode === 'wild';
+      wildEnemiesGroup.style.display = show ? '' : 'none';
+      wildBonusGroup.style.display = show ? '' : 'none';
+    }
+
     function setMode(key) {
       if (settings.mode === key) return;
       settings.mode = key;
       modePicker.querySelectorAll('[data-mode]').forEach(b => {
         b.classList.toggle('active', b.dataset.mode === key);
       });
-      wildBonusRow.style.display = key === 'wild' ? '' : 'none';
+      updateWildGroupVisibility();
       writeSettings();
       // Mode switch = clean restart (per ADR fancy-web-004)
       restartGame();
+    }
+
+    // ---- Enemy picker (Wild mode only; enemies added per phase) ----
+    const ENEMIES = [
+      { key: 'enemyBird', label: '🐦 Bird',
+        description: 'Thief — races you for the highest-value apple. Non-lethal.' },
+      // Phase 2+ enemies will land here iteratively:
+      // { key: 'enemyWasps', label: '🐝 Wasps', description: '...' },
+      // { key: 'enemyRival', label: '🪱 Rival', description: '...' },
+      // { key: 'enemyGardener', label: '🧑‍🌾 Gardener', description: '...' },
+    ];
+
+    ENEMIES.forEach(e => {
+      const btn = document.createElement('button');
+      btn.className = 'btn speed-btn' + (settings[e.key] ? ' active' : '');
+      btn.dataset.enemy = e.key;
+      btn.textContent = e.label;
+      btn.title = e.description;
+      btn.onclick = () => toggleEnemy(e.key);
+      enemyPicker.appendChild(btn);
+    });
+
+    function toggleEnemy(key) {
+      settings[key] = !settings[key];
+      enemyPicker.querySelectorAll('[data-enemy]').forEach(b => {
+        b.classList.toggle('active', settings[b.dataset.enemy]);
+      });
+      writeSettings();
     }
 
     // ---- Bonus picker (Wild mode only) ----
@@ -752,8 +1078,8 @@
       writeSettings();
     }
 
-    // Show/hide bonus row based on initial mode
-    wildBonusRow.style.display = settings.mode === 'wild' ? '' : 'none';
+    // Set initial visibility
+    updateWildGroupVisibility();
 
     // ================= SPEED SETTINGS =================
     const SPEEDS = [
@@ -824,8 +1150,14 @@
     function doTick() {
       if (game.state !== 'playing') return;
 
-      // Commit buffered direction
-      worm.direction = worm.pendingDirection;
+      // TURN ACCURACY FIX: move FIRST in the current direction, then commit
+      // the pending direction change for the NEXT tick. Rationale: the visual
+      // head interpolates forward past the current cell during a tick, so
+      // when the player presses a direction key, the head appears to be at
+      // a cell BEYOND segments[0]. Turning at segments[0] would put the turn
+      // behind the visual eye position ("neck turn"). Instead: complete the
+      // in-flight cell first, THEN turn — so the turn happens at the cell
+      // the eye visually reached, which matches player expectation.
 
       const oldHead = worm.segments[0];
       const newHead = {
@@ -889,6 +1221,9 @@
       if (worm.segments.length >= GRID.cols * GRID.rows - 1) {
         triggerWin();
       }
+
+      // Commit pending direction for NEXT tick (turn accuracy fix)
+      worm.direction = worm.pendingDirection;
     }
 
     // ================= DEATH / WIN =================
@@ -952,7 +1287,9 @@
       initWorm();
       initApples();
       frog.active = false;
+      bird.active = false;
       scheduleNextFrog(performance.now());
+      scheduleNextBird(performance.now());
       particles.length = 0;
       updateScoreDisplay();
       updateLengthDisplay();
@@ -1704,6 +2041,7 @@
       updateApples(dt);
       updateApplesLifecycle(now);      // Wild mode rot + delayed respawn
       updateFrog(now);                  // Wild mode frog bonus
+      updateBird(dt, now);              // Wild mode enemy: Bird (Phase 1)
       updateParticles(dt);
 
       if (game.state === 'playing') {
@@ -1719,6 +2057,7 @@
       renderBackground(time);
       renderApples(time);
       renderFrog(now);
+      renderBird(now);
 
       if (game.state === 'dead') {
         // Fade worm during death
@@ -1740,6 +2079,7 @@
     initWorm();
     initApples();
     scheduleNextFrog(performance.now());
+    scheduleNextBird(performance.now());
     updateTickInterval();
     updateScoreDisplay();
     updateLengthDisplay();

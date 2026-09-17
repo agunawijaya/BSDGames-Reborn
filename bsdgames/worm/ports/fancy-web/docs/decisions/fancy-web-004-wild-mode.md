@@ -255,14 +255,14 @@ subsequent iterations.
 
 ## Roll-out plan
 
-| Phase | Contents | Reviewer sign-off |
+| Phase | Contents | Status |
 |--:|---|---|
-| 0 | Mode picker, multi-apple pool, rot state, delayed respawn, frog bonus, localStorage | This ADR |
-| 1 | Bird enemy + shadow warning + checkbox | Per-phase update to this ADR |
-| 2 | Wasp enemy + apple rot → wasp spawn chain + checkbox | Per-phase update |
-| 3 | Rival worm AI + head-collision rules + checkbox | Per-phase update |
-| 4 | Gardener enemy + state machine + checkbox | Per-phase update |
-| 5 | Balance tuning, wave pacing, difficulty defaults | Per-phase update |
+| 0 | Mode picker, multi-apple pool, rot state, delayed respawn, frog bonus, localStorage | ✅ Shipped 2026-09-17 |
+| 1 | 🐦 Bird enemy: thief AI, shadow projection, race for highest-value apple, non-lethal, checkbox toggle | ✅ Shipped 2026-09-17 |
+| 2 | 🐝 Wasp enemy + apple rot → wasp spawn chain + checkbox | Pending |
+| 3 | 🪱 Rival worm AI + head-collision rules + slither.io-style bonus + checkbox | Pending |
+| 4 | 🧑‍🌾 Gardener enemy + state machine + checkbox | Pending |
+| 5 | Balance tuning, wave pacing, difficulty defaults | Pending |
 
 Each phase gets a commit, playtest, and iteration cycle. Phase
 progression is not fixed on a timeline — user drives cadence.
