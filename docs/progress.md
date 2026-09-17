@@ -152,9 +152,10 @@ for the naming rules and reserved slugs.
 
 | Game | Port | Status | Owner | Live URL | Notes |
 |---|---|:---:|:---:|---|---|
-| robots | fancy-web | 🟠 | Agun | — | React 18 + react-konva + Vite. Walking skeleton scaffolded 2026-09-17; engine + rendering pending Phase 2. |
+| robots | fancy-web | 🟠 | Agun | — | React 18 + `@react-three/fiber` + Three.js (isometric 3D orthographic) + Vite. Playable: full spec engine, animated human player with walk cycle, hover-bot enemies, luminous platform with zoom-adaptive planet halo, safe-wait turn-by-turn, follow-player camera at high zoom. Pending Released: media capture, deploy, localStorage high scores, full canonical test-scenarios pass. Two port ADRs: 001 tech stack, 002 safe-wait deviation. |
 | robots | classic-web | 🔴 | — | — | Reserved for delegation to another agent (Codex / Deepseek). TypeScript + Vite + PWA per ADR-005 reference stack. |
 | snake | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Single-file Canvas 2D + vanilla JS (~1900 LOC). 8 cosmetic themes, eagle/owl state-machine chaser, apple collection, edge escape, localStorage best-score. Vite + TS + PWA deferred to v2 per port ADR `fancy-web-003`. |
+| worm | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Growing worm (BSD spec faithful: progressive growth, chained score bonus, walls lethal). Numbered apples 1-9 with size+color+digit encoding. 8 themes reused from snake port. Settings row: Classic/Fast/Progressive tick rate. Single-file HTML ~1500 LOC. |
 
 *(Other games' ports will appear here as they are claimed. No
 port row = no port started yet; canonical docs at
