@@ -279,7 +279,7 @@
     const worm = {
       segments: [],                    // array of {x, y} grid cells; index 0 = head
       direction: {dx: 1, dy: 0},       // current move direction
-      pendingDirection: {dx: 1, dy: 0},// buffered from input
+      directionQueue: [],              // Nokia-snake input buffer (max 2)
       growing: 0,                       // pending growth (BSD spec: tail stays N ticks after eat)
       tickInterval: 1000,               // ms between ticks; set by speed setting
       tickTimer: 0,                     // ms accumulator
@@ -295,7 +295,7 @@
         worm.segments.push({x: startX - i, y: startY});
       }
       worm.direction = {dx: 1, dy: 0};
-      worm.pendingDirection = {dx: 1, dy: 0};
+      worm.directionQueue = [];
       worm.growing = 0;
       worm.tickTimer = 0;
       worm.interpolation = 0;
@@ -1431,9 +1431,20 @@
       if (!valid) return;
       e.preventDefault();
 
-      // Prevent 180° turn (can't reverse directly into own neck)
-      if (dx === -worm.direction.dx && dy === -worm.direction.dy) return;
-      worm.pendingDirection = {dx, dy};
+      // Nokia-snake input buffer — queue up to 2 turns so rapid double-taps
+      // both register in sequence.
+      // Reverse/no-op checks are against the LAST INTENT (last queued if any,
+      // else the currently-committed direction), not the committed direction.
+      // This lets you press ↑ then ← quickly and both turns happen on
+      // successive ticks — instead of the ← being rejected as reverse of
+      // the pre-turn "right".
+      const lastIntent = worm.directionQueue.length > 0
+        ? worm.directionQueue[worm.directionQueue.length - 1]
+        : worm.direction;
+      if (dx === -lastIntent.dx && dy === -lastIntent.dy) return;   // 180° block
+      if (dx ===  lastIntent.dx && dy ===  lastIntent.dy) return;   // no-op
+      if (worm.directionQueue.length >= 2) return;                  // cap depth
+      worm.directionQueue.push({ dx, dy });
     });
 
     // ================= TICK LOGIC (BSD spec) =================
@@ -1468,15 +1479,18 @@
       }
 
       const currDir = worm.direction;
-      const pendDir = worm.pendingDirection;
+      const pendDir = worm.directionQueue.length > 0
+        ? worm.directionQueue[0]
+        : currDir;
       const pendingDiffers =
         (pendDir.dx !== currDir.dx) || (pendDir.dy !== currDir.dy);
 
       let newHead = { x: oldHead.x + currDir.dx, y: oldHead.y + currDir.dy };
 
       if (pendingDiffers && isDeadly(newHead)) {
-        // Input rescue — commit pending early to honor player intent
+        // Input rescue — pull the queued turn forward to honor player intent
         worm.direction = pendDir;
+        worm.directionQueue.shift();
         newHead = { x: oldHead.x + pendDir.dx, y: oldHead.y + pendDir.dy };
       }
 
@@ -1542,7 +1556,11 @@
       }
 
       // Commit pending direction for NEXT tick (turn accuracy fix)
-      worm.direction = worm.pendingDirection;
+      // Consume next queued turn (Nokia-snake buffer) — one per tick, so a
+      // double-tap plays back as two sequential turns.
+      if (worm.directionQueue.length > 0) {
+        worm.direction = worm.directionQueue.shift();
+      }
     }
 
     // ================= DEATH / WIN =================
