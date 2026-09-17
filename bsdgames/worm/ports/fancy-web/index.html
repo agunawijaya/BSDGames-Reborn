@@ -144,8 +144,18 @@
   </div>
 
   <div class="picker-group">
+    <div class="picker-label">mode</div>
+    <div class="picker-row" id="modePicker"></div>
+  </div>
+
+  <div class="picker-group">
     <div class="picker-label">speed</div>
     <div class="picker-row" id="speedPicker"></div>
+  </div>
+
+  <div class="picker-group" id="wildBonusRow" style="display:none">
+    <div class="picker-label">bonus</div>
+    <div class="picker-row" id="bonusPicker"></div>
   </div>
 
   <div class="stage">
@@ -202,20 +212,37 @@
         return {
           speed: s.speed || 'progressive',
           theme: s.theme || 'neon-grid',
+          mode: s.mode || 'pure',              // 'pure' (single apple, BSD) | 'wild' (multi-apple + bonuses)
+          bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
         };
       } catch (e) {
-        return { speed: 'progressive', theme: 'neon-grid' };
+        return { speed: 'progressive', theme: 'neon-grid', mode: 'pure', bonusFrog: true };
       }
     }
     function writeSettings() {
       try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-          speed: settings.speed, theme: currentTheme
+          speed: settings.speed,
+          theme: currentTheme,
+          mode: settings.mode,
+          bonusFrog: settings.bonusFrog,
         }));
       } catch (e) {}
     }
 
     const settings = readSettings();
+
+    // ================= WILD MODE CONSTANTS =================
+    const APPLE_POOL_SIZE = 10;      // Wild mode: apples on grid at once
+    const APPLE_RIPE_MS = 20000;      // Wild mode: 20s before apple rots
+    const APPLE_RESPAWN_MS = 2500;    // Wild mode: 2.5s delay between eat and new spawn
+
+    const FROG_SPAWN_MIN_MS = 30000;
+    const FROG_SPAWN_MAX_MS = 45000;
+    const FROG_LIFESPAN_MS = 12000;
+    const FROG_JUMP_INTERVAL_MS = 1500;
+    const FROG_JUMP_ARC_MS = 380;
+    const FROG_SCORE = 50;
 
     // ================= GAME STATE =================
     const game = {
@@ -252,21 +279,152 @@
       worm.interpolation = 0;
     }
 
-    // ================= APPLE (numbered 1-9) =================
-    const apple = { x: 0, y: 0, value: 5, spin: 0, bob: 0 };
-    function spawnApple() {
-      const occupied = new Set(worm.segments.map(s => `${s.x},${s.y}`));
+    // ================= APPLES (numbered 1-9) =================
+    // Unified array-based structure: length 1 in Pure mode, ~APPLE_POOL_SIZE in Wild.
+    // Each apple: { x, y, value, spin, bob, spawnTime, state:'ripe'|'rotten' }
+    const apples = [];
+    const pendingApples = [];   // Wild mode only: {spawnAt} entries waiting to spawn
+
+    function occupiedCells() {
+      const s = new Set(worm.segments.map(s => `${s.x},${s.y}`));
+      for (const a of apples) s.add(`${a.x},${a.y}`);
+      if (frog.active) s.add(`${frog.x},${frog.y}`);
+      return s;
+    }
+
+    function newApple() {
+      const occupied = occupiedCells();
       let x, y, attempts = 0;
       do {
         x = Math.floor(Math.random() * GRID.cols);
         y = Math.floor(Math.random() * GRID.rows);
         attempts++;
       } while (occupied.has(`${x},${y}`) && attempts < 200);
-      apple.x = x;
-      apple.y = y;
-      apple.value = 1 + Math.floor(Math.random() * 9);
-      apple.spin = 0;
-      apple.bob = Math.random() * Math.PI * 2;
+      return {
+        x, y,
+        value: 1 + Math.floor(Math.random() * 9),
+        spin: 0,
+        bob: Math.random() * Math.PI * 2,
+        spawnTime: performance.now(),
+        state: 'ripe',
+      };
+    }
+
+    function initApples() {
+      apples.length = 0;
+      pendingApples.length = 0;
+      const target = settings.mode === 'wild' ? APPLE_POOL_SIZE : 1;
+      for (let i = 0; i < target; i++) apples.push(newApple());
+    }
+
+    function respawnAfterEat() {
+      if (settings.mode === 'wild') {
+        pendingApples.push({ spawnAt: performance.now() + APPLE_RESPAWN_MS });
+      } else {
+        apples.push(newApple());   // Pure: instant respawn (BSD spec)
+      }
+    }
+
+    function updateApplesLifecycle(now) {
+      // Rot check (Wild mode only)
+      if (settings.mode === 'wild') {
+        for (const a of apples) {
+          if (a.state === 'ripe' && (now - a.spawnTime > APPLE_RIPE_MS)) {
+            a.state = 'rotten';
+          }
+        }
+        // Delayed respawn
+        for (let i = pendingApples.length - 1; i >= 0; i--) {
+          if (pendingApples[i].spawnAt <= now) {
+            apples.push(newApple());
+            pendingApples.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    // ================= FROG BONUS (Wild mode) =================
+    const frog = {
+      active: false,
+      x: 0, y: 0,
+      fromX: 0, fromY: 0,     // for jump interpolation
+      jumpStart: 0,           // ms when current jump started
+      lastJumpEnd: 0,         // ms when last jump landed
+      spawnTime: 0,
+      nextSpawnAt: 0,
+      appearAnimStart: 0,     // for spawn puff animation
+    };
+
+    function scheduleNextFrog(now) {
+      frog.nextSpawnAt = now + FROG_SPAWN_MIN_MS + Math.random() * (FROG_SPAWN_MAX_MS - FROG_SPAWN_MIN_MS);
+    }
+
+    function spawnFrog(now) {
+      const occupied = occupiedCells();
+      let x, y, attempts = 0;
+      do {
+        x = Math.floor(Math.random() * GRID.cols);
+        y = Math.floor(Math.random() * GRID.rows);
+        attempts++;
+      } while (occupied.has(`${x},${y}`) && attempts < 100);
+      frog.x = x; frog.y = y;
+      frog.fromX = x; frog.fromY = y;
+      frog.jumpStart = now - FROG_JUMP_ARC_MS;   // start "landed"
+      frog.lastJumpEnd = now;
+      frog.spawnTime = now;
+      frog.appearAnimStart = now;
+      frog.active = true;
+    }
+
+    function despawnFrog(now) {
+      frog.active = false;
+      scheduleNextFrog(now);
+    }
+
+    function updateFrog(now) {
+      if (!settings.bonusFrog || settings.mode !== 'wild' || game.state !== 'playing') {
+        return;
+      }
+
+      if (!frog.active) {
+        if (now >= frog.nextSpawnAt) spawnFrog(now);
+        return;
+      }
+
+      // Lifespan expired?
+      if (now - frog.spawnTime > FROG_LIFESPAN_MS) {
+        despawnFrog(now);
+        return;
+      }
+
+      // Time to jump?
+      if (now - frog.lastJumpEnd > FROG_JUMP_INTERVAL_MS &&
+          now - frog.jumpStart > FROG_JUMP_ARC_MS) {
+        // Pick random adjacent (or diagonal) cell
+        const dirs = [
+          [1,0],[-1,0],[0,1],[0,-1],
+          [1,1],[1,-1],[-1,1],[-1,-1],
+        ];
+        const occupied = occupiedCells();
+        occupied.delete(`${frog.x},${frog.y}`);   // current cell is fine to leave
+        const shuffled = dirs.sort(() => Math.random() - 0.5);
+        for (const [dx, dy] of shuffled) {
+          const nx = frog.x + dx, ny = frog.y + dy;
+          if (nx < 0 || nx >= GRID.cols || ny < 0 || ny >= GRID.rows) continue;
+          if (occupied.has(`${nx},${ny}`)) continue;
+          frog.fromX = frog.x; frog.fromY = frog.y;
+          frog.x = nx; frog.y = ny;
+          frog.jumpStart = now;
+          return;
+        }
+        // No valid move; skip this jump
+        frog.lastJumpEnd = now;
+      }
+
+      // Check if jump animation completed
+      if (now - frog.jumpStart >= FROG_JUMP_ARC_MS && frog.lastJumpEnd < frog.jumpStart) {
+        frog.lastJumpEnd = frog.jumpStart + FROG_JUMP_ARC_MS;
+      }
     }
 
     // ================= THEMES (reused from snake fancy-web) =================
@@ -536,6 +694,67 @@
       writeSettings();
     }
 
+    // ================= MODE PICKER =================
+    const modePicker = document.getElementById('modePicker');
+    const bonusPicker = document.getElementById('bonusPicker');
+    const wildBonusRow = document.getElementById('wildBonusRow');
+
+    const MODES = [
+      { key: 'pure', label: 'Pure',
+        description: 'Single apple, no enemies, no bonuses — BSD spec faithful' },
+      { key: 'wild', label: 'Wild',
+        description: 'Multi-apple pool, rot state, bonus frog. Enemies land iteratively.' },
+    ];
+
+    MODES.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'btn speed-btn' + (m.key === settings.mode ? ' active' : '');
+      btn.dataset.mode = m.key;
+      btn.textContent = m.label;
+      btn.title = m.description;
+      btn.onclick = () => setMode(m.key);
+      modePicker.appendChild(btn);
+    });
+
+    function setMode(key) {
+      if (settings.mode === key) return;
+      settings.mode = key;
+      modePicker.querySelectorAll('[data-mode]').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === key);
+      });
+      wildBonusRow.style.display = key === 'wild' ? '' : 'none';
+      writeSettings();
+      // Mode switch = clean restart (per ADR fancy-web-004)
+      restartGame();
+    }
+
+    // ---- Bonus picker (Wild mode only) ----
+    const BONUSES = [
+      { key: 'bonusFrog', label: '🐸 Frog  ·  +50',
+        description: 'Occasional hopping frog. Eat for big score bonus.' },
+    ];
+
+    BONUSES.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'btn speed-btn' + (settings[b.key] ? ' active' : '');
+      btn.dataset.bonus = b.key;
+      btn.textContent = b.label;
+      btn.title = b.description;
+      btn.onclick = () => toggleBonus(b.key);
+      bonusPicker.appendChild(btn);
+    });
+
+    function toggleBonus(key) {
+      settings[key] = !settings[key];
+      bonusPicker.querySelectorAll('[data-bonus]').forEach(b => {
+        b.classList.toggle('active', settings[b.dataset.bonus]);
+      });
+      writeSettings();
+    }
+
+    // Show/hide bonus row based on initial mode
+    wildBonusRow.style.display = settings.mode === 'wild' ? '' : 'none';
+
     // ================= SPEED SETTINGS =================
     const SPEEDS = [
       { key: 'classic',     label: 'Classic  ·  3×',    description: 'Comfortable retro pace — 3 ticks / sec' },
@@ -634,12 +853,25 @@
       worm.segments.unshift(newHead);
 
       // Eat apple? — check BEFORE tail resolution, matches BSD source
-      if (newHead.x === apple.x && newHead.y === apple.y) {
-        worm.growing += apple.value;         // BSD: growing += ch - '0'
-        spawnPickupBurst(apple.x, apple.y, apple.value);
-        game.score += worm.growing;           // BSD: score += growing (chained bonus!)
+      for (let ai = 0; ai < apples.length; ai++) {
+        const a = apples[ai];
+        if (newHead.x === a.x && newHead.y === a.y) {
+          worm.growing += a.value;                 // BSD: growing += ch - '0'
+          spawnPickupBurst(a.x, a.y, a.value);
+          game.score += worm.growing;               // BSD: score += growing (chained bonus!)
+          updateScoreDisplay();
+          apples.splice(ai, 1);
+          respawnAfterEat();                        // Pure=instant, Wild=delayed 2.5s
+          break;
+        }
+      }
+
+      // Frog bonus?
+      if (frog.active && newHead.x === frog.x && newHead.y === frog.y) {
+        game.score += FROG_SCORE;
+        spawnFrogEatBurst(frog.x, frog.y);
         updateScoreDisplay();
-        spawnApple();
+        despawnFrog(performance.now());
       }
 
       // Tail resolution
@@ -718,7 +950,9 @@
       game.score = 0;
       hideOverlay();
       initWorm();
-      spawnApple();
+      initApples();
+      frog.active = false;
+      scheduleNextFrog(performance.now());
       particles.length = 0;
       updateScoreDisplay();
       updateLengthDisplay();
@@ -726,9 +960,35 @@
     }
 
     // ================= APPLE + PARTICLE UPDATES =================
-    function updateApple(dt) {
-      apple.spin += dt * 0.003;
-      apple.bob  += dt * 0.0022;
+    function updateApples(dt) {
+      for (const a of apples) {
+        a.spin += dt * 0.003;
+        a.bob  += dt * 0.0022;
+      }
+    }
+
+    function spawnFrogEatBurst(gx, gy) {
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      for (let i = 0; i < 40; i++) {
+        const a = (i / 40) * Math.PI * 2 + Math.random() * 0.3;
+        const s = 120 + Math.random() * 200;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 850,
+          maxLife: 850,
+          color: i % 3 === 0 ? '#ffd044' : (i % 3 === 1 ? '#7cf248' : '#ffffff'),
+          size: 2 + Math.random() * 1.6,
+        });
+      }
+      particles.push({
+        x: cx, y: cy, vx: 0, vy: 0,
+        life: 700, maxLife: 700,
+        ring: true, radius: 5,
+        color: '#ffd044',
+      });
     }
 
     // ================= PARTICLES =================
@@ -1001,7 +1261,11 @@
       ctx.restore();
     }
 
-    function renderApple(time) {
+    function renderApples(time) {
+      for (const a of apples) renderApple(a, time);
+    }
+
+    function renderApple(apple, time) {
       const cellSize = GRID.cellSize;
       const cx = (apple.x + 0.5) * cellSize;
       const cy = (apple.y + 0.5) * cellSize;
@@ -1011,7 +1275,11 @@
       const sizeFactor = 0.55 + (apple.value / 9) * 0.45;
       const r = (cellSize / 2 - 3) * sizeFactor;
 
-      const bodyColor = appleColorForValue(apple.value);
+      let bodyColor = appleColorForValue(apple.value);
+      // Rotten visual state: desaturated + darker
+      if (apple.state === 'rotten') {
+        bodyColor = darkenColor(bodyColor, 0.45);
+      }
       const bodyLight = lightenColor(bodyColor, 0.35);
       const bodyDark = darkenColor(bodyColor, 0.35);
 
@@ -1124,6 +1392,119 @@
       ctx.fillStyle = T.appleDigit;
       ctx.fillText(String(apple.value), 0, 0);
       ctx.restore();
+
+      // Rot indicator: subtle dark stipple pattern on top
+      if (apple.state === 'rotten') {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(60,30,10,0.35)';
+        for (let i = 0; i < 5; i++) {
+          const ang = (i / 5) * Math.PI * 2 + Math.sin(apple.spin) * 0.2;
+          const rr = r * 0.55;
+          ctx.beginPath();
+          ctx.arc(Math.cos(ang) * rr, Math.sin(ang) * rr, r * 0.10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // ================= FROG RENDER =================
+    function renderFrog(now) {
+      if (!frog.active) return;
+      const cellSize = GRID.cellSize;
+
+      // Jump arc interpolation
+      let jt = (now - frog.jumpStart) / FROG_JUMP_ARC_MS;
+      jt = Math.max(0, Math.min(1, jt));
+      const easedT = jt;   // linear for now; arc via y offset
+      const cx = ((frog.fromX + 0.5) + (frog.x - frog.fromX) * easedT) * cellSize;
+      const cy = ((frog.fromY + 0.5) + (frog.y - frog.fromY) * easedT) * cellSize;
+      const arc = -Math.sin(jt * Math.PI) * cellSize * 0.5;   // parabolic jump
+
+      // Spawn/despawn pulse
+      const age = now - frog.spawnTime;
+      const spawnPulse = Math.max(0, 1 - age / 400);
+      const despawnT = Math.max(0, (age - (FROG_LIFESPAN_MS - 800)) / 800);
+      const fade = 1 - Math.min(1, despawnT);
+
+      ctx.save();
+      ctx.globalAlpha = fade * (1 + spawnPulse * 0.4);
+      ctx.translate(cx, cy + arc);
+
+      const r = cellSize * 0.36;
+
+      // Shadow on ground (fixed position, doesn't lift with arc)
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.filter = 'blur(4px)';
+      ctx.beginPath();
+      ctx.ellipse(0, -arc + r * 0.9, r * 0.9 * (1 - jt * 0.3), r * 0.25 * (1 - jt * 0.3), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Frog body (green)
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#4ada58';
+      const bodyGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.35, 1, 0, 0, r * 1.2);
+      bodyGrad.addColorStop(0, '#a8f068');
+      bodyGrad.addColorStop(0.55, '#4ada58');
+      bodyGrad.addColorStop(1, '#1e7a30');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.15, r * 0.95, r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Back stripes
+      ctx.save();
+      ctx.strokeStyle = 'rgba(20,60,20,0.5)';
+      ctx.lineWidth = 1;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.5, r * 0.1); ctx.lineTo(-r * 0.2, -r * 0.15);
+      ctx.moveTo(r * 0.5, r * 0.1);  ctx.lineTo(r * 0.2, -r * 0.15);
+      ctx.stroke();
+      ctx.restore();
+
+      // Belly (lighter)
+      ctx.fillStyle = 'rgba(255,255,180,0.4)';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.5, r * 0.6, r * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes (big bulging)
+      ctx.fillStyle = '#f8f8e0';
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#ffee88';
+      ctx.beginPath();
+      ctx.arc(-r * 0.35, -r * 0.45, r * 0.28, 0, Math.PI * 2);
+      ctx.arc( r * 0.35, -r * 0.45, r * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(-r * 0.30, -r * 0.42, r * 0.13, 0, Math.PI * 2);
+      ctx.arc( r * 0.40, -r * 0.42, r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye highlights
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(-r * 0.28, -r * 0.48, r * 0.05, 0, Math.PI * 2);
+      ctx.arc( r * 0.42, -r * 0.48, r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mouth
+      ctx.strokeStyle = 'rgba(20,60,20,0.7)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.3, r * 0.15);
+      ctx.quadraticCurveTo(0, r * 0.32, r * 0.3, r * 0.15);
+      ctx.stroke();
 
       ctx.restore();
     }
@@ -1315,11 +1696,14 @@
     function loop(time) {
       const dt = Math.min(50, time - lastTime);
       lastTime = time;
+      const now = performance.now();
 
       if (game.state !== 'playing') game.overOffTime += dt;
 
       updateDrift(dt);
-      updateApple(dt);
+      updateApples(dt);
+      updateApplesLifecycle(now);      // Wild mode rot + delayed respawn
+      updateFrog(now);                  // Wild mode frog bonus
       updateParticles(dt);
 
       if (game.state === 'playing') {
@@ -1333,7 +1717,8 @@
       }
 
       renderBackground(time);
-      renderApple(time);
+      renderApples(time);
+      renderFrog(now);
 
       if (game.state === 'dead') {
         // Fade worm during death
@@ -1353,7 +1738,8 @@
 
     // ================= INIT =================
     initWorm();
-    spawnApple();
+    initApples();
+    scheduleNextFrog(performance.now());
     updateTickInterval();
     updateScoreDisplay();
     updateLengthDisplay();

@@ -237,6 +237,19 @@ one-time.
   3→6×. Docs updated to note that "Classic" no longer means
   "BSD verbatim" — pure-BSD rate is documented as a one-line
   code edit for anyone who wants it.
+- **2026-09-17 second playtest — "sudah lihat terlalu garing"**
+  — Single-apple, no-enemies Pure mode felt too austere for
+  arcade replay. User requested a Wild mode with multi-apple
+  pool + selectable enemies + bonus frog.
+- **2026-09-17 Wild mode Phase 0 shipped** — Two-mode architecture:
+  Pure (spec-faithful, single apple, no bonuses) and Wild
+  (multi-apple pool of 10, rot state after 20s, delayed respawn
+  2.5s, bonus frog every 30-45s worth +50). Mode picker UI
+  added between theme and speed pickers. Bonus checkbox row
+  appears only when Wild is active. Mode switch triggers clean
+  restart. ADR `fancy-web-004-wild-mode.md` documents the phased
+  rollout: Phase 0 (this) → Phase 1 Bird → Phase 2 Wasps → Phase
+  3 Rival worm → Phase 4 Gardener → Phase 5 balance polish.
 
 ## See also
 
