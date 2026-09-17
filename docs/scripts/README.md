@@ -2,6 +2,21 @@
 
 Utility scripts for the BSDGames Reborn workflow.
 
+## Two screenshot pipelines
+
+The repo uses **two** screenshot pipelines depending on what's
+being captured:
+
+| What you're capturing | Pipeline | Docs |
+|---|---|---|
+| BSDGames original binary running in a terminal | Terminal pipeline (this file) | Below |
+| Browser-based port (HTML + Canvas) | Browser pipeline | [`../learning/browser-port-screenshots.md`](../learning/browser-port-screenshots.md) |
+
+Different tools, same purpose. If you're documenting the **original
+game** to give context for a port, use the terminal pipeline. If
+you're documenting a **port you built** that runs in a browser
+(fancy-web, classic-web, etc.), use the browser pipeline.
+
 ## `capture-screenshots.sh`
 
 Captures terminal screenshots of a BSDGames original binary by driving
