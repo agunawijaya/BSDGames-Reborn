@@ -9,15 +9,37 @@ Contract, see the root
 
 ## Port-Specific Notes
 
-- **Tech stack:** TypeScript 5.6 + React 18 + @react-three/fiber
-  (Three.js) + Vite 5. **Isometric look via orthographic camera**,
-  all geometry procedural (no external asset packs).
+- **Tech stack:** TypeScript 5.6 + React 18 + `@react-three/fiber`
+  + Three.js 0.169 + `@react-three/postprocessing` + Vite 5.
+  **Isometric look via orthographic camera**, all geometry
+  procedural (no external asset packs).
 - **Build system:** npm.
 - **Run dev server:** `npm run dev` (opens on `http://localhost:5173`).
 - **Run tests:** `npm test` (watch) or `npm run test:once`.
 - **Build production:** `npm run build` → `dist/`.
 - **Typecheck only:** `npm run typecheck`.
 - **Deploy target:** *(pending — Cloudflare Pages, Vercel, or GitHub Pages likely)*.
+
+## Directory conventions
+
+- `src/game/` — pure game logic (engine, RNG, grid, state types,
+  high-score storage). **No React, no Three.js imports here.**
+  Testable via Vitest without a DOM.
+- `src/entities/` — R3F components for rendering game entities
+  (player, robot, pile) + shared `AnimatedGroup` wrapper.
+  `AnimatedGroup` provides `StepAnimationContext` that entity
+  meshes consume to synchronize sub-animations (e.g. leg swing).
+- `src/input/` — keyboard mapping. Isolated from game and
+  rendering.
+- `src/ui/` — React DOM UI (help panel, modals).
+- `src/Game.tsx` — root composition. Holds React state
+  (GameState, zoom, waiting, showHelp, highScores, isNewBest)
+  and wires everything.
+- `scripts/` — one-shot maintenance scripts, not shipped in
+  build. Currently contains `capture-screenshots.mjs`
+  (Playwright-driven headless Chromium that captures
+  `media/*.png`; run `node scripts/capture-screenshots.mjs`
+  after `npm run dev` is up).
 
 ## Constraints Specific to This Port
 
@@ -39,11 +61,30 @@ Contract, see the root
   no external asset packs. All visuals are Three.js box / sphere
   / plane / group meshes composed from code + palette. Style
   consistency is enforced by this constraint.
-- **Palette (locked):** background `#0d1b2a`, tile top `#4cc9f0`,
-  tile side `#3a86a8`, player `#f72585`, robot `#ffbe0b`, pile
-  `#7c8894`, danger flash `#ff006e`, text `#f8f9fa` / `#adb5bd`.
-  Consolidated in `src/Game.tsx` → `COLORS` const. Change there,
-  not per-component.
+- **Palette (locked):**
+  - Space background: `#050912` (via CSS gradient, also
+    Canvas is transparent so backing plate blends with space).
+  - Tile top: `#4cc9f0` cyan (also aura + frame emissive color).
+  - Backing plate: `#08152a` navy — invisible buffer around
+    platform to absorb inward bloom bleed.
+  - Player shirt: `#ff3a95` magenta, skin `#f5cba8`, hair
+    `#4a2f1c`, pants `#3d4a5e`, shoes `#1a2540`, eye `#0a0a10`.
+  - Robot body: `#ffbe0b` yellow with red LEDs `#ff006e` and
+    steel-gray `#7c8894` accents.
+  - Pile: `#7c8894` steel gray.
+  - HUD text: `#f8f9fa` / `#adb5bd`.
+
+  Consolidated in `src/Game.tsx` → `COLORS`, and per-entity in
+  `entities/*.tsx`. Change in one place.
+
+- **Bloom is calibrated around a single threshold.** Bloom
+  `luminanceThreshold = 0.55`. Any material with emissive
+  luminance above that will bloom. Keep tile emissive well below
+  (currently `0.12`) or the grid pattern gets washed out by
+  inward bloom bleed. Aura emissive is `AURA_BASE_EMISSIVE ×
+  haloIntensityForZoom(zoom)` — designed so aura crosses the
+  threshold at low zoom (visible planet halo) and drops below at
+  high zoom (no silau on tiles during close-range gameplay).
 - **Forward-Compatibility Rules** from
   [ADR-005](../../../../docs/decisions/005-target-language-and-ui-stack.md)
   apply here even though ADR-005 doesn't strictly govern fancy

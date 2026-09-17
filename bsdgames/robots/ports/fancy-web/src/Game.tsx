@@ -19,6 +19,12 @@ import {
   teleport,
 } from './game/engine';
 import { RNG } from './game/rng';
+import {
+  loadHighScores,
+  qualifiesForLeaderboard,
+  saveHighScore,
+  type HighScoreEntry,
+} from './game/highScores';
 import { attachKeyboard, type KeyAction } from './input/keyboard';
 import { PlayerMesh } from './entities/Player';
 import { RobotMesh } from './entities/Robot';
@@ -49,8 +55,19 @@ const ENTITY_Y = TILE_HEIGHT / 2;
 // Zoom bounds (orthographic camera zoom factor).
 const MIN_ZOOM = 8;
 const MAX_ZOOM = 55;
-const DEFAULT_ZOOM = 14;
+const DEFAULT_ZOOM = MIN_ZOOM; // Spawn fully zoomed out — "planet from afar"
 const ZOOM_STEP = 1.2;
+
+// Halo attenuation — the aura ring's emissive intensity (and thus how much
+// bloom it produces) is a function of zoom. At MIN_ZOOM the halo is at
+// full strength for the wide "planet view". As the player zooms in, the
+// halo fades so it doesn't cause silau at close range.
+const HALO_MIN = 0.08; // fraction of full intensity at MAX_ZOOM
+
+function haloIntensityForZoom(zoom: number): number {
+  const t = Math.min(1, Math.max(0, (zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)));
+  return Math.max(HALO_MIN, 1 - t * (1 - HALO_MIN));
+}
 
 // When zoom exceeds FOLLOW_BLEND_START, the camera begins interpolating from
 // grid-center to player-centered; by FOLLOW_BLEND_END, the camera fully
@@ -127,62 +144,38 @@ const GridFloor = (() => {
   return Component;
 })();
 
-// -----------------------------------------------------------------------------
-// Perimeter frame — four thin emissive bars around the platform edge.
-// This is the primary bloom source: its outward glow produces the "planet
-// halo" halo effect against the surrounding starfield.
+// Aura + backing plate geometry.
+//   - Backing plate: opaque dark rectangle beneath the tiles. Extended
+//     several units past the platform edge so that (a) it blocks CSS
+//     starfield through tile gaps, and (b) any bloom bleed inward from
+//     the aura ring lands on the plate — not on the tiles — keeping the
+//     grid crisp. Colored to match the CSS starfield near-center so the
+//     visible plate blends invisibly into surrounding space.
+//   - Aura: a much larger emissive slab BELOW the backing plate. Only
+//     the ring extending past the backing plate reaches the camera,
+//     forming the bright halo ring around the platform. Bloom bleed
+//     outward from this ring is the wide soft halo the player sees.
+const BACKING_PLATE_MARGIN = 3;  // opaque buffer past platform edge
+const AURA_RING_WIDTH = 4;       // visible width of aura ring per side
 
-const FRAME_HALF_X = GRID_WIDTH / 2 + 0.5; // just outside tile edges
-const FRAME_HALF_Z = GRID_HEIGHT / 2 + 0.5;
-const FRAME_THICKNESS = 0.4;
-const FRAME_HEIGHT = 0.35;
-const FRAME_Y = 0.05; // slight lift above the tile plane
+const AURA_BASE_EMISSIVE = 2.2;
 
-function FrameBar({
-  position,
-  size,
-}: Readonly<{
-  position: [number, number, number];
-  size: [number, number, number];
-}>) {
+type PlatformAuraProps = Readonly<{ intensity: number }>;
+
+function PlatformAura({ intensity }: PlatformAuraProps) {
+  const width = GRID_WIDTH + (BACKING_PLATE_MARGIN + AURA_RING_WIDTH) * 2;
+  const depth = GRID_HEIGHT + (BACKING_PLATE_MARGIN + AURA_RING_WIDTH) * 2;
   return (
-    <mesh position={position}>
-      <boxGeometry args={size} />
+    <mesh position={[0, -0.9, 0]}>
+      <boxGeometry args={[width, 0.1, depth]} />
       <meshStandardMaterial
         color={COLORS.tileTop}
         emissive={COLORS.tileTop}
-        emissiveIntensity={1.4}
-        roughness={0.3}
-        metalness={0.5}
+        emissiveIntensity={AURA_BASE_EMISSIVE * intensity}
+        roughness={0.6}
+        metalness={0.2}
       />
     </mesh>
-  );
-}
-
-function PlatformFrame() {
-  return (
-    <group>
-      {/* North bar (−z edge) */}
-      <FrameBar
-        position={[0, FRAME_Y, -FRAME_HALF_Z]}
-        size={[FRAME_HALF_X * 2 + FRAME_THICKNESS, FRAME_HEIGHT, FRAME_THICKNESS]}
-      />
-      {/* South bar (+z edge) */}
-      <FrameBar
-        position={[0, FRAME_Y, FRAME_HALF_Z]}
-        size={[FRAME_HALF_X * 2 + FRAME_THICKNESS, FRAME_HEIGHT, FRAME_THICKNESS]}
-      />
-      {/* West bar (−x edge) */}
-      <FrameBar
-        position={[-FRAME_HALF_X, FRAME_Y, 0]}
-        size={[FRAME_THICKNESS, FRAME_HEIGHT, FRAME_HALF_Z * 2]}
-      />
-      {/* East bar (+x edge) */}
-      <FrameBar
-        position={[FRAME_HALF_X, FRAME_Y, 0]}
-        size={[FRAME_THICKNESS, FRAME_HEIGHT, FRAME_HALF_Z * 2]}
-      />
-    </group>
   );
 }
 
@@ -252,6 +245,7 @@ type SceneProps = Readonly<{
 }>;
 
 function Scene({ state, zoom, playerWorld }: SceneProps) {
+  const halo = haloIntensityForZoom(zoom);
   return (
     <>
       <CameraController zoom={zoom} playerWorld={playerWorld} />
@@ -287,25 +281,39 @@ function Scene({ state, zoom, playerWorld }: SceneProps) {
         decay={1}
       />
 
-      {/* Backing plate — solid opaque box beneath the tile grid, extending
-          past its edges. Since Canvas is transparent, this plate is what
-          blocks the CSS starfield from showing through the gaps between
-          tiles. Slightly lighter than space so it reads as "planet surface"
-          rather than blending with the void. */}
+      {/* Aura plate — large emissive slab below the backing plate. Its
+          center is occluded by the backing plate; only the ring extending
+          past the platform edges is visible from above. That ring is a big
+          bright bloom source → wide, soft halo bleed into the surrounding
+          CSS starfield. Intensity attenuates with zoom (bright when zoomed
+          out for "planet view", dims at close-range gameplay to avoid
+          silau on the tiles). */}
+      <PlatformAura intensity={halo} />
+
+      {/* Backing plate — extended well past the platform edge (3 units per
+          side) so it occludes both the CSS starfield through tile gaps
+          AND the aura's inward bloom bleed. Colored to match the CSS
+          starfield near-center gradient (#0a1428) so the visible buffer
+          ring outside the tile grid blends invisibly with surrounding
+          space. */}
       <mesh position={[0, -0.5, 0]}>
-        <boxGeometry args={[GRID_WIDTH + 2, 0.6, GRID_HEIGHT + 2]} />
+        <boxGeometry
+          args={[
+            GRID_WIDTH + BACKING_PLATE_MARGIN * 2,
+            0.6,
+            GRID_HEIGHT + BACKING_PLATE_MARGIN * 2,
+          ]}
+        />
         <meshStandardMaterial
-          color="#08152a"
+          color="#0a1428"
           roughness={0.9}
-          metalness={0.2}
+          metalness={0.15}
         />
       </mesh>
 
-      {/* Perimeter frame — the sole strong bloom source. Emits halo
-          outward (into surrounding transparent space + CSS starfield).
-          Tiles themselves have only faint emissive so the grid pattern
-          stays crisp instead of being washed out by inward bloom bleed. */}
-      <PlatformFrame />
+      {/* No perimeter frame — the aura ring alone provides the halo, and
+          keeping tiles free of any bright rim source stops bloom from
+          bleeding onto the outermost tiles. */}
 
       <GridFloor />
 
@@ -315,15 +323,20 @@ function Scene({ state, zoom, playerWorld }: SceneProps) {
           space" — cyan glow that extends past the tile edges into the void. */}
       <EffectComposer>
         <Bloom
-          intensity={1.2}
-          luminanceThreshold={0.5}
-          luminanceSmoothing={0.55}
-          radius={0.8}
+          intensity={2.2}
+          luminanceThreshold={0.55}
+          luminanceSmoothing={0.6}
+          radius={0.9}
           mipmapBlur
         />
       </EffectComposer>
 
-      <AnimatedGroup target={gridToWorld(state.player)}>
+      <AnimatedGroup
+        target={gridToWorld(state.player)}
+        stepDurationMs={340}
+        stepHeight={0.12}
+        rotationSpeed={18}
+      >
         <PlayerMesh />
       </AnimatedGroup>
 
@@ -331,9 +344,9 @@ function Scene({ state, zoom, playerWorld }: SceneProps) {
         <AnimatedGroup
           key={`robot-${r.id}`}
           target={gridToWorld(r)}
-          speed={10}
-          bounceHeight={0.08}
-          bounceSpeed={12}
+          stepDurationMs={240}
+          stepHeight={0.06}
+          rotationSpeed={14}
         >
           <RobotMesh />
         </AnimatedGroup>
@@ -356,6 +369,8 @@ function Scene({ state, zoom, playerWorld }: SceneProps) {
 type HudProps = Readonly<{
   state: GameState;
   waiting: boolean;
+  highScores: readonly HighScoreEntry[];
+  isNewBest: boolean;
   onRestart: () => void;
   onAdvance: () => void;
   onZoomIn: () => void;
@@ -366,6 +381,8 @@ type HudProps = Readonly<{
 function Hud({
   state,
   waiting,
+  highScores,
+  isNewBest,
   onRestart,
   onAdvance,
   onZoomIn,
@@ -416,12 +433,51 @@ function Hud({
           <h2 style={{ margin: '0 0 0.5rem 0', color: '#ff006e' }}>
             AARRrrgghhhh…
           </h2>
-          <p style={{ margin: '0 0 1rem 0', opacity: 0.85 }}>
+          <p style={{ margin: '0 0 0.75rem 0', opacity: 0.85 }}>
             You were caught on level {state.level}.
           </p>
-          <p style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem' }}>
+          <p style={{ margin: '0 0 0.75rem 0', fontSize: '1.5rem' }}>
             Final score: <b>{state.score}</b>
           </p>
+          {isNewBest && (
+            <p
+              style={{
+                margin: '0 0 1rem 0',
+                color: '#ffbe0b',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+              }}
+            >
+              🏆 New high score!
+            </p>
+          )}
+          {highScores.length > 0 && (
+            <div style={highScoreListStyle}>
+              <div style={highScoreTitleStyle}>Top scores</div>
+              {highScores.slice(0, 5).map((entry, i) => {
+                const isCurrent =
+                  entry.score === state.score && entry.level === state.level;
+                return (
+                  <div
+                    key={`${entry.date}-${i}`}
+                    style={{
+                      ...highScoreRowStyle,
+                      color: isCurrent ? '#ffbe0b' : '#e5eef7',
+                      fontWeight: isCurrent ? 700 : 400,
+                    }}
+                  >
+                    <span style={{ opacity: 0.55, width: '2ch' }}>
+                      #{i + 1}
+                    </span>
+                    <span style={{ flex: 1, textAlign: 'left', paddingLeft: '0.5rem' }}>
+                      {entry.score}
+                    </span>
+                    <span style={{ opacity: 0.7 }}>Lv {entry.level}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <button style={primaryButtonStyle} onClick={onRestart} autoFocus>
             Play again
           </button>
@@ -468,6 +524,29 @@ export function Game() {
   const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [waiting, setWaiting] = useState<boolean>(false);
+  const [highScores, setHighScores] = useState<readonly HighScoreEntry[]>(
+    () => loadHighScores(),
+  );
+  const [isNewBest, setIsNewBest] = useState<boolean>(false);
+
+  // Persist the run to the local high-score list once, on transition to
+  // the `dead` status. Effect re-fires only when the status ID changes.
+  useEffect(() => {
+    if (state.status !== 'dead') return;
+    const qualifies = qualifiesForLeaderboard(state.score);
+    setIsNewBest(qualifies);
+    setHighScores(
+      saveHighScore({
+        score: state.score,
+        level: state.level,
+        date: new Date().toISOString(),
+      }),
+    );
+    // Intentionally not depending on state.score/state.level — they can't
+    // change while status stays 'dead', so status alone triggers this once
+    // per death.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status]);
 
   const zoomIn = useCallback(
     () => setZoom((z) => Math.min(MAX_ZOOM, z * ZOOM_STEP)),
@@ -547,6 +626,8 @@ export function Game() {
 
   const handleRestart = useCallback(() => {
     setWaiting(false);
+    setZoom(DEFAULT_ZOOM); // reset to fully zoomed-out cinematic view
+    setIsNewBest(false);   // clear the new-best banner
     setState(initGame(1, rngRef.current));
   }, []);
 
@@ -587,6 +668,8 @@ export function Game() {
       <Hud
         state={state}
         waiting={waiting}
+        highScores={highScores}
+        isNewBest={isNewBest}
         onRestart={handleRestart}
         onAdvance={handleAdvance}
         onZoomIn={zoomIn}
@@ -728,6 +811,34 @@ const modalPanelStyle: CSSProperties = {
   textAlign: 'center',
   minWidth: '260px',
   boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+};
+
+const highScoreListStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.15rem',
+  margin: '0 0 1.25rem 0',
+  padding: '0.6rem 0.8rem',
+  background: 'rgba(76, 201, 240, 0.06)',
+  border: '1px solid rgba(76, 201, 240, 0.25)',
+  borderRadius: '0.4rem',
+  fontSize: '0.85rem',
+  fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+  textAlign: 'left',
+};
+
+const highScoreTitleStyle: CSSProperties = {
+  fontSize: '0.7rem',
+  letterSpacing: '0.15em',
+  textTransform: 'uppercase',
+  color: '#adb5bd',
+  marginBottom: '0.25rem',
+};
+
+const highScoreRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: '0.3rem',
 };
 
 const primaryButtonStyle: CSSProperties = {

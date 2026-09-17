@@ -287,7 +287,11 @@ function advanceRobots(state: GameState, waiting: boolean): MoveResult {
     waitBonus: state.waitBonus + waitBonusDelta,
   };
 
-  if (survivors.length === 0) {
+  // Level clears only when robots existed and were all destroyed this turn.
+  // Guarding against `state.robots.length > 0` avoids reporting level-clear
+  // on degenerate states that had no robots to begin with (e.g. test
+  // scaffolds that isolate movement mechanics).
+  if (survivors.length === 0 && state.robots.length > 0) {
     newState = {
       ...newState,
       score: newState.score + newState.waitBonus,

@@ -65,8 +65,8 @@ progress, or release a game.
 | Game | Status | Owner | Complexity | Notes |
 |---|:---:|:---:|:---:|---|
 | hunt | 🟠 | AntiGravity & Agun | XL | Real-time multiplayer; internet redesign |
-| robots | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted). Simple chase |
-| snake | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted). Classic chase (BSD variant) |
+| robots | 🟢 | Agun | S | Released 2026-09-17 — canonical docs complete + `fancy-web` port at Released status (see Port Tracking). |
+| snake | 🟢 | Agun | S | Released 2026-09-17 — canonical docs complete + `fancy-web` port at Released status (see Port Tracking). |
 | tetris | 🟠 | Agun | S | Docs done; ready to implement (ADR-005 accepted) |
 | worm | 🟠 | AntiGravity & Agun | S | Growing worm; Michael Toy (1980); digit food 1-9; SIGALRM |
 
@@ -128,8 +128,8 @@ progress, or release a game.
 |---|---:|
 | 🔴 Unclaimed | 0 |
 | 🟡 Claimed | 0 |
-| 🟠 In Progress | 43 (all in documentation phase; `dm` is docs-only with port skipped per ADR) |
-| 🟢 Released | 0 |
+| 🟠 In Progress | 41 (documentation phase; `dm` is docs-only with port skipped per ADR) |
+| 🟢 Released | 2 (`robots` — `fancy-web` shipped 2026-09-17; `snake` — `fancy-web` shipped 2026-09-17) |
 | ✨ Complete | 0 |
 | **Total** | **43** |
 
@@ -152,7 +152,7 @@ for the naming rules and reserved slugs.
 
 | Game | Port | Status | Owner | Live URL | Notes |
 |---|---|:---:|:---:|---|---|
-| robots | fancy-web | 🟠 | Agun | — | React 18 + `@react-three/fiber` + Three.js (isometric 3D orthographic) + Vite. Playable: full spec engine, animated human player with walk cycle, hover-bot enemies, luminous platform with zoom-adaptive planet halo, safe-wait turn-by-turn, follow-player camera at high zoom. Pending Released: media capture, deploy, localStorage high scores, full canonical test-scenarios pass. Two port ADRs: 001 tech stack, 002 safe-wait deviation. |
+| robots | fancy-web | 🟢 | Agun | *(pending deploy)* | **Released 2026-09-17.** React 18 + `@react-three/fiber` + Three.js (isometric 3D orthographic) + Vite. 33/33 engine tests pass; TypeScript strict; production bundle 289 KB gzipped. Full spec engine, animated human player with walk cycle, hover-bot enemies, luminous platform with zoom-adaptive planet halo, safe-wait turn-by-turn, follow-player camera at high zoom, localStorage top-10 leaderboard. 4 port-specific screenshots captured via Playwright + embedded in port README. Two port ADRs (001 tech stack, 002 safe-wait deviation). ✨ Complete pending: deploy live URL + sound (needs port ADR). |
 | robots | classic-web | 🔴 | — | — | Reserved for delegation to another agent (Codex / Deepseek). TypeScript + Vite + PWA per ADR-005 reference stack. |
 | snake | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Single-file Canvas 2D + vanilla JS (~1900 LOC). 8 cosmetic themes, eagle/owl state-machine chaser, apple collection, edge escape, localStorage best-score. Vite + TS + PWA deferred to v2 per port ADR `fancy-web-003`. |
 | worm | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Growing worm (BSD spec faithful: progressive growth, chained score bonus, walls lethal). Numbered apples 1-9 with size+color+digit encoding. 8 themes reused from snake port. Settings row: Classic/Fast/Progressive tick rate. Single-file HTML ~1500 LOC. |

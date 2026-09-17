@@ -1,64 +1,131 @@
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useLayoutEffect, useRef } from 'react';
+import type { MutableRefObject, ReactNode } from 'react';
 import { Group, Vector3 } from 'three';
 
-// AnimatedGroup interpolates its position toward `target` every frame.
-// While moving, the group also bounces slightly on the Y axis to give
-// entities a "walking" feel instead of a chess-piece leap.
+// AnimatedGroup wraps its children and drives three runtime behaviors:
+//
+//   1. **Time-based step animation.** Each new grid target starts a step
+//      that plays out over a fixed duration (`stepDurationMs`). Position
+//      lerps linearly from step-start to target over that duration.
+//   2. **Facing rotation.** The group rotates around Y so children's +Z
+//      face points in the movement direction.
+//   3. **Step arc.** The group's Y coordinate traces a parabolic hop.
+//
+// Also exposes `StepAnimationContext` so children (e.g. PlayerMesh) can
+// synchronize their own sub-animations to the walk state.
+//
+// Ordering: state updates for the current step happen in
+// `useLayoutEffect` so they are committed BEFORE the next useFrame runs.
+// The useFrame callback here also uses `renderPriority = -1` so it
+// runs before children's useFrames — children read fresh step state.
+
+export type StepState = {
+  /** Progress within the current step, 0..1. Stays at 1 when idle. */
+  progress: number;
+  /** True while a step is actively playing out. */
+  isMoving: boolean;
+  /** Monotonic counter — increments once per new step. */
+  stepIndex: number;
+};
+
+const defaultStepRef: MutableRefObject<StepState> = {
+  current: { progress: 1, isMoving: false, stepIndex: 0 },
+};
+
+export const StepAnimationContext =
+  createContext<MutableRefObject<StepState>>(defaultStepRef);
 
 type Props = Readonly<{
   target: [number, number, number];
-  /** Higher = faster catch-up. 12 ≈ ~90 ms half-life. */
-  speed?: number;
-  /** Amplitude of the movement bounce (Y offset, world units). */
-  bounceHeight?: number;
-  /** How rapidly the bounce oscillates. */
-  bounceSpeed?: number;
+  /** Duration of a single step in milliseconds. */
+  stepDurationMs?: number;
+  /** Rotation lerp responsiveness. Higher = catches up faster. */
+  rotationSpeed?: number;
+  /** Peak Y offset at the midpoint of a step arc, in world units. */
+  stepHeight?: number;
   children: ReactNode;
 }>;
 
-const SETTLED_THRESHOLD = 0.02;
-
 export function AnimatedGroup({
   target,
-  speed = 12,
-  bounceHeight = 0.06,
-  bounceSpeed = 14,
+  stepDurationMs = 320,
+  rotationSpeed = 15,
+  stepHeight = 0.15,
   children,
 }: Props) {
   const groupRef = useRef<Group>(null);
   const current = useRef(new Vector3(target[0], target[1], target[2]));
+  const stepStart = useRef(new Vector3(target[0], target[1], target[2]));
+  const stepStartTime = useRef(-Infinity); // "no step started yet"
+  const rotationY = useRef(0);
+  const targetRotationY = useRef(0);
+  const stepRef = useRef<StepState>({
+    progress: 1,
+    isMoving: false,
+    stepIndex: 0,
+  });
 
-  // On mount, snap to initial position so we don't animate from origin.
-  useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.position.set(target[0], target[1], target[2]);
-      current.current.set(target[0], target[1], target[2]);
-    }
-    // Intentionally run only on mount — subsequent target changes are
-    // handled by the useFrame lerp below.
+  // Snap to initial position on mount.
+  useLayoutEffect(() => {
+    if (!groupRef.current) return;
+    groupRef.current.position.set(target[0], target[1], target[2]);
+    current.current.set(target[0], target[1], target[2]);
+    stepStart.current.set(target[0], target[1], target[2]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
-
-    const t = Math.min(1, delta * speed);
+  // On target change (new step), record starting position/time and new
+  // facing angle. useLayoutEffect fires synchronously after commit and
+  // BEFORE the next useFrame — so useFrame reads fresh state.
+  useLayoutEffect(() => {
     const dx = target[0] - current.current.x;
     const dz = target[2] - current.current.z;
-    current.current.x += dx * t;
-    current.current.z += dz * t;
+    if (dx * dx + dz * dz < 0.0001) return;
 
-    const distanceSq = dx * dx + dz * dz;
-    const isMoving = distanceSq > SETTLED_THRESHOLD * SETTLED_THRESHOLD;
-    const bounce = isMoving
-      ? Math.abs(Math.sin(state.clock.elapsedTime * bounceSpeed)) * bounceHeight
-      : 0;
+    stepStart.current.copy(current.current);
+    stepStartTime.current = performance.now();
+    stepRef.current.stepIndex += 1;
 
-    current.current.y = target[1] + bounce;
+    let angle = Math.atan2(dx, dz);
+    const diff = angle - rotationY.current;
+    if (diff > Math.PI) angle -= Math.PI * 2;
+    else if (diff < -Math.PI) angle += Math.PI * 2;
+    targetRotationY.current = angle;
+  }, [target[0], target[2]]);
+
+  // renderPriority = -1 → this useFrame runs before children's useFrames
+  // (which use default priority 0). Children reading stepRef.current get
+  // this frame's updated values, not last frame's.
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+
+    // Linear progress over stepDurationMs.
+    const elapsedMs = performance.now() - stepStartTime.current;
+    const progress = Math.min(1, elapsedMs / stepDurationMs);
+    stepRef.current.progress = progress;
+    stepRef.current.isMoving = progress < 1;
+
+    // Position: linear interpolation from step origin to target.
+    current.current.x =
+      stepStart.current.x + (target[0] - stepStart.current.x) * progress;
+    current.current.z =
+      stepStart.current.z + (target[2] - stepStart.current.z) * progress;
+
+    // Parabolic step arc.
+    const arc = progress < 1 ? 4 * progress * (1 - progress) * stepHeight : 0;
+    current.current.y = target[1] + arc;
     groupRef.current.position.copy(current.current);
-  });
 
-  return <group ref={groupRef}>{children}</group>;
+    // Facing rotation — shortest-path lerp.
+    const rotLerpT = Math.min(1, delta * rotationSpeed);
+    rotationY.current += (targetRotationY.current - rotationY.current) * rotLerpT;
+    groupRef.current.rotation.y = rotationY.current;
+  }, -1);
+
+  return (
+    <StepAnimationContext.Provider value={stepRef}>
+      <group ref={groupRef}>{children}</group>
+    </StepAnimationContext.Provider>
+  );
 }

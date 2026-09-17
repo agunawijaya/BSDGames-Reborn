@@ -47,7 +47,7 @@ see each port's `docs/diff-log.md`.
 
 | Port | Status | Style | Tech | Owner | Live URL |
 |---|:---:|---|---|:---:|---|
-| [`fancy-web`](./ports/fancy-web/) | 🟠 In Progress | Modern web with sprites, animations, sound (see [port README](./ports/fancy-web/README.md)) | React 18 + react-konva + Vite | Agun | *(pending)* |
+| [`fancy-web`](./ports/fancy-web/) | 🟢 **Released 2026-09-17** | Isometric 3D "planet in space" — animated walking human, hover-bot enemies, luminous platform, zoom-adaptive halo. See [port README](./ports/fancy-web/README.md). | React 18 + `@react-three/fiber` + Three.js + Vite | Agun | *(pending deploy)* |
 | `classic-web` | 🔴 Unclaimed | Faithful ASCII-in-browser, retro terminal palette | TypeScript + Vite + PWA (per ADR-005) | Reserved for delegation | — |
 
 Contribute a new port by picking a style not yet claimed, following
