@@ -1440,34 +1440,63 @@
     function doTick() {
       if (game.state !== 'playing') return;
 
-      // TURN ACCURACY FIX: move FIRST in the current direction, then commit
-      // the pending direction change for the NEXT tick. Rationale: the visual
-      // head interpolates forward past the current cell during a tick, so
-      // when the player presses a direction key, the head appears to be at
-      // a cell BEYOND segments[0]. Turning at segments[0] would put the turn
-      // behind the visual eye position ("neck turn"). Instead: complete the
-      // in-flight cell first, THEN turn — so the turn happens at the cell
-      // the eye visually reached, which matches player expectation.
+      // TURN ACCURACY: move FIRST in current direction, then commit pending
+      // direction at end of tick. Turn visually happens at the cell the eye
+      // reached (not at the neck).
+      //
+      // INPUT RESCUE: if moving in current direction WOULD kill (wall or self)
+      // AND the pending direction differs, commit pending NOW instead. This
+      // preserves player intent when they press turn late — e.g. right after
+      // eating an apple at the edge — instead of dying on a stale direction.
+      // Rescue only fires in the death-adjacent case, so normal turns still
+      // land at the eye position.
 
       const oldHead = worm.segments[0];
-      const newHead = {
-        x: oldHead.x + worm.direction.dx,
-        y: oldHead.y + worm.direction.dy,
-      };
 
-      // Death: wall
-      if (newHead.x < 0 || newHead.x >= GRID.cols || newHead.y < 0 || newHead.y >= GRID.rows) {
+      function isDeadly(cell) {
+        if (cell.x < 0 || cell.x >= GRID.cols ||
+            cell.y < 0 || cell.y >= GRID.rows) return true;
+        const willShrinkTail = worm.growing === 0;
+        const checkUntil = willShrinkTail
+          ? worm.segments.length - 1
+          : worm.segments.length;
+        for (let i = 0; i < checkUntil; i++) {
+          if (worm.segments[i].x === cell.x &&
+              worm.segments[i].y === cell.y) return true;
+        }
+        return false;
+      }
+
+      const currDir = worm.direction;
+      const pendDir = worm.pendingDirection;
+      const pendingDiffers =
+        (pendDir.dx !== currDir.dx) || (pendDir.dy !== currDir.dy);
+
+      let newHead = { x: oldHead.x + currDir.dx, y: oldHead.y + currDir.dy };
+
+      if (pendingDiffers && isDeadly(newHead)) {
+        // Input rescue — commit pending early to honor player intent
+        worm.direction = pendDir;
+        newHead = { x: oldHead.x + pendDir.dx, y: oldHead.y + pendDir.dy };
+      }
+
+      // Death: wall (may still fire if rescue direction is also deadly)
+      if (newHead.x < 0 || newHead.x >= GRID.cols ||
+          newHead.y < 0 || newHead.y >= GRID.rows) {
         return triggerDeath('wall');
       }
 
-      // Death: self collision.
-      // If we're not growing this tick, the tail WILL move away, so it's safe to
-      // occupy the tail's OLD cell. Check all segments except the last one.
-      const willShrinkTail = worm.growing === 0;
-      const checkUntil = willShrinkTail ? worm.segments.length - 1 : worm.segments.length;
-      for (let i = 0; i < checkUntil; i++) {
-        if (worm.segments[i].x === newHead.x && worm.segments[i].y === newHead.y) {
-          return triggerDeath('self');
+      // Death: self collision (rescue direction re-checked here too)
+      {
+        const willShrinkTail = worm.growing === 0;
+        const checkUntil = willShrinkTail
+          ? worm.segments.length - 1
+          : worm.segments.length;
+        for (let i = 0; i < checkUntil; i++) {
+          if (worm.segments[i].x === newHead.x &&
+              worm.segments[i].y === newHead.y) {
+            return triggerDeath('self');
+          }
         }
       }
 
