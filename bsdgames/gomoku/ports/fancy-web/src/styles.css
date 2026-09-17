@@ -16,9 +16,14 @@ body,
   height: 100%;
 }
 
+/* Palette: traditional Japanese gomoku/go board.
+ *   - Kaya-wood board (#e8c184) with black grid ink.
+ *   - Vermillion (#c23b22) for the last-move mark — classic
+ *     Japanese red-ink seal colour.
+ *   - Warm cream sidebar cards on a medium-wood tabletop. */
 body {
-  background: #1a1a1f;
-  color: #e8e5d6;
+  background: #d4b58e; /* warm wood tabletop */
+  color: #3a2a1a;
   font-family:
     'Inter',
     system-ui,
@@ -45,11 +50,14 @@ body {
   align-items: start;
 }
 
+/* Darker-wood "frame" around the honey board surface. */
 .board-wrapper {
-  background: #2b2b32;
-  border-radius: 12px;
-  padding: 0.75rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  background: #a06d3d;
+  border-radius: 14px;
+  padding: 0.85rem;
+  box-shadow:
+    0 12px 32px rgba(90, 55, 20, 0.28),
+    inset 0 1px 0 rgba(255, 236, 200, 0.35);
 }
 
 .board {
@@ -59,6 +67,7 @@ body {
   max-height: 88vh;
   user-select: none;
   cursor: crosshair;
+  border-radius: 6px;
 }
 
 .board.game-over {
@@ -74,14 +83,15 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Sidebar cards */
+/* Sidebar cards — cream parchment */
 /* ------------------------------------------------------------------ */
 
 .card {
-  background: #24242a;
-  border: 1px solid #34343d;
+  background: #f5efe0;
+  border: 1px solid #c9b48a;
   border-radius: 10px;
   padding: 0.9rem 1rem;
+  box-shadow: 0 2px 6px rgba(90, 55, 20, 0.08);
 }
 
 .card h2 {
@@ -89,7 +99,7 @@ body {
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #a09b8a;
+  color: #8a7757;
   font-weight: 600;
 }
 
@@ -97,6 +107,7 @@ body {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0 0 0.25rem 0;
+  color: #3a2a1a;
 }
 
 .status-title .stone-dot {
@@ -106,30 +117,35 @@ body {
   border-radius: 50%;
   margin-right: 0.4rem;
   vertical-align: -1px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(90, 55, 20, 0.2);
 }
 
 .status-title .stone-dot.black {
-  background: #14141a;
+  background: #14140f;
 }
 
 .status-title .stone-dot.white {
-  background: #f4f2e8;
+  background: #f5efe0;
+  border-color: #a09077;
 }
 
 .status-title.winner {
-  color: #ffbe0b;
+  color: #c23b22;
 }
 
 .status-title.tie {
-  color: #a09b8a;
+  color: #8a7757;
 }
 
 .status-sub {
   margin: 0;
   font-size: 0.85rem;
-  color: #a09b8a;
+  color: #8a7757;
 }
+
+/* ------------------------------------------------------------------ */
+/* Controls */
+/* ------------------------------------------------------------------ */
 
 .controls {
   display: grid;
@@ -143,16 +159,19 @@ body {
   font-weight: 600;
   padding: 0.55rem 0.7rem;
   border-radius: 6px;
-  border: 1px solid #34343d;
-  background: #2b2b32;
-  color: #e8e5d6;
+  border: 1px solid #c9b48a;
+  background: #ede4cc;
+  color: #3a2a1a;
   cursor: pointer;
-  transition: background 100ms ease, border-color 100ms ease;
+  transition:
+    background 100ms ease,
+    border-color 100ms ease,
+    box-shadow 100ms ease;
 }
 
 .controls button:hover:not(:disabled) {
-  background: #34343d;
-  border-color: #4a4a55;
+  background: #e0d4b0;
+  border-color: #a08856;
 }
 
 .controls button:disabled {
@@ -161,14 +180,14 @@ body {
 }
 
 .controls button.primary {
-  background: #e63946;
-  border-color: #e63946;
+  background: #c23b22;
+  border-color: #a12e1a;
   color: #ffffff;
 }
 
 .controls button.primary:hover:not(:disabled) {
-  background: #d02d3a;
-  border-color: #d02d3a;
+  background: #a12e1a;
+  border-color: #892716;
 }
 
 /* ------------------------------------------------------------------ */
@@ -179,11 +198,12 @@ body {
   max-height: 400px;
   overflow-y: auto;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  color: #3a2a1a;
 }
 
 .moves-empty {
-  color: #6a6659;
+  color: #a89974;
   font-style: italic;
   font-family: inherit;
   font-size: 0.85rem;
@@ -193,8 +213,8 @@ body {
   display: grid;
   grid-template-columns: 2ch 1fr 1fr;
   gap: 0.4rem;
-  padding: 0.15rem 0;
-  border-bottom: 1px dashed #2b2b32;
+  padding: 0.18rem 0;
+  border-bottom: 1px dashed #d8c9a4;
 }
 
 .moves-row:last-child {
@@ -202,16 +222,16 @@ body {
 }
 
 .moves-num {
-  color: #6a6659;
+  color: #a89974;
   text-align: right;
 }
 
 .moves-move {
-  color: #e8e5d6;
+  color: #3a2a1a;
 }
 
 .moves-move.empty {
-  color: #4a4a55;
+  color: #c9b48a;
 }
 
 /* ------------------------------------------------------------------ */
@@ -220,14 +240,15 @@ body {
 
 .footer {
   font-size: 0.72rem;
-  color: #6a6659;
+  color: #6a5738;
   text-align: center;
   padding: 0.75rem 0;
 }
 
 .footer a {
-  color: #a09b8a;
+  color: #c23b22;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .footer a:hover {
@@ -246,7 +267,7 @@ body {
 @keyframes pulse {
   0%,
   100% {
-    opacity: 0.5;
+    opacity: 0.55;
     stroke-width: 4;
   }
   50% {

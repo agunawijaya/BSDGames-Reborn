@@ -21,9 +21,13 @@ SVG was designed for.
 
 Target profile:
 
-- **Aesthetic:** Modern minimalist board — slate warm background,
-  muted sienna grid, subtly-shaded stones. Read like a modern
-  mobile Go / gomoku app.
+- **Aesthetic:** Traditional Japanese gomoku / go board — kaya-wood
+  surface, black grid ink, slate + clamshell stones, vermillion
+  last-move mark. See [`../../AGENTS.md`](../../AGENTS.md) →
+  *Palette (locked)*. (An earlier iteration used a dark slate
+  palette; superseded on 2026-09-17 per user feedback — see the
+  `2026-09-17 palette update` entry in
+  [`../diff-log.md`](../diff-log.md).)
 - **Platform:** Any modern browser. **No GPU required** (unlike
   the sibling `robots/fancy-web` R3F port, which needs WebGL).
   Should be playable on low-end phones + old laptops without a

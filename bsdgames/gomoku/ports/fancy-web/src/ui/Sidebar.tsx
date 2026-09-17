@@ -102,7 +102,7 @@ function StatusCard({
           <span
             style={{
               fontSize: '0.75rem',
-              color: '#a09b8a',
+              color: '#8a7757',
               fontWeight: 400,
               marginLeft: '0.5rem',
             }}
@@ -138,16 +138,22 @@ function ModeCard({
         <button
           type="button"
           onClick={() => onOpponentChange('ai')}
-          className={opponent === 'ai' ? 'primary' : ''}
-          style={{ background: opponent === 'ai' ? '#4a4a55' : undefined, borderColor: opponent === 'ai' ? '#4a4a55' : undefined, color: '#e8e5d6' }}
+          style={{
+            background: opponent === 'ai' ? '#3a2a1a' : undefined,
+            borderColor: opponent === 'ai' ? '#3a2a1a' : undefined,
+            color: opponent === 'ai' ? '#f5efe0' : undefined,
+          }}
         >
           Vs AI
         </button>
         <button
           type="button"
           onClick={() => onOpponentChange('hotseat')}
-          className={opponent === 'hotseat' ? 'primary' : ''}
-          style={{ background: opponent === 'hotseat' ? '#4a4a55' : undefined, borderColor: opponent === 'hotseat' ? '#4a4a55' : undefined, color: '#e8e5d6' }}
+          style={{
+            background: opponent === 'hotseat' ? '#3a2a1a' : undefined,
+            borderColor: opponent === 'hotseat' ? '#3a2a1a' : undefined,
+            color: opponent === 'hotseat' ? '#f5efe0' : undefined,
+          }}
         >
           Hot-seat
         </button>
@@ -162,14 +168,14 @@ function ModeCard({
               fontSize: '0.8rem',
               padding: '0.45rem 0.6rem',
               borderRadius: 6,
-              border: '1px solid #34343d',
+              border: '1px solid #c9b48a',
               background: 'transparent',
-              color: '#a09b8a',
+              color: '#8a7757',
               cursor: 'pointer',
               width: '100%',
             }}
           >
-            You: <b style={{ color: '#e8e5d6' }}>{humanStone === 'black' ? 'Black' : 'White'}</b>
+            You: <b style={{ color: '#3a2a1a' }}>{humanStone === 'black' ? 'Black' : 'White'}</b>
             {' · swap sides'}
           </button>
         </div>

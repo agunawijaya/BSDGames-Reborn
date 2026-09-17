@@ -18,14 +18,15 @@ const STONE_RADIUS = 13;
 const HOSHI_RADIUS = 3.5;
 const LAST_MOVE_INDICATOR_RADIUS = 5;
 
-// Reused palette (mirrored in AGENTS.md port constraints).
+// Palette: traditional Japanese gomoku board (kaya wood + black ink).
+// Mirrored in AGENTS.md port constraints.
 const COLORS = {
-  board: '#2b2b32',
-  grid: '#8a8676',
-  hoshi: '#c0b899',
-  label: '#a09b8a',
-  lastMove: '#e63946',
-  winLine: '#ffbe0b',
+  board: '#e8c184',   // kaya honey wood
+  grid: '#2a1e10',    // black ink grid
+  hoshi: '#1a1210',   // near-black hoshi dots
+  label: '#5a4530',   // warm brown label ink
+  lastMove: '#c23b22', // vermillion / cinnabar seal
+  winLine: '#c23b22', // vermillion winning line
 } as const;
 
 const toSvgX = (col: number): number => PADDING + col * SPACING;
@@ -246,15 +247,17 @@ export function Board({ state, onPlace }: Props) {
         onPointerDown={handlePointerDown}
       >
         <defs>
+          {/* Black slate (mikage) stone — matte with a soft highlight. */}
           <radialGradient id="black-stone" cx="35%" cy="30%">
-            <stop offset="0%" stopColor="#4a4a55" />
-            <stop offset="60%" stopColor="#1a1a1e" />
-            <stop offset="100%" stopColor="#0a0a10" />
+            <stop offset="0%" stopColor="#3a3a3a" />
+            <stop offset="55%" stopColor="#141410" />
+            <stop offset="100%" stopColor="#000000" />
           </radialGradient>
+          {/* White shell (hamaguri) stone — warm cream with a subtle shadow. */}
           <radialGradient id="white-stone" cx="35%" cy="30%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="70%" stopColor="#f0eed8" />
-            <stop offset="100%" stopColor="#d0ccb4" />
+            <stop offset="70%" stopColor="#f2eddb" />
+            <stop offset="100%" stopColor="#d0c6a6" />
           </radialGradient>
         </defs>
 

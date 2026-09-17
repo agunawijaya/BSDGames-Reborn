@@ -46,15 +46,25 @@ Contract, see the root
   SVG primitive. This keeps the bundle small (~ 150 KB gzipped
   target) and the app accessible on low-end mobile / no-GPU
   devices.
-- **Palette (locked):**
-  - Board: slate warm `#2b2b32`
-  - Grid lines: `#8a8676` (muted sienna)
-  - Hoshi dots: `#c0b899`
-  - Black stone: `#141418` with subtle radial highlight
-  - White stone: `#f4f2e8` with subtle radial shadow
-  - Last-move indicator: `#e63946` (accent red)
-  - Win line: `#ffbe0b` (accent yellow) with pulse animation
-  - HUD text: `#e8e5d6` / `#a09b8a`
+- **Palette (locked): traditional Japanese gomoku / go board.**
+  Modelled on a real kaya-wood board with black grid ink, black
+  slate (mikage) stones, and white clamshell (hamaguri) stones.
+  See [`docs/diff-log.md`](docs/diff-log.md) `2026-09-17 palette
+  update` entry for rationale (user rejected the earlier dark
+  theme; wanted the port to look like the physical board).
+  - Body / tabletop: `#d4b58e` (warm wood)
+  - Board frame: `#a06d3d` (darker wood rim)
+  - Board surface: `#e8c184` (kaya honey)
+  - Grid lines: `#2a1e10` (black ink)
+  - Hoshi dots: `#1a1210` (near-black)
+  - Labels: `#5a4530` (warm brown ink)
+  - Black stone: radial gradient `#3a3a3a → #141410 → #000000`
+  - White stone: radial gradient `#ffffff → #f2eddb → #d0c6a6`
+  - Last-move indicator: `#c23b22` (vermillion — cinnabar seal)
+  - Win line: `#c23b22` (vermillion) with pulse animation
+  - Sidebar cards: `#f5efe0` cream on `#c9b48a` border
+  - Primary text: `#3a2a1a`; muted text: `#8a7757`
+  - Primary button: `#c23b22` (vermillion) with white text
 - **Game state lives in React state** — `useState<GameState>`.
   Small enough (a 19×19 array + move history) that immutable
   updates and re-renders are cheap. No `useRef`-based imperative

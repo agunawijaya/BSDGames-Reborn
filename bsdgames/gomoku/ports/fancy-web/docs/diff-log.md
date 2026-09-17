@@ -26,10 +26,11 @@ diverges from it.
 - 🟢 **Coordinate system A–T (skipping I), rows 1–19.**
   Center = K10 — the AI's forced first move.
 - 🟠 **Rendering.** Original renders `curses` characters on an
-  ANSI-drawn grid. This port renders an SVG board: a
-  slate-warm background, muted-sienna grid lines, dot marks
-  (hoshi) at 4-4, 4-10, 4-16, 10-4, 10-10, 10-16, 16-4, 16-10,
-  16-16.
+  ANSI-drawn grid. This port renders an SVG board modelled on a
+  traditional Japanese gomoku board — a kaya-wood honey surface,
+  black ink grid, dot marks (hoshi) at 4-4, 4-10, 4-16, 10-4,
+  10-10, 10-16, 16-4, 16-10, 16-16. See *Palette (locked)* in
+  [`../AGENTS.md`](../AGENTS.md) for exact colours.
 
 ## Rules
 
@@ -146,6 +147,41 @@ bsdgames/gomoku/ports/fancy-web/
         ├── README.md
         └── 001-tech-stack.md
 ```
+
+## 2026-09-17 palette update
+
+**Change.** Switched the board and HUD from a modern dark-slate
+palette to a traditional Japanese kaya-wood palette. User rejected
+the dark theme and asked "how does the original real board (not a
+computer game) look?" — this is the answer, expressed in code.
+
+**What moved:**
+
+- Board surface: `#2b2b32` (slate) → `#e8c184` (kaya honey wood).
+- Grid: `#8a8676` (muted sienna) → `#2a1e10` (black ink).
+- Hoshi: `#c0b899` → `#1a1210`.
+- Labels: `#a09b8a` → `#5a4530` (warm brown).
+- Black stone: `#4a4a55 → #1a1a1e → #0a0a10` → `#3a3a3a → #141410 → #000000` (matte slate).
+- White stone: `#ffffff → #f0eed8 → #d0ccb4` → `#ffffff → #f2eddb → #d0c6a6` (clamshell warm cream).
+- Last-move mark: `#e63946` (red) → `#c23b22` (vermillion / cinnabar seal — the classic Japanese red-ink colour).
+- Win line: `#ffbe0b` (gold) → `#c23b22` (vermillion).
+- Body: `#1a1a1f` → `#d4b58e` (warm wood tabletop).
+- Board frame: `#2b2b32` → `#a06d3d` (darker-wood rim).
+- Sidebar cards: `#24242a` on `#34343d` → `#f5efe0` on `#c9b48a` (cream parchment).
+- Primary button: `#e63946` bg / white text (kept the red accent but
+  shifted the hue to match the vermillion elsewhere).
+
+**Files changed:** `src/styles.css`, `src/Board.tsx`
+(`COLORS` constant + stone gradients), `index.html`
+(`<meta name="theme-color">`), `AGENTS.md` (locked palette),
+`docs/decisions/001-tech-stack.md` (aesthetic target).
+
+**No engine / test / build changes.** All 47 tests still pass;
+bundle size effectively unchanged.
+
+**Screenshots regenerated** via
+`node scripts/capture-screenshots.mjs` against the running dev
+server; the four PNGs under `media/` now show the wood palette.
 
 ## Removed / Deferred
 
