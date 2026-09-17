@@ -46,7 +46,7 @@ see each port's `docs/diff-log.md`.
 
 | Port | Status | Style | Tech | Owner | Live URL |
 |---|:---:|---|---|:---:|---|
-| [`fancy-web`](./ports/fancy-web/) | 🟢 **Released 2026-09-17** | Modern minimalist board — slate-warm SVG board, gradient stones, hoshi dots, animated win-line. Heuristic AI + hot-seat. See [port README](./ports/fancy-web/README.md). | React 18 + TypeScript + native SVG + Vite | Agun | *(pending deploy)* |
+| [`fancy-web`](./ports/fancy-web/) | 🟢 **Released 2026-09-17** | Traditional Japanese board — kaya-wood SVG surface, black grid ink, matte-slate + clamshell stones, vermillion cinnabar last-move mark, animated pulsing win-line. Heuristic AI + hot-seat. Palette locked 2026-09-17 (see [port diff-log](./ports/fancy-web/docs/diff-log.md)). Full [port README](./ports/fancy-web/README.md). | React 18 + TypeScript + native SVG + Vite | Agun | *(pending deploy)* |
 | `classic-web` | 🔴 Unclaimed | Faithful curses-board reproduction with ASCII stones | TypeScript + Vite + PWA (per ADR-005) | — | — |
 
 ## Media

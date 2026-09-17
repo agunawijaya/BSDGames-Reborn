@@ -1,21 +1,23 @@
 # `gomoku` — `fancy-web` port
 
-> A modern browser reimplementation of BSDGames `gomoku`
-> (five-in-a-row). Faithful mechanics, minimalist board game UI —
-> crisp SVG board, animated stone placement, heuristic AI, hot-seat
-> 2-player. No WebGL required.
+> A browser reimplementation of BSDGames `gomoku` (five-in-a-row)
+> styled after a **traditional Japanese gomoku board** — kaya-wood
+> honey surface, black grid ink, slate + clamshell stones,
+> vermillion (cinnabar seal) last-move mark. Faithful mechanics,
+> crisp SVG rendering, heuristic AI, hot-seat 2-player. No WebGL
+> required.
 
 ![Empty board — start of a Vs-AI game, Black to move](./media/01-empty-board.png)
-*Empty board at spawn. Vs-AI mode is the default; the human plays Black and moves first. Hoshi dots at 4-4, 10-10, 16-16, etc. mark the standard star points.*
+*Empty board at spawn. Vs-AI mode is the default; the human plays Black and moves first. Hoshi dots at 4-4, 10-10, 16-16, etc. mark the standard star points. The whole board is drawn in native SVG, framed by a darker-wood rim.*
 
-![Midgame vs AI — 11 moves in, both colours attacking around K10](./media/02-midgame-vs-ai.png)
-*Midgame against the AI — 5 rounds in, the position has already tangled around the K10 opening. The red ring highlights the most recent move.*
+![Midgame vs AI — several moves in, both colours attacking around K10](./media/02-midgame-vs-ai.png)
+*Midgame against the AI. The position has already tangled around the K10 opening. The vermillion ring highlights the most recent move — the classic cinnabar-seal accent from Japanese board tradition.*
 
 ![Hot-seat mode — Black threatens four in a row on row 10](./media/03-hotseat-threats.png)
-*Hot-seat 2-player mode. Black has quietly built a four-in-a-row threat on row 10 while White defends on row 11.*
+*Hot-seat 2-player mode. Black has quietly built a four-in-a-row threat on row 10 while White defends on row 11. The Mode toggle in the sidebar switches between Vs-AI and Hot-seat mid-game.*
 
-![Black wins — winning line highlighted in gold](./media/04-win.png)
-*Black completes five-in-a-row. The winning line pulses in gold; the result card announces the winner and the move count.*
+![Black wins — winning line highlighted in vermillion](./media/04-win.png)
+*Black completes five-in-a-row. The winning line pulses in vermillion; the result card announces the winner and the move count. Notice how the white clamshell stones sit softly on the kaya wood — a low-contrast pairing that mimics the real physical board.*
 
 ## Status
 
@@ -25,11 +27,14 @@
 - **License:** MIT (root default)
 - **Live URL:** *(pending deploy — `dist/` builds cleanly)*
 
-**Verified**
+**Verified (last update 2026-09-18)**
 - ✅ 47/47 Vitest tests pass (11 coords + 22 engine + 14 AI).
 - ✅ TypeScript strict clean.
-- ✅ Production bundle **49.67 KB gzipped** (target: 150 KB).
+- ✅ Production bundle **49.66 KB gzipped** (target: 150 KB).
 - ✅ 4 port-specific screenshots via Playwright.
+- ✅ Traditional wooden-board palette in place (see
+  [`docs/diff-log.md`](docs/diff-log.md) → *2026-09-17 palette
+  update*).
 
 ## Pitch
 
@@ -98,10 +103,18 @@ help panel has the full reference.
 
 ## What makes this port different
 
-- vs `../classic-web/` *(pending)*: this port uses a modern
-  minimalist wooden-slate board with SVG rendering, animated
-  stone placement, sidebar move history. `classic-web` will be
-  the faithful curses-board reproduction with ASCII stones.
+- vs `../classic-web/` *(pending)*: this port renders a
+  **traditional Japanese gomoku board** — kaya-wood surface,
+  black grid ink, matte-slate + clamshell stones, vermillion
+  last-move mark. Native SVG, animated stone drop + pulsing
+  win-line, cream-parchment sidebar. `classic-web` will be the
+  faithful curses-board reproduction with ASCII stones on a
+  terminal grid.
+- vs a "modern minimalist" board: an earlier iteration used a
+  dark-slate palette; superseded on 2026-09-17 per user
+  feedback. See
+  [`docs/diff-log.md`](docs/diff-log.md) →
+  *2026-09-17 palette update*.
 
 ## Spec compliance
 
@@ -123,10 +136,23 @@ port-level ADRs under
 
 ## Documentation
 
-- Canonical (game-level):
-  [`../../docs/`](../../docs/) — spec, architecture, about,
-  how-to-play, lessons, references.
-- This port's diff log:
-  [`docs/diff-log.md`](docs/diff-log.md).
-- This port's decisions:
-  [`docs/decisions/`](docs/decisions/).
+- **Canonical (game-level)** — [`../../docs/`](../../docs/):
+  `spec.md`, `architecture.md`, `about.md`, `how-to-play.md`,
+  `lessons.md`, `references.md`, `port-ideas.md`, `manpage.md`,
+  `lineage.md`, `test-scenarios.md`, `notes.md`.
+- **This port's diff log** — [`docs/diff-log.md`](docs/diff-log.md):
+  the running narrative of what was kept / added / changed /
+  removed vs canonical `spec.md`, with the palette-shift entry
+  at the bottom.
+- **This port's port ADRs** —
+  [`docs/decisions/`](docs/decisions/):
+  - [`001-tech-stack.md`](docs/decisions/001-tech-stack.md)
+    — React + SVG + Vite rationale.
+- **Port-level test scenarios** —
+  [`docs/test-scenarios.md`](docs/test-scenarios.md): 20
+  scenarios covering the additive features (undo, hot-seat
+  switch, side swap, click / keyboard input, palette lock,
+  responsive layout, zero-error smoke).
+- **Port working notes** —
+  [`docs/notes.md`](docs/notes.md): follow-ups, gotchas,
+  bundle-size log.
