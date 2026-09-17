@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>snake · fancy-web · animation mockup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --page-bg: #f7f4ee;
+      --page-bg-2: #efeae0;
+      --ink: #2a2a2e;
+      --ink-soft: #6a6a72;
+      --ink-faint: #a8a7ac;
+      --card: #ffffff;
+      --card-border: #e0dcd2;
+      --accent: #2a2a2e;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background:
+        radial-gradient(ellipse at 50% 0%, var(--page-bg) 0%, var(--page-bg-2) 100%);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 24px;
+      gap: 18px;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .title {
+      font-family: 'JetBrains Mono', 'Fira Code', SF Mono, Monaco, Consolas, monospace;
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+    }
+    .subtitle {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    .theme-picker {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 900px;
+    }
+    .theme-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px 8px 8px;
+      background: var(--card);
+      border: 1.5px solid var(--card-border);
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--ink-soft);
+      transition: all 0.18s cubic-bezier(0.2, 0.6, 0.3, 1);
+      user-select: none;
+    }
+    .theme-btn:hover {
+      border-color: var(--ink-soft);
+      color: var(--ink);
+      transform: translateY(-1px);
+    }
+    .theme-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .theme-btn .swatch {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.4);
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .canvas-wrap {
+      position: relative;
+      display: block;
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 72vh;
+      box-shadow:
+        0 30px 60px -20px rgba(0,0,0,0.20),
+        0 12px 24px -8px rgba(0,0,0,0.10),
+        0 0 0 1px rgba(0,0,0,0.06);
+      border-radius: 10px;
+      background: #050a1a;
+    }
+    .game-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s cubic-bezier(0.2, 0.7, 0.3, 1);
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%);
+      border-radius: 10px;
+      color: white;
+      font-family: 'JetBrains Mono', 'Fira Code', SF Mono, monospace;
+    }
+    .game-overlay.visible {
+      opacity: 1;
+    }
+    .game-overlay .go-title {
+      font-size: 48px;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      text-shadow: 0 0 30px rgba(255,255,255,0.4), 0 4px 20px rgba(0,0,0,0.6);
+    }
+    .game-overlay .go-title.win  { color: #a0f0d0; }
+    .game-overlay .go-title.dead { color: #ffa0a0; }
+    .game-overlay .go-sub {
+      font-size: 15px;
+      letter-spacing: 0.2em;
+      opacity: 0.85;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .game-overlay .go-instr {
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      opacity: 0.65;
+      margin-top: 26px;
+      text-transform: uppercase;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.35; } }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+      padding: 0 4px;
+      font-family: 'JetBrains Mono', 'Fira Code', SF Mono, monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--ink-soft);
+      gap: 12px;
+    }
+    .meta-row .keys kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 10px;
+      color: var(--ink);
+      margin: 0 1px;
+    }
+    .meta-row .score {
+      display: flex; gap: 6px; align-items: baseline;
+    }
+    .meta-row .score .label { color: var(--ink-faint); }
+    .meta-row .score .value {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      min-width: 22px;
+      display: inline-block;
+    }
+    .meta-row .score .sep { color: var(--ink-faint); margin: 0 4px; }
+    .meta-row .state {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .meta-row .state .label { color: var(--ink-faint); }
+    .meta-row .state .value {
+      color: var(--ink);
+      font-weight: 700;
+      min-width: 68px; text-align: left;
+    }
+    .footer {
+      font-size: 10.5px;
+      color: var(--ink-faint);
+      letter-spacing: 0.05em;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">snake · fancy-web · mockup</div>
+    <div class="subtitle">Animation showcase</div>
+  </div>
+
+  <div class="theme-picker" id="themePicker"></div>
+
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="c" width="900" height="600"></canvas>
+      <div class="game-overlay" id="gameOverlay"></div>
+    </div>
+    <div class="meta-row">
+      <div class="keys">steer &nbsp; <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> &nbsp; · &nbsp; <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+      <div class="score">
+        <span class="label">apples</span><span class="value" id="scoreLabel">0</span>
+        <span class="sep">·</span>
+        <span class="label">best</span><span class="value" id="bestLabel">0</span>
+      </div>
+      <div class="state"><span class="label">eagle</span><span class="value" id="stateLabel">GLIDE</span></div>
+    </div>
+  </div>
+
+  <div class="footer">collect apples · reach any edge to escape · avoid the eagle</div>
+
+  <script>
+  (() => {
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const stateLabel = document.getElementById('stateLabel');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const bestLabel = document.getElementById('bestLabel');
+    const gameOverlay = document.getElementById('gameOverlay');
+    const themePicker = document.getElementById('themePicker');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // ================= GAME STATE =================
+    const BEST_KEY = 'snake-fancy-best';
+    const game = {
+      state: 'playing',      // 'playing' | 'dead' | 'won'
+      score: 0,
+      bestScore: parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0,
+      overOffTime: 0,        // ms since game ended
+      canRestart: false,
+    };
+
+    // ================= THEMES =================
+    const THEMES = {
+      'neon-grid': {
+        name: 'Neon Grid',
+        swatch: 'linear-gradient(135deg,#00ffff 0%,#ff00ff 100%)',
+        bg: '#050a1a',
+        bgGradient: null,
+        vignette: 'rgba(20,30,80,0.4)',
+        gridLine: 'rgba(30,80,180,0.35)',
+        gridDot: 'rgba(255,0,255,0.55)',
+        gridDotGlow: 4,
+        snakeHead: '#00ffff',
+        snakeTail: '#ff00ff',
+        snakeGlow: '#00ffff',
+        snakeGlowRadius: 22,
+        snakePulseColor: 'rgba(255,255,255,0.14)',
+        snakeEyeWhite: '#ffffff',
+        snakeEyeColor: '#08f018',
+        snakeTongue: '#ff2266',
+        apple: '#ff2266',
+        appleGlow: '#ff4488',
+        appleLeaf: '#22ff88',
+        appleLeafGlow: '#22ff88',
+        appleStem: '#664422',
+        appleHighlight: 'rgba(255,255,255,0.55)',
+        enemy: '#ff00ff',
+        enemyTip: '#00ffff',
+        enemyGlow: '#ff00ff',
+        beak: '#ffcc00',
+        driftColors: ['rgba(0,255,255,ALPHA)', 'rgba(255,0,255,ALPHA)'],
+        composite: 'lighter',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+      },
+      'savanna': {
+        name: 'Savanna',
+        swatch: 'linear-gradient(135deg,#a8d8f0 0%,#d0b448 50%,#5a7828 100%)',
+        bg: '#c8b048',
+        bgGradient: [
+          { pos: 0,    color: '#a8d8f0' },   // sky
+          { pos: 0.35, color: '#e5d478' },   // dry grass yellow
+          { pos: 0.65, color: '#a8ac48' },   // yellow-green grass
+          { pos: 1,    color: '#5a6828' },   // shaded ground
+        ],
+        vignette: 'rgba(90,60,20,0.20)',
+        gridLine: 'rgba(80,90,30,0.25)',
+        gridDot: 'rgba(80,60,20,0.4)',
+        gridDotGlow: 0,
+        snakeHead: '#7bb038',           // grass snake bright green
+        snakeTail: '#3a6a1a',
+        snakeGlow: 'rgba(60,120,30,0.45)',
+        snakeGlowRadius: 8,
+        snakePulseColor: 'rgba(220,255,180,0.20)',
+        snakeEyeWhite: '#fff8dc',
+        snakeEyeColor: '#000000',
+        snakeTongue: '#c92a3a',
+        apple: '#ff8a1a',               // mango
+        appleGlow: 'rgba(255,140,40,0.55)',
+        appleLeaf: '#4aab5a',
+        appleLeafGlow: '#4aab5a',
+        appleStem: '#5a3a20',
+        appleHighlight: 'rgba(255,240,180,0.7)',
+        enemy: '#4a3020',               // African fish eagle brown
+        enemyTip: '#f5f0e0',            // white head/tail
+        enemyGlow: 'rgba(60,40,20,0.4)',
+        beak: '#ffcc22',
+        driftColors: ['rgba(240,220,140,ALPHA)', 'rgba(180,200,80,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+      },
+      'jungle': {
+        name: 'Jungle',
+        swatch: 'linear-gradient(135deg,#2a5028 0%,#68b048 100%)',
+        bg: '#1e3d1a',
+        bgGradient: [
+          { pos: 0,   color: '#0f2a0e' },   // deep canopy shadow
+          { pos: 0.5, color: '#2a5028' },   // mid canopy
+          { pos: 1,   color: '#5a8a3a' },   // forest floor
+        ],
+        vignette: 'rgba(10,30,10,0.5)',
+        gridLine: 'rgba(150,220,120,0.10)',
+        gridDot: 'rgba(180,240,140,0.45)',
+        gridDotGlow: 2,
+        snakeHead: '#48c268',           // emerald bright
+        snakeTail: '#0a3010',           // dark forest
+        snakeGlow: 'rgba(80,220,80,0.5)',
+        snakeGlowRadius: 12,
+        snakePulseColor: 'rgba(220,255,200,0.20)',
+        snakeEyeWhite: '#fffee8',
+        snakeEyeColor: '#c8a020',       // amber snake iris
+        snakeTongue: '#e8409a',
+        apple: '#f8b028',               // tropical mango yellow-orange
+        appleGlow: 'rgba(255,180,40,0.6)',
+        appleLeaf: '#68d868',
+        appleLeafGlow: '#68d868',
+        appleStem: '#5a2a10',
+        appleHighlight: 'rgba(255,240,180,0.6)',
+        enemy: '#4a4a45',               // harpy eagle dark upper
+        enemyTip: '#f0ead0',            // pale belly / wingtip
+        enemyGlow: 'rgba(60,60,55,0.5)',
+        beak: '#f8d8a0',
+        driftColors: ['rgba(140,220,80,ALPHA)', 'rgba(80,180,120,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+      },
+      'desert': {
+        name: 'Desert',
+        swatch: 'linear-gradient(135deg,#f5d798 0%,#e8a848 60%,#8a5020 100%)',
+        bg: '#d59845',
+        bgGradient: [
+          { pos: 0,    color: '#f5d798' },   // pale sky
+          { pos: 0.5,  color: '#e8a848' },   // warm sand
+          { pos: 1,    color: '#8a5020' },   // dune shadow
+        ],
+        vignette: 'rgba(100,50,10,0.30)',
+        gridLine: 'rgba(120,70,20,0.20)',
+        gridDot: 'rgba(100,50,10,0.4)',
+        gridDotGlow: 0,
+        snakeHead: '#e5b268',           // sidewinder tan
+        snakeTail: '#8a5820',
+        snakeGlow: 'rgba(160,100,30,0.4)',
+        snakeGlowRadius: 6,
+        snakePulseColor: 'rgba(255,230,180,0.20)',
+        snakeEyeWhite: '#fff8dc',
+        snakeEyeColor: '#000000',
+        snakeTongue: '#c92a3a',
+        apple: '#e64570',               // prickly pear fruit
+        appleGlow: 'rgba(230,70,110,0.55)',
+        appleLeaf: '#6a9a3a',           // sage green
+        appleLeafGlow: '#6a9a3a',
+        appleStem: '#4a2a10',
+        appleHighlight: 'rgba(255,240,220,0.7)',
+        enemy: '#5a3820',               // dark hawk brown
+        enemyTip: '#f0d090',            // pale gold wingtip
+        enemyGlow: 'rgba(140,90,40,0.4)',
+        beak: '#ffcc22',
+        driftColors: ['rgba(255,220,140,ALPHA)', 'rgba(230,180,100,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+        sandBlow: true,
+      },
+      'river': {
+        name: 'River',
+        swatch: 'linear-gradient(135deg,#c0e0e8 0%,#3a8ab8 50%,#164560 100%)',
+        bg: '#3a8ab8',
+        bgGradient: [
+          { pos: 0,   color: '#c0e0e8' },   // sky reflection
+          { pos: 0.3, color: '#7ac0d8' },   // shallow water
+          { pos: 0.7, color: '#2a7098' },   // mid water
+          { pos: 1,   color: '#0f3a58' },   // deep water
+        ],
+        vignette: 'rgba(30,80,120,0.35)',
+        gridLine: 'rgba(255,255,255,0.10)',
+        gridDot: 'rgba(200,240,255,0.55)',
+        gridDotGlow: 3,
+        snakeHead: '#8ec8a8',           // water snake pale green-blue
+        snakeTail: '#2a5850',
+        snakeGlow: 'rgba(120,200,180,0.5)',
+        snakeGlowRadius: 10,
+        snakePulseColor: 'rgba(220,255,240,0.20)',
+        snakeEyeWhite: '#f0f8ff',
+        snakeEyeColor: '#c8a020',
+        snakeTongue: '#e8408a',
+        apple: '#ff7050',               // fallen fruit — coral orange
+        appleGlow: 'rgba(255,120,80,0.55)',
+        appleLeaf: '#5aa88a',
+        appleLeafGlow: '#5aa88a',
+        appleStem: '#5a3a20',
+        appleHighlight: 'rgba(255,240,220,0.7)',
+        enemy: '#3a2818',               // osprey brown wings
+        enemyTip: '#f5f0e8',            // osprey white body
+        enemyGlow: 'rgba(50,30,15,0.4)',
+        beak: '#f5c848',
+        driftColors: ['rgba(200,240,255,ALPHA)', 'rgba(150,220,240,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+        risingParticles: true,          // bubbles rise
+      },
+      'aztec': {
+        name: 'Aztec',
+        swatch: 'linear-gradient(135deg,#c8724a 0%,#e8b028 50%,#3cc0c8 100%)',
+        bg: '#3a2010',
+        bgGradient: [
+          { pos: 0,    color: '#5a2a10' },   // dark umber top
+          { pos: 0.55, color: '#c8724a' },   // terracotta mid
+          { pos: 1,    color: '#4a1e08' },   // dark umber bottom
+        ],
+        vignette: 'rgba(50,20,5,0.4)',
+        gridLine: 'rgba(232,176,40,0.28)',
+        gridDot: 'rgba(232,176,40,0.75)',
+        gridDotGlow: 4,
+        snakeHead: '#3cc0c8',           // Quetzalcoatl turquoise
+        snakeTail: '#e8b028',           // golden feathers
+        snakeGlow: 'rgba(60,192,200,0.55)',
+        snakeGlowRadius: 12,
+        snakePulseColor: 'rgba(255,255,200,0.25)',
+        snakeEyeWhite: '#fff0c0',
+        snakeEyeColor: '#c02020',       // ruby red
+        snakeTongue: '#ff6060',
+        apple: '#c02036',               // pomegranate
+        appleGlow: 'rgba(255,60,90,0.55)',
+        appleLeaf: '#4a7028',
+        appleLeafGlow: '#4a7028',
+        appleStem: '#3a1a08',
+        appleHighlight: 'rgba(255,220,180,0.7)',
+        enemy: '#e8b028',               // Mexican-flag golden eagle
+        enemyTip: '#3cc0c8',            // turquoise wing/tail accents
+        enemyGlow: 'rgba(232,176,40,0.55)',
+        beak: '#f8e880',
+        driftColors: ['rgba(232,176,40,ALPHA)', 'rgba(60,192,200,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: false,
+      },
+      'origami': {
+        name: 'Origami',
+        swatch: 'linear-gradient(135deg,#ff8a95 0%,#74a8d1 100%)',
+        bg: '#faf7f2',
+        bgGradient: [
+          { pos: 0,   color: '#ffffff' },
+          { pos: 1,   color: '#f2ece0' },
+        ],
+        vignette: 'rgba(180,170,160,0.18)',
+        gridLine: 'rgba(180,170,160,0.45)',
+        gridDot: 'rgba(150,140,130,0.55)',
+        gridDotGlow: 0,
+        snakeHead: '#ff8a95',
+        snakeTail: '#b74250',
+        snakeGlow: 'rgba(255,138,149,0.15)',
+        snakeGlowRadius: 6,
+        snakePulseColor: 'rgba(255,255,255,0.30)',
+        snakeEyeWhite: '#ffffff',
+        snakeEyeColor: '#000000',
+        snakeTongue: '#c02030',
+        apple: '#e8515e',
+        appleGlow: 'rgba(232,81,94,0.2)',
+        appleLeaf: '#7ec585',
+        appleLeafGlow: '#7ec585',
+        appleStem: '#8b5a2b',
+        appleHighlight: 'rgba(255,255,255,0.75)',
+        enemy: '#e0dcd0',           // cream paper
+        enemyTip: '#a08c78',
+        enemyGlow: 'rgba(160,140,120,0.15)',
+        beak: '#e8a230',
+        driftColors: ['rgba(255,180,190,ALPHA)', 'rgba(180,210,230,ALPHA)'],
+        composite: 'source-over',
+        enemyShape: 'eagle',
+        stars: false,
+        paperFold: true,
+      },
+      'midnight': {
+        name: 'Midnight',
+        swatch: 'linear-gradient(135deg,#2a1a4a 0%,#d4d4f0 100%)',
+        bg: '#1a0d33',
+        bgGradient: [
+          { pos: 0,   color: '#2a1a4a' },
+          { pos: 0.6, color: '#160830' },
+          { pos: 1,   color: '#0a0418' },
+        ],
+        vignette: 'rgba(80,50,120,0.35)',
+        gridLine: 'rgba(140,100,200,0.14)',
+        gridDot: 'rgba(200,180,255,0.5)',
+        gridDotGlow: 3,
+        snakeHead: '#e0d8ff',
+        snakeTail: '#5b2c8a',
+        snakeGlow: 'rgba(180,150,240,0.55)',
+        snakeGlowRadius: 18,
+        snakePulseColor: 'rgba(255,255,255,0.18)',
+        snakeEyeWhite: '#ffdd44',
+        snakeEyeColor: '#1a0a2a',
+        snakeTongue: '#a02060',
+        apple: '#c02040',
+        appleGlow: 'rgba(255,60,100,0.7)',
+        appleLeaf: '#5a3a5a',
+        appleLeafGlow: '#a080c0',
+        appleStem: '#3a2a1a',
+        appleHighlight: 'rgba(255,200,220,0.6)',
+        enemy: '#d0c8e8',           // owl body pale
+        enemyTip: '#ffdd44',        // owl eyes yellow
+        enemyGlow: 'rgba(255,220,80,0.45)',
+        beak: '#ff8800',
+        driftColors: ['rgba(200,180,255,ALPHA)', 'rgba(255,220,120,ALPHA)'],
+        composite: 'lighter',
+        enemyShape: 'owl',
+        stars: true,
+        paperFold: false,
+      },
+    };
+
+    let currentTheme = 'neon-grid';
+    let T = THEMES[currentTheme];
+
+    // ---- Build theme picker ----
+    Object.entries(THEMES).forEach(([key, theme]) => {
+      const btn = document.createElement('button');
+      btn.className = 'theme-btn' + (key === currentTheme ? ' active' : '');
+      btn.dataset.theme = key;
+      btn.innerHTML = `<span class="swatch" style="background:${theme.swatch}"></span><span>${theme.name}</span>`;
+      btn.onclick = () => setTheme(key);
+      themePicker.appendChild(btn);
+    });
+
+    function setTheme(name) {
+      currentTheme = name;
+      T = THEMES[name];
+      themePicker.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.theme === name);
+      });
+      invalidateStaticLayer();
+    }
+
+    // ---- OFFSCREEN STATIC LAYER (bg + grid + moon) ----
+    // The static parts of the scene don't change per frame — only per theme.
+    // Rendering them into an offscreen canvas ONCE per theme and blitting each
+    // frame eliminates ~370 shadow-blur operations per frame on high-glow themes.
+    let staticLayer = null;
+    let staticLayerTheme = null;
+
+    function invalidateStaticLayer() {
+      staticLayer = null;
+      staticLayerTheme = null;
+    }
+
+    function ensureStaticLayer() {
+      if (staticLayer && staticLayerTheme === currentTheme) return;
+      staticLayer = document.createElement('canvas');
+      staticLayer.width = W;
+      staticLayer.height = H;
+      const sctx = staticLayer.getContext('2d');
+      renderStaticLayer(sctx);
+      staticLayerTheme = currentTheme;
+    }
+
+    function renderStaticLayer(sctx) {
+      // Base bg fill
+      if (T.bgGradient) {
+        const g = sctx.createLinearGradient(0, 0, 0, H);
+        for (const stop of T.bgGradient) g.addColorStop(stop.pos, stop.color);
+        sctx.fillStyle = g;
+      } else {
+        sctx.fillStyle = T.bg;
+      }
+      sctx.fillRect(0, 0, W, H);
+
+      // Vignette
+      const vg = sctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, W*0.7);
+      vg.addColorStop(0, T.vignette);
+      vg.addColorStop(1, 'rgba(0,0,0,0)');
+      sctx.fillStyle = vg;
+      sctx.fillRect(0, 0, W, H);
+
+      // Grid lines
+      sctx.strokeStyle = T.gridLine;
+      sctx.lineWidth = 1;
+      sctx.beginPath();
+      for (let x = 40; x < W; x += 40) {
+        sctx.moveTo(x + 0.5, 0);
+        sctx.lineTo(x + 0.5, H);
+      }
+      for (let y = 40; y < H; y += 40) {
+        sctx.moveTo(0, y + 0.5);
+        sctx.lineTo(W, y + 0.5);
+      }
+      sctx.stroke();
+
+      // Grid intersection dots (with per-theme glow — cached, not per frame!)
+      sctx.save();
+      if (T.composite === 'lighter') sctx.globalCompositeOperation = 'lighter';
+      sctx.fillStyle = T.gridDot;
+      if (T.gridDotGlow > 0) {
+        sctx.shadowBlur = T.gridDotGlow;
+        sctx.shadowColor = T.gridDot;
+      }
+      for (let x = 40; x < W; x += 40) {
+        for (let y = 40; y < H; y += 40) {
+          sctx.beginPath();
+          sctx.arc(x, y, 1.2, 0, Math.PI * 2);
+          sctx.fill();
+        }
+      }
+      sctx.restore();
+
+      // Moon crescent (Midnight theme only — static geometry, cached)
+      if (T.stars) {
+        const moonX = W - 80, moonY = 80;
+        const moonR = 24;
+        const coverX = moonX + 10, coverY = moonY - 4;
+        const coverR = 22;
+        sctx.save();
+        sctx.beginPath();
+        sctx.rect(0, 0, W, H);
+        sctx.arc(coverX, coverY, coverR, 0, Math.PI * 2, true);
+        sctx.clip('evenodd');
+        sctx.shadowBlur = 30;
+        sctx.shadowColor = 'rgba(240,235,220,0.7)';
+        sctx.fillStyle = 'rgba(240,235,220,0.95)';
+        sctx.beginPath();
+        sctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+        sctx.fill();
+        sctx.restore();
+      }
+    }
+
+    // ================= INPUT =================
+    const input = { dx: 1, dy: 0 };
+    document.addEventListener('keydown', (e) => {
+      // Restart on any key when game is over (after brief lockout)
+      if (game.state !== 'playing') {
+        if (game.canRestart) {
+          restartGame();
+          e.preventDefault();
+        }
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'arrowright' || k === 'd') { input.dx = 1;  input.dy = 0;  e.preventDefault(); }
+      else if (k === 'arrowleft'  || k === 'a') { input.dx = -1; input.dy = 0;  e.preventDefault(); }
+      else if (k === 'arrowup'    || k === 'w') { input.dx = 0;  input.dy = -1; e.preventDefault(); }
+      else if (k === 'arrowdown'  || k === 's') { input.dx = 0;  input.dy = 1;  e.preventDefault(); }
+    });
+
+    // ================= SNAKE =================
+    const snake = {
+      segments: [],
+      dx: 1, dy: 0,
+      speed: 0.14,
+      segLen: 8,
+      count: 45,
+    };
+    for (let i = 0; i < snake.count; i++) {
+      snake.segments.push({ x: W/2 - i * snake.segLen, y: H/2 });
+    }
+
+    function updateSnake(dt) {
+      if (game.state !== 'playing') return;
+
+      const s = Math.min(1, 0.010 * dt);
+      snake.dx += (input.dx - snake.dx) * s;
+      snake.dy += (input.dy - snake.dy) * s;
+      const len = Math.hypot(snake.dx, snake.dy) || 1;
+      snake.dx /= len; snake.dy /= len;
+
+      const head = snake.segments[0];
+      head.x += snake.dx * snake.speed * dt;
+      head.y += snake.dy * snake.speed * dt;
+
+      // Edge = escape (win with current score). Even 0 apples counts as an escape
+      // — but the win screen will note if empty-handed.
+      const escapeM = 4;
+      if (head.x < escapeM || head.x > W - escapeM || head.y < escapeM || head.y > H - escapeM) {
+        // Clamp head to edge for visual only
+        head.x = Math.max(escapeM, Math.min(W - escapeM, head.x));
+        head.y = Math.max(escapeM, Math.min(H - escapeM, head.y));
+        triggerWin();
+        return;
+      }
+
+      // Body chain constraint
+      for (let i = 1; i < snake.segments.length; i++) {
+        const prev = snake.segments[i-1];
+        const curr = snake.segments[i];
+        const dx = curr.x - prev.x;
+        const dy = curr.y - prev.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d > snake.segLen) {
+          const t = snake.segLen / d;
+          curr.x = prev.x + dx * t;
+          curr.y = prev.y + dy * t;
+        }
+      }
+
+      // Collision checks
+      checkAppleCollection();
+      checkEagleStrikeHit();
+    }
+
+    // ================= COLLISION / GAME EVENTS =================
+    function checkAppleCollection() {
+      const head = snake.segments[0];
+      for (let i = 0; i < apples.length; i++) {
+        const a = apples[i];
+        const d = Math.hypot(head.x - a.x, head.y - a.y);
+        if (d < APPLE_PICKUP_RADIUS) {
+          spawnPickupBurst(a.x, a.y);
+          game.score++;
+          updateScoreDisplay();
+          apples[i] = spawnApple();
+          break;   // one pickup per frame is fine
+        }
+      }
+    }
+
+    function checkEagleStrikeHit() {
+      // Death window: while eagle is in 'strike' state, first ~120ms.
+      // The strike lands at the LOCKED target — player can dodge.
+      if (eagle.state !== 'strike' || eagle.stateTime > 120) return;
+      const head = snake.segments[0];
+      const sx = eagle.targetX || eagle.x;
+      const sy = eagle.targetY || eagle.y;
+      const d = Math.hypot(head.x - sx, head.y - sy);
+      if (d < 26) triggerDeath();
+    }
+
+    function spawnPickupBurst(x, y) {
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2 + Math.random() * 0.3;
+        const s = 50 + Math.random() * 90;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 550, maxLife: 550,
+          color: i % 2 === 0 ? T.apple : (T.appleLeaf.startsWith('#') ? T.appleLeaf : T.apple),
+          size: 1.5 + Math.random() * 1,
+        });
+      }
+      particles.push({
+        x, y, vx: 0, vy: 0,
+        life: 380, maxLife: 380,
+        ring: true, radius: 4,
+        color: T.apple,
+      });
+    }
+
+    function spawnDeathBurst(x, y) {
+      for (let i = 0; i < 30; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 90 + Math.random() * 180;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 900, maxLife: 900,
+          color: i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? T.snakeHead : T.snakeTail),
+          size: 2 + Math.random() * 2,
+        });
+      }
+      particles.push({
+        x, y, vx: 0, vy: 0,
+        life: 700, maxLife: 700,
+        ring: true, radius: 6,
+        color: '#ffffff',
+      });
+    }
+
+    function triggerDeath() {
+      if (game.state !== 'playing') return;
+      game.state = 'dead';
+      game.overOffTime = 0;
+      game.canRestart = false;
+      const head = snake.segments[0];
+      spawnDeathBurst(head.x, head.y);
+      if (game.score > game.bestScore) {
+        game.bestScore = game.score;
+        try { localStorage.setItem(BEST_KEY, String(game.bestScore)); } catch(e) {}
+        updateScoreDisplay();
+      }
+      showOverlay('dead',
+        'CAUGHT',
+        game.score === 0 ? 'no apples secured' : `lost ${game.score} apple${game.score === 1 ? '' : 's'}`,
+        'press any key');
+    }
+
+    function triggerWin() {
+      if (game.state !== 'playing') return;
+      game.state = 'won';
+      game.overOffTime = 0;
+      game.canRestart = false;
+      if (game.score > game.bestScore) {
+        game.bestScore = game.score;
+        try { localStorage.setItem(BEST_KEY, String(game.bestScore)); } catch(e) {}
+        updateScoreDisplay();
+      }
+      const msg = game.score === 0
+        ? 'escaped empty-handed'
+        : `${game.score} apple${game.score === 1 ? '' : 's'} secured`;
+      showOverlay('win', 'ESCAPED', msg, 'press any key');
+    }
+
+    function showOverlay(cls, title, sub, instr) {
+      gameOverlay.innerHTML = `
+        <div class="go-title ${cls}">${title}</div>
+        <div class="go-sub">${sub}</div>
+        <div class="go-instr">${instr}</div>
+      `;
+      // Delay the "visible" class so the fade in feels intentional,
+      // AND delay canRestart briefly so player can't skip the end screen instantly
+      setTimeout(() => gameOverlay.classList.add('visible'), 40);
+      setTimeout(() => { game.canRestart = true; }, 550);
+    }
+
+    function hideOverlay() {
+      gameOverlay.classList.remove('visible');
+      gameOverlay.innerHTML = '';
+    }
+
+    function updateScoreDisplay() {
+      scoreLabel.textContent = game.score;
+      bestLabel.textContent = game.bestScore;
+    }
+    updateScoreDisplay();
+
+    function restartGame() {
+      game.state = 'playing';
+      game.score = 0;
+      updateScoreDisplay();
+      hideOverlay();
+
+      // Reset snake
+      snake.segments.length = 0;
+      for (let i = 0; i < snake.count; i++) {
+        snake.segments.push({ x: W/2 - i * snake.segLen, y: H/2 });
+      }
+      snake.dx = 1; snake.dy = 0;
+      input.dx = 1; input.dy = 0;
+
+      // Reset apples
+      initApples();
+
+      // Reset eagle to non-threatening state, far from player
+      eagle.x = 120; eagle.y = 100;
+      eagle.vx = 100; eagle.vy = 30;
+      eagle.altitude = 0.8;
+      eagle.state = 'glide';
+      eagle.stateTime = -2000;   // negative so first lock is delayed further
+      eagle.wingPhase = 0;
+      eagle.targetX = 0;
+      eagle.targetY = 0;
+      stateLabel.textContent = 'GLIDE';
+
+      // Clear particles
+      particles.length = 0;
+    }
+
+    function renderSnake(time) {
+      const N = snake.segments.length;
+      const positions = [];
+      for (let i = 0; i < N; i++) {
+        const seg = snake.segments[i];
+        let px, py;
+        if (i === 0) { px = -snake.dy; py = snake.dx; }
+        else {
+          const prev = snake.segments[i-1];
+          const dx = prev.x - seg.x;
+          const dy = prev.y - seg.y;
+          const d = Math.hypot(dx, dy) || 1;
+          px = -dy / d; py = dx / d;
+        }
+        const wave = 3.2 * Math.sin(time * 0.006 + i * 0.35) * (1 - (i / N) * 0.35);
+        positions.push({
+          x: seg.x + px * wave,
+          y: seg.y + py * wave,
+          r: Math.max(1.5, 11 - i * 0.16),
+          t: i / (N - 1),
+          nx: -px, ny: -py,        // tangent (approx)
+        });
+      }
+
+      // ---- SINGLE-PASS BODY GLOW ----
+      // Draw the whole body as one stroke path with shadow — canvas performs
+      // one blur op instead of one per segment (45 blurs → 1 blur). Same
+      // visual halo, dramatically cheaper on high-glow themes (Neon Grid,
+      // Midnight, Aztec, Jungle, River).
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      ctx.shadowBlur = T.snakeGlowRadius;
+      ctx.shadowColor = T.snakeGlow;
+      ctx.strokeStyle = T.snakeHead;
+      ctx.lineWidth = 20;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) {
+        const p = positions[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // ---- SEGMENT FILLS (no shadow — cheap, provides taper + gradient detail) ----
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      for (let i = N - 1; i >= 0; i--) {
+        const p = positions[i];
+        ctx.fillStyle = lerpColor(T.snakeHead, T.snakeTail, p.t);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Origami paper fold shading (subtle darker line down center)
+      if (T.paperFold) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(80,50,60,0.35)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const p = positions[i];
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Muscle-pulse highlight
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < N; i++) {
+        const p = positions[i];
+        const pulse = 0.5 + 0.5 * Math.sin(time * 0.006 + i * 0.45);
+        ctx.fillStyle = T.snakePulseColor.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * pulse).toFixed(2) + ')');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Head detail
+      const head = positions[0];
+      ctx.save();
+      ctx.translate(head.x, head.y);
+      ctx.rotate(Math.atan2(snake.dy, snake.dx));
+
+      ctx.fillStyle = T.snakeEyeWhite;
+      ctx.beginPath();
+      ctx.arc(2, -4, 2.6, 0, Math.PI * 2);
+      ctx.arc(2,  4, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = T.snakeEyeColor;
+      ctx.beginPath();
+      ctx.arc(3.4, -4, 1.4, 0, Math.PI * 2);
+      ctx.arc(3.4,  4, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Vertical slit pupil (only when eyes have color contrast to black)
+      if (T.snakeEyeColor !== '#000000') {
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(3.4, -5.2); ctx.lineTo(3.4, -2.8);
+        ctx.moveTo(3.4,  2.8); ctx.lineTo(3.4,  5.2);
+        ctx.stroke();
+      }
+
+      // Tongue flick
+      const flick = Math.sin(time * 0.0032);
+      if (flick > 0.7) {
+        const extend = (flick - 0.7) / 0.3;
+        ctx.strokeStyle = T.snakeTongue;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(9, 0);
+        ctx.lineTo(11 + extend * 6, -1.5);
+        ctx.moveTo(9, 0);
+        ctx.lineTo(11 + extend * 6,  1.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ================= APPLES (multiple) =================
+    const APPLE_COUNT = 6;
+    const APPLE_PICKUP_RADIUS = 16;
+    const apples = [];
+
+    function spawnApple() {
+      const margin = 60;
+      // Try a few times to spawn away from snake head
+      let best = null;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const x = margin + Math.random() * (W - margin * 2);
+        const y = margin + Math.random() * (H - margin * 2);
+        const h = snake.segments[0];
+        const d = Math.hypot(x - h.x, y - h.y);
+        if (d > 90 && (!best || d > best.d)) {
+          best = { x, y, d };
+        }
+      }
+      const pos = best || {
+        x: margin + Math.random() * (W - margin * 2),
+        y: margin + Math.random() * (H - margin * 2),
+      };
+      return {
+        x: pos.x,
+        y: pos.y,
+        spin: Math.random() * Math.PI * 2,
+        bob: Math.random() * Math.PI * 2,
+      };
+    }
+
+    function initApples() {
+      apples.length = 0;
+      for (let i = 0; i < APPLE_COUNT; i++) apples.push(spawnApple());
+    }
+    initApples();
+
+    function updateApples(dt) {
+      for (const a of apples) {
+        a.spin += dt * 0.003;
+        a.bob  += dt * 0.0022;
+      }
+    }
+
+    function renderApples(time) {
+      for (const a of apples) renderApple(a, time);
+    }
+
+    function renderApple(apple, time) {
+      ctx.save();
+      ctx.translate(apple.x, apple.y + Math.sin(apple.bob) * 3);
+      const spin = Math.sin(apple.spin);
+      const spinAbs = Math.abs(spin);
+
+      // ---- Ground shadow (soft ellipse) ----
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.filter = 'blur(3px)';
+      ctx.beginPath();
+      ctx.ellipse(0, 13, 8, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // ---- Apple body (proper apple silhouette with stem well + calyx) ----
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = T.appleGlow;
+
+      const widthMod = 1 + spinAbs * 0.12;   // subtle width breathing with spin
+      const w = 10 * widthMod;
+      const h = 11;
+
+      ctx.beginPath();
+      // Top-left of stem well
+      ctx.moveTo(-2, -h + 1);
+      // Dip down into stem well
+      ctx.quadraticCurveTo(-1, -h + 2.5, 0, -h + 1.8);
+      ctx.quadraticCurveTo(1, -h + 2.5, 2, -h + 1);
+      // Right shoulder
+      ctx.bezierCurveTo(6, -h + 0.5, w * 0.95, -h * 0.55, w, -h * 0.15);
+      // Right side & bottom
+      ctx.bezierCurveTo(w * 1.05, h * 0.4, w * 0.6, h * 0.95, w * 0.3, h * 0.92);
+      // Calyx (bottom center dip)
+      ctx.quadraticCurveTo(w * 0.1, h * 1.05, 0, h * 0.90);
+      ctx.quadraticCurveTo(-w * 0.1, h * 1.05, -w * 0.3, h * 0.92);
+      // Left side & bottom
+      ctx.bezierCurveTo(-w * 0.6, h * 0.95, -w * 1.05, h * 0.4, -w, -h * 0.15);
+      // Left shoulder
+      ctx.bezierCurveTo(-w * 0.95, -h * 0.55, -6, -h + 0.5, -2, -h + 1);
+      ctx.closePath();
+
+      // Radial gradient body (lighter top-left → darker bottom-right)
+      const bodyGrad = ctx.createRadialGradient(
+        -3 + spin * 2, -3, 1,
+        1, 3, w * 1.6
+      );
+      bodyGrad.addColorStop(0, lightenColor(T.apple, 0.35));
+      bodyGrad.addColorStop(0.55, T.apple);
+      bodyGrad.addColorStop(1, darkenColor(T.apple, 0.35));
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+
+      // ---- Freckles / speckles for realism (skip on origami — paper is smooth) ----
+      if (!T.paperFold) {
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = darkenColor(T.apple, 0.25);
+        ctx.globalAlpha = 0.35;
+        ctx.shadowBlur = 0;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2 + spin * 0.5;
+          const r = 4 + (i % 3);
+          ctx.beginPath();
+          ctx.arc(Math.cos(angle) * r, Math.sin(angle) * r + 2, 0.4 + (i % 2) * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // ---- Paper fold crease for origami theme ----
+      if (T.paperFold) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(0, -h + 2);
+        ctx.lineTo(0, h * 0.9);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ---- Main glossy highlight (elongated diagonal) ----
+      ctx.save();
+      ctx.shadowBlur = 0;
+      const hlGrad = ctx.createRadialGradient(
+        -3 + spin * 3, -4, 0,
+        -3 + spin * 3, -4, 6
+      );
+      hlGrad.addColorStop(0, T.appleHighlight);
+      hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hlGrad;
+      ctx.translate(-3 + spin * 3, -4);
+      ctx.rotate(-0.35);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 2.4, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // ---- Sharp specular dot (glossy highlight peak) ----
+      ctx.save();
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(255,255,255,0.9)';
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.arc(-4 + spin * 3, -6, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // ---- Bottom subtle shading (adds roundness) ----
+      ctx.save();
+      ctx.shadowBlur = 0;
+      const bottomGrad = ctx.createRadialGradient(0, 8, 1, 0, 8, 8);
+      bottomGrad.addColorStop(0, 'rgba(0,0,0,0.25)');
+      bottomGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bottomGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 8, 7, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // ---- Calyx notch (tiny dark spot at bottom) ----
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(0, 10, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- Stem well shadow ----
+      ctx.fillStyle = 'rgba(0,0,0,0.30)';
+      ctx.beginPath();
+      ctx.ellipse(0, -10, 1.8, 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- Stem (curved, tapered) ----
+      ctx.save();
+      ctx.strokeStyle = T.appleStem;
+      ctx.lineWidth = 1.9;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.quadraticCurveTo(1.5, -13, 3, -14);
+      ctx.stroke();
+      // Stem shading (thinner darker line on one side)
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(0.5, -10.5);
+      ctx.quadraticCurveTo(2, -13, 3.3, -13.8);
+      ctx.stroke();
+      ctx.restore();
+
+      // ---- Leaf (with veins + gradient shading) ----
+      ctx.save();
+      ctx.translate(3, -13);
+      ctx.rotate(-0.45);
+      // Leaf outline shape (asymmetric, pointed)
+      ctx.beginPath();
+      ctx.moveTo(0, 0.5);
+      ctx.quadraticCurveTo(2, -3, 5.5, -1.2);
+      ctx.quadraticCurveTo(6.5, 0, 5, 1);
+      ctx.quadraticCurveTo(2, 2, 0, 0.5);
+      ctx.closePath();
+      // Leaf gradient
+      const leafGrad = ctx.createLinearGradient(0, -1.5, 6, 1.5);
+      leafGrad.addColorStop(0, lightenColor(T.appleLeaf, 0.25));
+      leafGrad.addColorStop(1, darkenColor(T.appleLeaf, 0.2));
+      ctx.fillStyle = leafGrad;
+      ctx.shadowColor = T.appleLeafGlow;
+      ctx.shadowBlur = 5;
+      ctx.fill();
+      // Central vein
+      ctx.strokeStyle = 'rgba(0,40,10,0.45)';
+      ctx.lineWidth = 0.55;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(0, 0.3);
+      ctx.lineTo(5.5, -0.5);
+      ctx.stroke();
+      // Side veins
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      ctx.moveTo(1.5, 0);
+      ctx.lineTo(2, -1);
+      ctx.moveTo(1.5, 0.3);
+      ctx.lineTo(2, 1);
+      ctx.moveTo(3, -0.2);
+      ctx.lineTo(3.5, -1.2);
+      ctx.moveTo(3, 0.4);
+      ctx.lineTo(3.5, 1.2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // ================= ENEMY (Eagle or Owl) =================
+    const eagle = {
+      x: 200, y: 100,
+      vx: 100, vy: 30,
+      altitude: 0.8,
+      state: 'glide',
+      stateTime: 0,
+      wingPhase: 0,
+      targetX: 0, targetY: 0,
+    };
+
+    function updateEagle(dt) {
+      if (game.state !== 'playing') return;
+      eagle.stateTime += dt;
+      const dtSec = dt / 1000;
+      const px = snake.segments[0].x;
+      const py = snake.segments[0].y;
+
+      switch (eagle.state) {
+        case 'glide': {
+          const ang = Math.atan2(py - eagle.y, px - eagle.x);
+          const circleAng = ang + Math.PI * 0.42;
+          const tgtVx = Math.cos(circleAng) * 105;
+          const tgtVy = Math.sin(circleAng) * 105;
+          eagle.vx += (tgtVx - eagle.vx) * Math.min(1, 0.0022 * dt);
+          eagle.vy += (tgtVy - eagle.vy) * Math.min(1, 0.0022 * dt);
+          eagle.x += eagle.vx * dtSec;
+          eagle.y += eagle.vy * dtSec;
+          eagle.altitude = 0.72 + 0.06 * Math.sin(eagle.wingPhase * 0.5);
+          eagle.wingPhase += dt * 0.0035;
+          if (eagle.stateTime > 4500 + Math.random() * 2500) {
+            eagle.state = 'lock';
+            eagle.stateTime = 0;
+          }
+          break;
+        }
+        case 'lock': {
+          eagle.vx *= Math.pow(0.4, dtSec * 3);
+          eagle.vy *= Math.pow(0.4, dtSec * 3);
+          eagle.x += eagle.vx * dtSec;
+          eagle.y += eagle.vy * dtSec;
+          eagle.altitude -= 0.00018 * dt;
+          eagle.wingPhase += dt * 0.006;
+          if (eagle.stateTime > 900) {
+            eagle.state = 'dive';
+            eagle.stateTime = 0;
+            eagle.targetX = px;
+            eagle.targetY = py;
+          }
+          break;
+        }
+        case 'dive': {
+          const dx = eagle.targetX - eagle.x;
+          const dy = eagle.targetY - eagle.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const speed = 440;
+          eagle.vx = (dx / d) * speed;
+          eagle.vy = (dy / d) * speed;
+          eagle.x += eagle.vx * dtSec;
+          eagle.y += eagle.vy * dtSec;
+          eagle.altitude -= 0.0021 * dt;
+          eagle.wingPhase += dt * 0.020;
+          if (d < 22 || eagle.altitude < 0.05) {
+            eagle.state = 'strike';
+            eagle.stateTime = 0;
+            eagle.altitude = 0.02;
+            spawnStrike(eagle.x, eagle.y);
+          }
+          break;
+        }
+        case 'strike': {
+          eagle.altitude = 0.02;
+          if (eagle.stateTime > 260) {
+            eagle.state = 'climb';
+            eagle.stateTime = 0;
+            const angleAway = Math.atan2(eagle.y - py, eagle.x - px);
+            eagle.vx = Math.cos(angleAway) * 160;
+            eagle.vy = Math.sin(angleAway) * 160 - 120;
+          }
+          break;
+        }
+        case 'climb': {
+          eagle.altitude += 0.0013 * dt;
+          eagle.x += eagle.vx * dtSec;
+          eagle.y += eagle.vy * dtSec;
+          eagle.vy += 55 * dtSec;
+          eagle.wingPhase += dt * 0.014;
+          if (eagle.altitude > 0.75) {
+            eagle.state = 'glide';
+            eagle.stateTime = 0;
+          }
+          break;
+        }
+      }
+
+      if (eagle.x < -80)    eagle.x = W + 80;
+      if (eagle.x > W + 80) eagle.x = -80;
+      if (eagle.y < 40)     eagle.y = 40;
+      if (eagle.y > H - 40) eagle.y = H - 40;
+
+      stateLabel.textContent = eagle.state.toUpperCase();
+    }
+
+    function renderEagle(time) {
+      // Shadow on ground plane
+      const shadowScale = 0.4 + eagle.altitude * 1.2;
+      const shadowAlpha = 0.15 + (1 - eagle.altitude) * 0.6;
+      const grad = ctx.createRadialGradient(eagle.x, eagle.y, 0, eagle.x, eagle.y, 32 * shadowScale);
+      grad.addColorStop(0,   `rgba(0,0,0,${shadowAlpha})`);
+      grad.addColorStop(0.6, `rgba(0,0,0,${shadowAlpha * 0.35})`);
+      grad.addColorStop(1,   `rgba(0,0,0,0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(eagle.x, eagle.y, 32 * shadowScale, 16 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lock-on warning ring
+      if (eagle.state === 'lock' || eagle.state === 'dive') {
+        const t = eagle.stateTime / (eagle.state === 'lock' ? 900 : 200);
+        const r = 40 * (1 - t * 0.6);
+        ctx.strokeStyle = `rgba(255,80,80,${0.55 * (1 - t * 0.5)})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(eagle.targetX || eagle.x, eagle.targetY || eagle.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      const drawY = eagle.y - eagle.altitude * 75;
+      const scale = 0.85 + (1 - eagle.altitude) * 0.6;
+      const heading = Math.atan2(eagle.vy, eagle.vx);
+
+      let wingFactor, wingSweep;
+      if (eagle.state === 'dive') {
+        wingFactor = 0.6;  wingSweep = -0.35;
+      } else if (eagle.state === 'strike') {
+        wingFactor = 0.8;  wingSweep = 0.4;
+      } else {
+        wingFactor = Math.sin(eagle.wingPhase * (eagle.state === 'climb' ? 11 : 5.5));
+        wingSweep  = 0;
+      }
+      const wingAngle = wingFactor * 0.55;
+
+      ctx.save();
+      ctx.translate(eagle.x, drawY);
+      ctx.rotate(heading);
+      ctx.scale(scale, scale);
+
+      if (T.enemyShape === 'owl') {
+        renderOwl(wingAngle, wingSweep);
+      } else {
+        renderEagleSprite(wingAngle, wingSweep);
+      }
+
+      ctx.restore();
+    }
+
+    function renderEagleSprite(wingAngle, wingSweep) {
+      const bodyDark = darkenColor(T.enemy, 0.30);
+      const bodyLight = lightenColor(T.enemy, 0.18);
+
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+
+      // =============== TAIL WEDGE (drawn first, behind everything) ===============
+      drawEagleTail(bodyDark);
+
+      // =============== WINGS (rotated by flap angle) ===============
+      ctx.save();
+      ctx.rotate(-wingAngle + wingSweep);
+      drawEagleWing(-1, bodyDark, bodyLight);
+      ctx.restore();
+
+      ctx.save();
+      ctx.rotate(wingAngle - wingSweep);
+      drawEagleWing(1, bodyDark, bodyLight);
+      ctx.restore();
+
+      // =============== BODY ===============
+      drawEagleBody(bodyDark, bodyLight);
+
+      // =============== HEAD + BEAK ===============
+      drawEagleHead(bodyDark, bodyLight);
+
+      ctx.restore();
+    }
+
+    function drawEagleTail(bodyDark) {
+      // Proper wedge fan (5 individual feathers with visible separation)
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 8;
+
+      const baseX = -7;
+      const tipX = -20;
+      const halfW = 7;
+
+      // Base wedge fill (gradient)
+      const grad = ctx.createLinearGradient(baseX, 0, tipX, 0);
+      grad.addColorStop(0, T.enemy);
+      grad.addColorStop(0.6, bodyDark);
+      grad.addColorStop(1, T.enemyTip);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(baseX, -2.5);
+      ctx.lineTo(baseX, 2.5);
+      ctx.quadraticCurveTo(-11, halfW, tipX, halfW * 0.9);
+      ctx.quadraticCurveTo(tipX - 1.5, 0, tipX, -halfW * 0.9);
+      ctx.quadraticCurveTo(-11, -halfW, baseX, -2.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Feather separation lines (radiating from base)
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 0.5;
+      ctx.shadowBlur = 0;
+      for (let i = 1; i <= 4; i++) {
+        const t = (i / 5) - 0.5;   // -0.3 to +0.3
+        ctx.beginPath();
+        ctx.moveTo(baseX, t * 2);
+        ctx.lineTo(tipX + 1, t * halfW * 2);
+        ctx.stroke();
+      }
+
+      // Tail tip band (lighter accents at feather tips)
+      ctx.fillStyle = T.enemyTip;
+      ctx.shadowColor = T.enemyTip;
+      ctx.shadowBlur = 4;
+      ctx.globalAlpha = 0.7;
+      for (let i = 0; i < 5; i++) {
+        const t = (i / 4) - 0.5;
+        ctx.beginPath();
+        ctx.arc(tipX + 0.5, t * halfW * 1.8, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
+    }
+
+    function drawEagleBody(bodyDark, bodyLight) {
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 12;
+
+      // Smaller, sleeker body (was 13x5, now 10x3.5 — better proportion vs new wingspan)
+      const bodyGrad = ctx.createLinearGradient(0, -4, 0, 4);
+      bodyGrad.addColorStop(0, bodyDark);
+      bodyGrad.addColorStop(0.5, T.enemy);
+      bodyGrad.addColorStop(1, bodyLight);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dorsal stripe
+      ctx.strokeStyle = 'rgba(0,0,0,0.40)';
+      ctx.lineWidth = 0.9;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(-8, 0);
+      ctx.lineTo(9, 0);
+      ctx.stroke();
+
+      // Body feather texture stipples (skip origami)
+      if (!T.paperFold) {
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.arc(-6 + i * 3.5, -1.5, 0.35, 0, Math.PI * 2);
+          ctx.arc(-6 + i * 3.5, 1.5, 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Neck highlight (light chest area between body and head)
+      ctx.fillStyle = T.enemyTip;
+      ctx.globalAlpha = 0.30;
+      ctx.shadowColor = T.enemyTip;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.ellipse(6, 0, 3.2, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Origami fold along body center
+      if (T.paperFold) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.20)';
+        ctx.lineWidth = 0.7;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(18, 0);
+        ctx.lineTo(-9, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawEagleHead(bodyDark, bodyLight) {
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 8;
+
+      // Head positioned at (12, 0)
+      const headGrad = ctx.createRadialGradient(12, -1, 0, 12, 0, 5);
+      headGrad.addColorStop(0, bodyLight);
+      headGrad.addColorStop(1, T.enemy);
+      ctx.fillStyle = headGrad;
+      ctx.beginPath();
+      ctx.ellipse(12, 0, 3.5, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Brow ridge
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 0.7;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(10.8, -1.8);
+      ctx.quadraticCurveTo(12.5, -2.6, 13.8, -2.1);
+      ctx.moveTo(10.8, 1.8);
+      ctx.quadraticCurveTo(12.5, 2.6, 13.8, 2.1);
+      ctx.stroke();
+
+      // Eyes
+      ctx.fillStyle = T.beak;
+      ctx.shadowColor = T.beak;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(12.5, -1.3, 1.1, 0, Math.PI * 2);
+      ctx.arc(12.5, 1.3, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(13, -1.3, 0.5, 0, Math.PI * 2);
+      ctx.arc(13, 1.3, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Specular
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.arc(13.2, -1.5, 0.22, 0, Math.PI * 2);
+      ctx.arc(13.2, 1.1, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Curved hooked beak
+      ctx.save();
+      ctx.shadowColor = T.beak;
+      ctx.shadowBlur = 4;
+      const beakGrad = ctx.createLinearGradient(14, 0, 18, 0);
+      beakGrad.addColorStop(0, T.beak);
+      beakGrad.addColorStop(1, darkenColor(T.beak, 0.25));
+      ctx.fillStyle = beakGrad;
+      ctx.beginPath();
+      ctx.moveTo(14, -1.2);
+      ctx.quadraticCurveTo(17, -1.2, 18.5, 0);
+      ctx.quadraticCurveTo(18.7, 0.7, 17.5, 1);
+      ctx.quadraticCurveTo(17.7, 0.4, 16.5, 0.4);
+      ctx.quadraticCurveTo(14.5, 0.4, 14, 1.2);
+      ctx.closePath();
+      ctx.fill();
+      // Mouth line
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(14.2, 0);
+      ctx.quadraticCurveTo(16.5, 0.1, 18, 0.35);
+      ctx.stroke();
+      // Nostril
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.arc(15.5, -0.35, 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawEagleWing(side, bodyDark, bodyLight) {
+      // Fully spread eagle wing with prominent primary finger feathers.
+      // side = -1 (top of top-down view) or +1 (bottom)
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 12;
+
+      // ---- ARM PORTION: base wing (from body attachment out to primary bases) ----
+      const armGrad = ctx.createLinearGradient(0, 0, 0, side * 22);
+      armGrad.addColorStop(0, T.enemy);
+      armGrad.addColorStop(0.65, bodyDark);
+      armGrad.addColorStop(1, T.enemy);
+      ctx.fillStyle = armGrad;
+
+      ctx.beginPath();
+      // Leading edge — from body, sweeps slightly forward then curves back
+      ctx.moveTo(3, side * 3);
+      ctx.bezierCurveTo(
+        6, side * 8,
+        5, side * 16,
+        -1, side * 22
+      );
+      // Wingtip zone (below primary bases)
+      ctx.quadraticCurveTo(-8, side * 23, -14, side * 20);
+      // Trailing edge — sweeps back to body
+      ctx.bezierCurveTo(
+        -12, side * 14,
+        -8, side * 8,
+        -3, side * 3
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      // ---- SECONDARY FEATHERS (trailing edge scallops) ----
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = 0.5;
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < 5; i++) {
+        const t = i / 4;
+        // Scallops arc along the trailing edge
+        const sx = -3 - t * 10;
+        const sy = side * (4 + t * 12);
+        const ex = -5 - t * 10;
+        const ey = side * (7 + t * 12);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo((sx + ex) / 2 - 1, (sy + ey) / 2 + side * 0.5, ex, ey);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 12;
+
+      // ---- PRIMARY "FINGER" FEATHERS (5, prominent & separated) ----
+      // Each primary is a tapered feather extending outward from wingtip zone.
+      // Positions & lengths chosen so the fan resembles the reference silhouette:
+      // - inner primary shortest, points nearly outward
+      // - mid primaries longest, sweep back
+      // - outer primary shorter, points back
+      const primaries = [
+        { base: [0,   side * 21], tip: [-1,  side * 33], w: 1.7 },
+        { base: [-3,  side * 22], tip: [-6,  side * 35], w: 1.9 },
+        { base: [-6,  side * 22.5], tip: [-11, side * 35], w: 2.0 },
+        { base: [-9,  side * 22], tip: [-15, side * 33], w: 1.9 },
+        { base: [-12, side * 20.5], tip: [-18, side * 29], w: 1.6 },
+      ];
+
+      for (const p of primaries) {
+        const [bx, by] = p.base;
+        const [tx, ty] = p.tip;
+        const dx = tx - bx, dy = ty - by;
+        const len = Math.hypot(dx, dy);
+        const nx = -dy / len, ny = dx / len;   // unit perpendicular
+        const w = p.w;
+
+        // Feather gradient — dark toward tip
+        const featherGrad = ctx.createLinearGradient(bx, by, tx, ty);
+        featherGrad.addColorStop(0, T.enemy);
+        featherGrad.addColorStop(0.55, bodyDark);
+        featherGrad.addColorStop(1, T.enemy);
+        ctx.fillStyle = featherGrad;
+        ctx.shadowBlur = 8;
+
+        // Tapered feather (leaf-shaped)
+        ctx.beginPath();
+        ctx.moveTo(bx - nx * w, by - ny * w);
+        ctx.quadraticCurveTo(
+          bx + dx * 0.35 - nx * w * 1.05,
+          by + dy * 0.35 - ny * w * 1.05,
+          bx + dx * 0.80 - nx * w * 0.35,
+          by + dy * 0.80 - ny * w * 0.35
+        );
+        ctx.quadraticCurveTo(tx, ty, bx + dx * 0.80 + nx * w * 0.35, by + dy * 0.80 + ny * w * 0.35);
+        ctx.quadraticCurveTo(
+          bx + dx * 0.35 + nx * w * 1.05,
+          by + dy * 0.35 + ny * w * 1.05,
+          bx + nx * w, by + ny * w
+        );
+        ctx.closePath();
+        ctx.fill();
+
+        // Feather shaft
+        ctx.strokeStyle = 'rgba(0,0,0,0.42)';
+        ctx.lineWidth = 0.45;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + dx * 0.92, by + dy * 0.92);
+        ctx.stroke();
+      }
+
+      // ---- WING COVERTS (small feather cluster at wing base — layered detail) ----
+      ctx.save();
+      ctx.fillStyle = bodyLight;
+      ctx.globalAlpha = 0.5;
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(-1 - i * 1.6, side * (4.5 + i * 2.5), 2.5, 1.4, side * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ---- WINGTIP HIGHLIGHT (bright spot at outermost primary tip) ----
+      ctx.fillStyle = T.enemyTip;
+      ctx.shadowColor = T.enemyTip;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(-18, side * 29, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- LEADING EDGE ACCENT LINE ----
+      ctx.strokeStyle = 'rgba(0,0,0,0.38)';
+      ctx.lineWidth = 0.7;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(3, side * 3);
+      ctx.bezierCurveTo(6, side * 8, 5, side * 16, -1, side * 22);
+      ctx.stroke();
+
+      // ---- ORIGAMI PAPER FOLD ----
+      if (T.paperFold) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.20)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(0, side * 3);
+        ctx.lineTo(-8, side * 20);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function renderOwl(wingAngle, wingSweep) {
+      const bodyDark = darkenColor(T.enemy, 0.30);
+      const bodyLight = lightenColor(T.enemy, 0.15);
+      const patternColor = 'rgba(80,60,120,0.55)';
+
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+
+      // =============== TAIL ===============
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 6;
+      const tailFeathers = 4;
+      const tailSpread = 0.35;
+      for (let i = 0; i < tailFeathers; i++) {
+        const t = (i / (tailFeathers - 1)) - 0.5;
+        const angle = t * tailSpread;
+        ctx.save();
+        ctx.translate(-11, 0);
+        ctx.rotate(Math.PI + angle);
+        const featherGrad = ctx.createLinearGradient(0, 0, 8, 0);
+        featherGrad.addColorStop(0, bodyDark);
+        featherGrad.addColorStop(0.6, T.enemy);
+        featherGrad.addColorStop(1, bodyDark);
+        ctx.fillStyle = featherGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -1.6);
+        ctx.quadraticCurveTo(4, -1.7, 8, -0.5);
+        ctx.quadraticCurveTo(9, 0, 8, 0.5);
+        ctx.quadraticCurveTo(4, 1.7, 0, 1.6);
+        ctx.closePath();
+        ctx.fill();
+        // Barring pattern on tail feather
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 0.4;
+        ctx.shadowBlur = 0;
+        for (let b = 1; b < 4; b++) {
+          ctx.beginPath();
+          ctx.moveTo(b * 2, -1.4);
+          ctx.lineTo(b * 2, 1.4);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 6;
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // =============== WINGS (broad, rounded) ===============
+      ctx.save();
+      ctx.rotate(-wingAngle + wingSweep);
+      drawOwlWing(-1, bodyDark, bodyLight, patternColor);
+      ctx.restore();
+
+      ctx.save();
+      ctx.rotate(wingAngle - wingSweep);
+      drawOwlWing(1, bodyDark, bodyLight, patternColor);
+      ctx.restore();
+
+      // =============== BODY (fat & round) ===============
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 14;
+
+      const bodyGrad = ctx.createRadialGradient(0, 0, 2, 0, 2, 10);
+      bodyGrad.addColorStop(0, bodyLight);
+      bodyGrad.addColorStop(0.7, T.enemy);
+      bodyGrad.addColorStop(1, bodyDark);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly barring pattern (owl signature)
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = patternColor;
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i < 4; i++) {
+        const y = -3 + i * 2;
+        ctx.beginPath();
+        ctx.moveTo(-6, y);
+        ctx.quadraticCurveTo(0, y - 0.5, 6, y);
+        ctx.stroke();
+      }
+
+      // Belly V-spots (denser center pattern)
+      ctx.fillStyle = patternColor;
+      for (let i = 0; i < 6; i++) {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        ctx.beginPath();
+        ctx.arc(-2 + col * 4, -3 + row * 3, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // =============== HEAD (big & round) ===============
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 12;
+
+      const headGrad = ctx.createRadialGradient(8, -2, 0, 8, 0, 8);
+      headGrad.addColorStop(0, bodyLight);
+      headGrad.addColorStop(1, T.enemy);
+      ctx.fillStyle = headGrad;
+      ctx.beginPath();
+      ctx.arc(8, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ear tufts (asymmetric little horns)
+      ctx.fillStyle = bodyDark;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.moveTo(4.5, -5.8);
+      ctx.quadraticCurveTo(3.5, -10, 5, -10.5);
+      ctx.quadraticCurveTo(6.5, -8, 6.5, -6);
+      ctx.closePath();
+      ctx.moveTo(4.5, 5.8);
+      ctx.quadraticCurveTo(3.5, 10, 5, 10.5);
+      ctx.quadraticCurveTo(6.5, 8, 6.5, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Facial disc — heart-shaped outline (owl characteristic)
+      ctx.save();
+      ctx.strokeStyle = bodyDark;
+      ctx.lineWidth = 0.6;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      // Upper facial disc boundary (goes above eyes, curves down to beak)
+      ctx.moveTo(4, -5);
+      ctx.quadraticCurveTo(8, -6.5, 12, -4);
+      // Right side down
+      ctx.quadraticCurveTo(14, 0, 12, 4);
+      ctx.quadraticCurveTo(8, 6.5, 4, 5);
+      // Below chin
+      ctx.quadraticCurveTo(6, 2, 6, 0);
+      ctx.quadraticCurveTo(6, -2, 4, -5);
+      ctx.stroke();
+      ctx.restore();
+
+      // Eye "surround" — slight darkening rings around eyes
+      ctx.fillStyle = bodyDark;
+      ctx.globalAlpha = 0.5;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(10, -3, 3.3, 0, Math.PI * 2);
+      ctx.arc(10,  3, 3.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Large forward-facing eyes (yellow with subtle radial gradient)
+      const eyeGrad = ctx.createRadialGradient(10, -3, 0, 10, -3, 3);
+      eyeGrad.addColorStop(0, '#ffee88');
+      eyeGrad.addColorStop(0.6, T.enemyTip);
+      eyeGrad.addColorStop(1, '#cc9900');
+      ctx.fillStyle = eyeGrad;
+      ctx.shadowColor = T.enemyTip;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(10, -3, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      const eyeGrad2 = ctx.createRadialGradient(10, 3, 0, 10, 3, 3);
+      eyeGrad2.addColorStop(0, '#ffee88');
+      eyeGrad2.addColorStop(0.6, T.enemyTip);
+      eyeGrad2.addColorStop(1, '#cc9900');
+      ctx.fillStyle = eyeGrad2;
+      ctx.beginPath();
+      ctx.arc(10,  3, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pupils (large — owl pupils dilate at night)
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(10.5, -3, 1.3, 0, Math.PI * 2);
+      ctx.arc(10.5,  3, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye specular
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(10.8, -3.4, 0.4, 0, Math.PI * 2);
+      ctx.arc(10.8,  2.6, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Small secondary reflection
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.arc(10.2, -2.4, 0.25, 0, Math.PI * 2);
+      ctx.arc(10.2,  3.4, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      // =============== BEAK (small hooked triangle between eyes) ===============
+      ctx.save();
+      ctx.shadowColor = T.beak;
+      ctx.shadowBlur = 3;
+      ctx.fillStyle = T.beak;
+      ctx.beginPath();
+      ctx.moveTo(13.5, -1);
+      ctx.quadraticCurveTo(15.5, -0.5, 15.5, 0);
+      ctx.quadraticCurveTo(15.5, 0.5, 13.5, 1);
+      ctx.quadraticCurveTo(13, 0, 13.5, -1);
+      ctx.closePath();
+      ctx.fill();
+      // Beak shading
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 0.4;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(13.5, 0);
+      ctx.lineTo(15.3, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    function drawOwlWing(side, bodyDark, bodyLight, patternColor) {
+      ctx.save();
+      ctx.shadowColor = T.enemyGlow;
+      ctx.shadowBlur = 13;
+
+      // --- Broad, rounded wing outline (owl wings are wider than eagle's) ---
+      const wingGrad = ctx.createLinearGradient(0, 0, 0, side * 20);
+      wingGrad.addColorStop(0, T.enemy);
+      wingGrad.addColorStop(0.7, bodyDark);
+      wingGrad.addColorStop(1, T.enemy);
+      ctx.fillStyle = wingGrad;
+      ctx.beginPath();
+      ctx.moveTo(-3, side * 4);
+      // Trailing edge (broad curve)
+      ctx.quadraticCurveTo(-17, side * 12, -13, side * 20);
+      // Wing tip (rounded — no sharp finger feathers, unlike eagle)
+      ctx.quadraticCurveTo(-4, side * 22, 2, side * 12);
+      // Leading edge back to body
+      ctx.quadraticCurveTo(4, side * 6, 3, side * 3);
+      ctx.closePath();
+      ctx.fill();
+
+      // --- Barring pattern (owl signature — bars across wing) ---
+      ctx.strokeStyle = patternColor;
+      ctx.lineWidth = 0.7;
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < 4; i++) {
+        const t = 0.2 + i * 0.18;
+        ctx.beginPath();
+        // Bar arcs across wing from leading edge to trailing edge
+        const startX = 3 - t * 15;
+        const startY = side * (3 + t * 3);
+        const endX = -13 + t * 10;
+        const endY = side * (20 - t * 5);
+        const midX = (startX + endX) / 2 - 2;
+        const midY = (startY + endY) / 2 + side * 1;
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(midX, midY, endX, endY);
+        ctx.stroke();
+      }
+
+      // --- Wing spot pattern (soft feathery dots) ---
+      ctx.save();
+      ctx.fillStyle = patternColor;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 0.6;
+        const r = 6 + (i % 3) * 3;
+        const px = -3 + Math.cos(angle) * -r;
+        const py = side * (4 + Math.sin(angle) * r * 0.9);
+        ctx.beginPath();
+        ctx.arc(px, py, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // --- Coverts (small feather layer at wing base) ---
+      ctx.save();
+      ctx.fillStyle = bodyLight;
+      ctx.globalAlpha = 0.4;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(-2 - i * 1.8, side * (5 + i * 2), 2.8, 1.8, side * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // --- Trailing edge highlight (soft light on outer feathers) ---
+      ctx.fillStyle = bodyLight;
+      ctx.globalAlpha = 0.4;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = bodyLight;
+      ctx.beginPath();
+      ctx.ellipse(-8, side * 18, 4, 1.5, side * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
+    }
+
+    // ================= STRIKE PARTICLES =================
+    const particles = [];
+    function spawnStrike(x, y) {
+      for (let i = 0; i < 22; i++) {
+        const a = (i / 22) * Math.PI * 2 + Math.random() * 0.4;
+        const s = 90 + Math.random() * 160;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 700, maxLife: 700,
+          color: i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? T.enemy : T.enemyTip),
+          size: 2 + Math.random() * 1.5,
+        });
+      }
+      particles.push({
+        x, y, vx: 0, vy: 0,
+        life: 500, maxLife: 500,
+        ring: true, radius: 5,
+        color: T.enemyTip,
+      });
+    }
+    function updateParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        const dtSec = dt / 1000;
+        if (p.ring) {
+          p.radius += 200 * dtSec;
+        } else {
+          p.x += p.vx * dtSec;
+          p.y += p.vy * dtSec;
+          p.vx *= Math.pow(0.05, dtSec);
+          p.vy *= Math.pow(0.05, dtSec);
+        }
+      }
+    }
+    function renderParticles() {
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      for (const p of particles) {
+        const a = p.life / p.maxLife;
+        if (p.ring) {
+          ctx.strokeStyle = p.color;
+          ctx.globalAlpha = a * 0.8;
+          ctx.lineWidth = 3 * a;
+          ctx.shadowBlur = 12; ctx.shadowColor = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = a;
+          ctx.shadowBlur = 12; ctx.shadowColor = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // ================= BACKGROUND =================
+    const drift = [];
+    for (let i = 0; i < 40; i++) {
+      drift.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: -6 - Math.random() * 12,
+        vy: (Math.random() - 0.5) * 4,
+        r: 0.6 + Math.random() * 1.2,
+        hueIdx: Math.random() < 0.6 ? 0 : 1,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+    // Stars (static positions, only shown when T.stars)
+    const stars = [];
+    for (let i = 0; i < 60; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.9,
+        r: 0.5 + Math.random() * 1.4,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.001 + Math.random() * 0.003,
+      });
+    }
+
+    function updateDrift(dt) {
+      const dtSec = dt / 1000;
+      for (const d of drift) {
+        if (T.risingParticles) {
+          // Bubbles: rise upward with gentle horizontal wobble
+          d.x += Math.sin((d.phase + performance.now() * 0.001)) * 8 * dtSec;
+          d.y -= (30 + d.r * 10) * dtSec;
+          if (d.y < -10) {
+            d.y = H + 10;
+            d.x = Math.random() * W;
+          }
+        } else if (T.sandBlow) {
+          // Sand: strong horizontal blow, minimal vertical
+          d.x += d.vx * 2.2 * dtSec;
+          d.y += d.vy * 0.4 * dtSec;
+          if (d.x < -10) { d.x = W + 10; d.y = Math.random() * H; }
+          if (d.y < -10) d.y = H + 10;
+          if (d.y > H + 10) d.y = -10;
+        } else {
+          d.x += d.vx * dtSec;
+          d.y += d.vy * dtSec;
+          if (d.x < -10) { d.x = W + 10; d.y = Math.random() * H; }
+          if (d.y < -10) d.y = H + 10;
+          if (d.y > H + 10) d.y = -10;
+        }
+      }
+    }
+
+    function renderGrid(time) {
+      // ---- STATIC LAYER (blit cached bg + vignette + grid + moon) ----
+      ensureStaticLayer();
+      ctx.drawImage(staticLayer, 0, 0);
+
+      // ---- STARS twinkle (dynamic — Midnight only) ----
+      if (T.stars) {
+        ctx.save();
+        for (const s of stars) {
+          const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(time * s.twinkleSpeed + s.phase));
+          ctx.fillStyle = `rgba(255,255,220,${twinkle})`;
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = '#ffeecc';
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r * twinkle, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // ---- DRIFT PARTICLES (dynamic) ----
+      ctx.save();
+      if (T.composite === 'lighter') ctx.globalCompositeOperation = 'lighter';
+      for (const d of drift) {
+        const pulse = 0.5 + 0.5 * Math.sin(time * 0.002 + d.phase);
+        const color = T.driftColors[d.hueIdx].replace('ALPHA', (0.25 * pulse).toFixed(2));
+        ctx.fillStyle = color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = color;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // ================= UTILITIES =================
+    function lerpColor(c1, c2, t) {
+      const p = c => [
+        parseInt(c.slice(1,3),16),
+        parseInt(c.slice(3,5),16),
+        parseInt(c.slice(5,7),16),
+      ];
+      const [r1,g1,b1] = p(c1);
+      const [r2,g2,b2] = p(c2);
+      return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
+    }
+    // Lighten a hex color toward white by factor (0..1)
+    function lightenColor(hex, factor) {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      const lr = Math.round(r + (255 - r) * factor);
+      const lg = Math.round(g + (255 - g) * factor);
+      const lb = Math.round(b + (255 - b) * factor);
+      return `rgb(${lr},${lg},${lb})`;
+    }
+    // Darken a hex color toward black by factor (0..1)
+    function darkenColor(hex, factor) {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      const dr = Math.round(r * (1 - factor));
+      const dg = Math.round(g * (1 - factor));
+      const db = Math.round(b * (1 - factor));
+      return `rgb(${dr},${dg},${db})`;
+    }
+
+    // ================= MAIN LOOP =================
+    let lastTime = performance.now();
+    function loop(time) {
+      const dt = Math.min(50, time - lastTime);
+      lastTime = time;
+
+      if (game.state !== 'playing') game.overOffTime += dt;
+
+      updateDrift(dt);
+      updateSnake(dt);
+      updateApples(dt);
+      updateEagle(dt);
+      updateParticles(dt);
+
+      renderGrid(time);
+      renderApples(time);
+      renderParticles();
+
+      // Fade snake gradually during death, hide fully after a moment.
+      if (game.state === 'dead') {
+        const t = Math.min(1, game.overOffTime / 400);
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        renderSnake(time);
+        ctx.restore();
+      } else {
+        renderSnake(time);
+      }
+
+      renderEagle(time);
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
