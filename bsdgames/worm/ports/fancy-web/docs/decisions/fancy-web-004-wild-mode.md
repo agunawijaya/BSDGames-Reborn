@@ -259,7 +259,7 @@ subsequent iterations.
 |--:|---|---|
 | 0 | Mode picker, multi-apple pool, rot state, delayed respawn, frog bonus, localStorage | ✅ Shipped 2026-09-17 |
 | 1 | 🐦 Bird enemy: thief AI, shadow projection, race for highest-value apple, non-lethal, checkbox toggle | ✅ Shipped 2026-09-17 |
-| 2 | 🐝 Wasp enemy + apple rot → wasp spawn chain + checkbox | Pending |
+| 2 | 🐝 Wasp enemy: emerges from apples left to rot 25s (20s ripe → 5s rotten), chases head at sub-cell smooth motion (~82 px/sec, slower than Classic worm), LETHAL on head-contact, 30s lifespan, up to 8 concurrent | ✅ Shipped 2026-09-17 |
 | 3 | 🪱 Rival worm AI + head-collision rules + slither.io-style bonus + checkbox | Pending |
 | 4 | 🧑‍🌾 Gardener enemy + state machine + checkbox | Pending |
 | 5 | Balance tuning, wave pacing, difficulty defaults | Pending |

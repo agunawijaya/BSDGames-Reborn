@@ -226,11 +226,12 @@
           theme: s.theme || 'neon-grid',
           mode: s.mode || 'pure',              // 'pure' (single apple, BSD) | 'wild' (multi-apple + bonuses)
           bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
-          enemyBird: !!s.enemyBird,             // Phase 1 enemy — default off
+          enemyBird: !!s.enemyBird,              // Phase 1 enemy — default off
+          enemyWasps: !!s.enemyWasps,             // Phase 2 enemy — default off (lethal!)
         };
       } catch (e) {
         return { speed: 'progressive', theme: 'neon-grid', mode: 'pure',
-                 bonusFrog: true, enemyBird: false };
+                 bonusFrog: true, enemyBird: false, enemyWasps: false };
       }
     }
     function writeSettings() {
@@ -241,6 +242,7 @@
           mode: settings.mode,
           bonusFrog: settings.bonusFrog,
           enemyBird: settings.enemyBird,
+          enemyWasps: settings.enemyWasps,
         }));
       } catch (e) {}
     }
@@ -348,9 +350,20 @@
     function updateApplesLifecycle(now) {
       // Rot check (Wild mode only)
       if (settings.mode === 'wild') {
-        for (const a of apples) {
+        for (let i = apples.length - 1; i >= 0; i--) {
+          const a = apples[i];
           if (a.state === 'ripe' && (now - a.spawnTime > APPLE_RIPE_MS)) {
             a.state = 'rotten';
+            a.rottenTime = now;
+          }
+          // Phase 2 — Wasp emergence: rotten apple + WASP_ROT_TO_SPAWN_MS more →
+          // wasp bursts from apple, apple disappears via delayed-respawn pipeline.
+          if (settings.enemyWasps && a.state === 'rotten' &&
+              a.rottenTime && (now - a.rottenTime > WASP_ROT_TO_SPAWN_MS)) {
+            spawnWasp(a.x, a.y, now);
+            spawnWaspEmergeBurst(a.x, a.y);
+            apples.splice(i, 1);
+            respawnAfterEat();
           }
         }
         // Delayed respawn
@@ -755,6 +768,226 @@
       }
     }
 
+    // ================= WASP ENEMY (Phase 2) =================
+    // Spawns from apples that ripen → rot (20s) → sit rotten another 5s.
+    // Chases player head continuously at sub-cell smooth motion. Head-touch
+    // kills the player. Multiple wasps can co-exist (scaling difficulty).
+    const WASP_ROT_TO_SPAWN_MS = 5000;
+    const WASP_EMERGE_MS = 500;
+    const WASP_SPEED_PX_PER_SEC = 82;      // slower than Classic worm (~90px/s)
+    const WASP_KILL_RADIUS = 12;            // px from head cell center
+    const WASP_LIFESPAN_MS = 30000;
+    const WASP_HOVER_AMPLITUDE = 2.5;
+    const WASP_MAX_ACTIVE = 8;              // safety cap
+
+    const wasps = [];
+
+    function spawnWasp(gx, gy, now) {
+      if (wasps.length >= WASP_MAX_ACTIVE) return;
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      wasps.push({
+        x: cx, y: cy,
+        vx: 0, vy: 0,
+        state: 'emerging',
+        stateStart: now,
+        spawnTime: now,
+        wingPhase: 0,
+        hoverPhase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    function updateWasps(dt, now) {
+      if (game.state !== 'playing') return;
+      const dtSec = dt / 1000;
+
+      for (let i = wasps.length - 1; i >= 0; i--) {
+        const w = wasps[i];
+        w.wingPhase += dt * 0.05;
+        w.hoverPhase += dt * 0.014;
+
+        // Lifespan
+        if (now - w.spawnTime > WASP_LIFESPAN_MS) {
+          wasps.splice(i, 1);
+          continue;
+        }
+
+        const stateAge = now - w.stateStart;
+        switch (w.state) {
+          case 'emerging':
+            // Rise slightly (small y offset animated by hoverPhase, no chase yet)
+            if (stateAge >= WASP_EMERGE_MS) {
+              w.state = 'chasing';
+              w.stateStart = now;
+            }
+            break;
+          case 'chasing': {
+            const head = worm.segments[0];
+            const targetX = (head.x + 0.5) * GRID.cellSize;
+            const targetY = (head.y + 0.5) * GRID.cellSize;
+            const dx = targetX - w.x, dy = targetY - w.y;
+            const d = Math.hypot(dx, dy);
+            if (d > 0.1) {
+              const speed = WASP_SPEED_PX_PER_SEC;
+              w.vx = (dx / d) * speed;
+              w.vy = (dy / d) * speed;
+              w.x += w.vx * dtSec;
+              w.y += w.vy * dtSec;
+            }
+            // Kill check
+            if (d < WASP_KILL_RADIUS) {
+              triggerDeath('wasp');
+              return;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    function renderWasps(now) {
+      for (const w of wasps) renderWasp(w, now);
+    }
+
+    function renderWasp(w, now) {
+      const wingFlap = Math.sin(w.wingPhase * 25);
+      const hover = Math.sin(w.hoverPhase * 8) * WASP_HOVER_AMPLITUDE;
+      const heading = Math.atan2(w.vy || 0, w.vx || 1);
+      const stateAge = now - w.stateStart;
+
+      // Emergence fade-in
+      let emergeAlpha = 1;
+      let emergeScale = 1;
+      if (w.state === 'emerging') {
+        const t = Math.min(1, stateAge / WASP_EMERGE_MS);
+        emergeAlpha = t;
+        emergeScale = 0.5 + t * 0.5;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = emergeAlpha;
+      ctx.translate(w.x, w.y + hover);
+      ctx.rotate(heading + Math.PI / 2);   // wasp sprite drawn head-up locally
+      ctx.scale(emergeScale, emergeScale);
+
+      const r = 5.5;
+
+      // ---- Wings (blurred, transparent, drawn behind body) ----
+      ctx.save();
+      ctx.globalAlpha = 0.45 * emergeAlpha;
+      ctx.fillStyle = 'rgba(240,250,255,0.85)';
+      ctx.shadowBlur = 3;
+      ctx.shadowColor = 'rgba(200,220,255,0.5)';
+      // Left wing
+      ctx.save();
+      ctx.rotate(-0.35 + wingFlap * 0.25);
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.8, -r * 0.5, r * 1.5, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // Right wing
+      ctx.save();
+      ctx.rotate(0.35 - wingFlap * 0.25);
+      ctx.beginPath();
+      ctx.ellipse(r * 0.8, -r * 0.5, r * 1.5, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.restore();
+
+      // ---- Body (striped yellow-black) ----
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = 'rgba(80,60,10,0.7)';
+
+      // Yellow base body (top-down oval)
+      ctx.fillStyle = '#ffd028';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.75, r * 1.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Black stripes across body (2-3 dark bands)
+      ctx.fillStyle = '#1a1a1a';
+      ctx.shadowBlur = 0;
+      // Draw as horizontal bars clipped to body shape
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.75, r * 1.15, 0, 0, Math.PI * 2);
+      ctx.clip();
+      for (let i = 0; i < 3; i++) {
+        const by = -r * 0.7 + i * r * 0.55;
+        ctx.fillRect(-r * 0.85, by, r * 1.7, r * 0.22);
+      }
+      ctx.restore();
+
+      // ---- Head (small dark ellipse at front) ----
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 3;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 1.25, r * 0.55, r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Compound eyes (dark red dots)
+      ctx.fillStyle = '#c02020';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(-r * 0.28, -r * 1.35, r * 0.12, 0, Math.PI * 2);
+      ctx.arc( r * 0.28, -r * 1.35, r * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- Antennae ----
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 0.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.22, -r * 1.55);
+      ctx.quadraticCurveTo(-r * 0.5, -r * 2.2, -r * 0.35, -r * 2.5);
+      ctx.moveTo( r * 0.22, -r * 1.55);
+      ctx.quadraticCurveTo( r * 0.5, -r * 2.2,  r * 0.35, -r * 2.5);
+      ctx.stroke();
+      // Antenna tips (small dots)
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-r * 0.35, -r * 2.5, 0.8, 0, Math.PI * 2);
+      ctx.arc( r * 0.35, -r * 2.5, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ---- Stinger (small pointed tail at back) ----
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.18, r * 1.15);
+      ctx.lineTo(0, r * 1.55);
+      ctx.lineTo(r * 0.18, r * 1.15);
+      ctx.closePath();
+      ctx.fill();
+
+      // Subtle warning glow around wasp
+      ctx.restore();
+    }
+
+    function spawnWaspEmergeBurst(gx, gy) {
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      // Rotten fruit "splat" + dust burst
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2 + Math.random() * 0.3;
+        const s = 40 + Math.random() * 70;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+          life: 500, maxLife: 500,
+          color: i % 2 === 0 ? '#6a4a1a' : '#ffd028',
+          size: 1.6 + Math.random() * 1,
+        });
+      }
+      // Warning shockwave
+      particles.push({
+        x: cx, y: cy, vx: 0, vy: 0,
+        life: 450, maxLife: 450,
+        ring: true, radius: 3,
+        color: '#ffd028',
+      });
+    }
+
     // ================= THEMES (reused from snake fancy-web) =================
     const THEMES = {
       'neon-grid': {
@@ -1068,8 +1301,9 @@
     const ENEMIES = [
       { key: 'enemyBird', label: '🐦 Bird',
         description: 'Thief — races you for the highest-value apple. Non-lethal.' },
-      // Phase 2+ enemies will land here iteratively:
-      // { key: 'enemyWasps', label: '🐝 Wasps', description: '...' },
+      { key: 'enemyWasps', label: '🐝 Wasps',
+        description: 'Emerge from apples left rotting too long. LETHAL — head-contact kills you.' },
+      // Phase 3+ enemies will land here iteratively:
       // { key: 'enemyRival', label: '🪱 Rival', description: '...' },
       // { key: 'enemyGardener', label: '🧑‍🌾 Gardener', description: '...' },
     ];
@@ -1277,9 +1511,10 @@
         try { localStorage.setItem(BEST_KEY, String(game.bestScore)); } catch(e) {}
         updateScoreDisplay();
       }
-      const sub = reason === 'wall'
-        ? 'crashed into the wall'
-        : 'tangled with your own body';
+      let sub;
+      if (reason === 'wall')      sub = 'crashed into the wall';
+      else if (reason === 'wasp') sub = 'stung by a wasp';
+      else                        sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
     }
 
@@ -1326,6 +1561,7 @@
       initApples();
       frog.active = false;
       bird.active = false;
+      wasps.length = 0;
       scheduleNextFrog(performance.now());
       scheduleNextBird(performance.now());
       particles.length = 0;
@@ -2241,6 +2477,7 @@
       updateApplesLifecycle(now);      // Wild mode rot + delayed respawn
       updateFrog(now);                  // Wild mode frog bonus
       updateBird(dt, now);              // Wild mode enemy: Bird (Phase 1)
+      updateWasps(dt, now);             // Wild mode enemy: Wasps (Phase 2)
       updateParticles(dt);
 
       if (game.state === 'playing') {
@@ -2257,6 +2494,7 @@
       renderApples(time);
       renderFrog(now);
       renderBird(now);
+      renderWasps(now);
 
       if (game.state === 'dead') {
         // Fade worm during death
