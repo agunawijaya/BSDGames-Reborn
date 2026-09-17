@@ -250,6 +250,43 @@ one-time.
   restart. ADR `fancy-web-004-wild-mode.md` documents the phased
   rollout: Phase 0 (this) → Phase 1 Bird → Phase 2 Wasps → Phase
   3 Rival worm → Phase 4 Gardener → Phase 5 balance polish.
+- **2026-09-17 turn accuracy fix** — Playtest: turns happened at
+  "neck" (segments[0] cell) not at the visual eye position. Root
+  cause in doTick: committed pending direction FIRST then computed
+  newHead using that new direction — so head moved from OLD cell
+  in NEW direction while visual head had interpolated forward.
+  **Fix**: reordered doTick to move FIRST in current direction
+  (complete in-flight cell), THEN commit pending direction for
+  next tick. Turn now happens at the cell the eye visually reached.
+- **2026-09-17 layout compressed to horizontal** — Playtest:
+  too much vertical space eaten by stacked picker rows.
+  Consolidated mode + speed + enemies + bonus into one horizontal
+  row (`.picker-row-horizontal` + `.picker-group-inline`). Theme
+  stays as top row. Enemies + bonus groups hidden in Pure mode.
+- **2026-09-17 Wild Phase 1: 🐦 Bird enemy** — First enemy shipped.
+  Non-lethal thief. Spawns 15-25s from side opposite highest-value
+  ripe apple. Approach → grab → retreat state machine with altitude
+  drop + shadow projection. If bird reaches apple first, apple
+  disappears via same 2.5s delayed-respawn pipeline (player loses
+  potential score only). Bird timeout 8s if it can't reach target
+  (player ate it first, apple pool depleted, etc.). Sprite:
+  procedural passerine — brown gradient body, wing flap, orange
+  beak, dark wing tips, tail feathers, eye with highlight.
+- **2026-09-17 frog visual + animation overhaul** — Playtest:
+  frog didn't look like a frog (green blob), movement felt like
+  chess-piece teleport not a leap.
+  * **Sprite redesign**: hind legs with visible knee bend + 3
+    webbed toes each; front-leg paws; head bulge base for eyes;
+    bulging yellow eyes with VERTICAL SLIT PUPILS (frog signature);
+    nostrils; wide curved mouth line; dorsal stripe; 6 back spots;
+    squat oval body wider at back.
+  * **Motion state machine**: sitting (2.5-4s random, subtle
+    breathing) → crouching (220ms, body squishes, legs fold more)
+    → airborne (460ms, parabolic arc, body stretches, hind legs
+    kick back and out, head tilts slightly) → landing (160ms,
+    impact absorb). Body rotates to face jump direction. Ground
+    shadow scales with altitude. Result: intermittent leaping
+    with expressive squash-and-stretch.
 
 ## See also
 
