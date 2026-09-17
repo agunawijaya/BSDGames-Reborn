@@ -1,0 +1,32 @@
+# The original BSDGames source is retrieved from
+# https://github.com/vattam/BSDGames and lives locally.
+# It is NOT redistributed in this repository. See ATTRIBUTION.md.
+BSDGames-master/
+BSDGames-master.zip
+*.tar.gz
+*.tgz
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Build output (populated after language decision)
+target/
+build/
+dist/
+node_modules/
+*.o
+*.obj
+
+# Local secrets / configs
+.env
+.env.local
+
+# Local dev helper scripts (contain hardcoded local paths — regenerated
+# per developer machine, not part of the public repo)
+build_*.sh
+compile_*.sh
