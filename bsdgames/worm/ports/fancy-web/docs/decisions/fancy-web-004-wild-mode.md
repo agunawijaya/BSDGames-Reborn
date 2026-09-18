@@ -155,16 +155,22 @@ enemies stop spawning or start spawning based on next spawn tick.
 - **Player head into bird** → impossible (bird flies at
   different altitude; only its shadow touches the grid).
 - **Player head into wasp** → death (Phase 2+).
-- **Player head into rival body** → rival dies, player grows by
-  rival's length (slither.io-style bonus — Phase 3+).
+- **Player head into rival body** → PLAYER dies (Ruleset A, Phase 3+
+  post-playtest). Rival's body is a wall to the player's head, same
+  as any other obstacle. The earlier slither.io-style bonus rule was
+  reverted — it made the collision matrix asymmetric and confusing.
 - **Player head into rival head** → both die (Phase 3+).
 - **Rival head into player body** → RIVAL dies (Phase 3+). Player's
-  body is a solid obstacle to the rival, same as a wall. This means
-  a player who successfully traps the rival by wrapping their body
-  around it wins the encounter — the rival is forced into player
-  body and dies. Rival AI scores moves into player body as
-  Infinity and only ever takes them under forced-death conditions
-  anyway, so this rule cannot punish the player unfairly.
+  body is a wall to the rival's head, symmetric with the rule
+  above. This means a player who successfully traps the rival by
+  wrapping their body around it wins the encounter. Rival AI scores
+  moves into player body as Infinity and only ever takes them under
+  forced-death conditions.
+
+**Symmetric ruleset (Ruleset A / Snake).** The head-into-body case
+always kills the head-owner regardless of which side is attacking.
+Head-into-head is the only mutual-death case. Simple, predictable,
+and consistent with self-collision (head → own body = self dies).
 - **Player head into gardener** → death (Phase 4+).
 
 ## Options considered

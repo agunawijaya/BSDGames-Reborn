@@ -1906,7 +1906,7 @@
       { key: 'enemyWasps', label: '🐝 Wasps',
         description: 'Emerge from apples left rotting too long. LETHAL — head-contact kills you.' },
       { key: 'enemyRival', label: '🪱 Rival',
-        description: 'AI worm competes for apples. Attack its body to kill it and grow. Head-to-head = both die. Trap it to force its suicide.' },
+        description: 'AI worm competes for apples. Its body is a wall — hitting it kills you. Head-to-head = both die. Trap it to force its suicide.' },
       { key: 'enemyGardener', label: '🧑‍🌾 Gardener',
         description: 'Rare — walks in from an edge and chases your head. LETHAL. 25s to survive.' },
       // Phase 3+ enemies will land here iteratively:
@@ -2063,6 +2063,12 @@
           if (worm.segments[i].x === cell.x &&
               worm.segments[i].y === cell.y) return true;
         }
+        // Ruleset A (Snake, symmetric): rival body/head is a wall to player head
+        if (rival.active) {
+          for (const s of rival.segments) {
+            if (s.x === cell.x && s.y === cell.y) return true;
+          }
+        }
         return false;
       }
 
@@ -2103,22 +2109,19 @@
       }
 
       // ---- Rival interactions (before advancing player head) ----
-      // Player head → rival head = both die (checked using rival head cell).
-      // Player head → rival body = rival dies, player grows by remaining length.
+      // Ruleset A (Snake, symmetric):
+      //   player head → rival head = both die (mutual crash)
+      //   player head → rival body = PLAYER dies (rival body is a wall)
+      // No slither.io bonus. Attacking the rival's body kills you the same
+      // as running into a wall.
       if (rival.active && rival.segments.length > 0) {
         const rHead = rival.segments[0];
         if (newHead.x === rHead.x && newHead.y === rHead.y) {
-          // Head-to-head
           killRival(performance.now(), false);
           return triggerDeath('rival-head');
         }
         if (isCellRivalBody(newHead.x, newHead.y, true)) {
-          // Slither.io-style bonus — grow by rival's remaining length
-          const bonus = rival.segments.length;
-          worm.growing += bonus;
-          game.score += worm.growing;               // chained-bonus math
-          updateScoreDisplay();
-          killRival(performance.now(), true);
+          return triggerDeath('rival-body');
         }
       }
 
@@ -2196,6 +2199,7 @@
       else if (reason === 'wasp')        sub = 'stung by a wasp';
       else if (reason === 'gardener')    sub = 'trampled by the gardener';
       else if (reason === 'rival-head')  sub = 'head-on with the rival';
+      else if (reason === 'rival-body')  sub = 'crashed into the rival';
       else                               sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
     }
