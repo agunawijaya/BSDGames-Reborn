@@ -228,12 +228,13 @@
           bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
           enemyBird: !!s.enemyBird,               // Phase 1 enemy — default off
           enemyWasps: !!s.enemyWasps,             // Phase 2 enemy — default off (lethal!)
+          enemyRival: !!s.enemyRival,             // Phase 3 enemy — default off
           enemyGardener: !!s.enemyGardener,       // Phase 4 enemy — default off (lethal!)
         };
       } catch (e) {
         return { speed: 'progressive', theme: 'neon-grid', mode: 'pure',
                  bonusFrog: true, enemyBird: false, enemyWasps: false,
-                 enemyGardener: false };
+                 enemyRival: false, enemyGardener: false };
       }
     }
     function writeSettings() {
@@ -245,6 +246,7 @@
           bonusFrog: settings.bonusFrog,
           enemyBird: settings.enemyBird,
           enemyWasps: settings.enemyWasps,
+          enemyRival: settings.enemyRival,
           enemyGardener: settings.enemyGardener,
         }));
       } catch (e) {}
@@ -1277,6 +1279,313 @@
       });
     }
 
+    // ================= RIVAL WORM ENEMY (Phase 3) =================
+    // AI competitor that follows the same rules (grow, chained bonus,
+    // self-collision-dies). Slither.io-style interaction:
+    //   player head → rival head = both die
+    //   player head → rival body = rival dies, player grows by remaining length
+    //   rival  head → player body = player dies
+    const RIVAL_INIT_LENGTH        = 4;
+    const RIVAL_INITIAL_SPAWN_MIN  = 15000;
+    const RIVAL_INITIAL_SPAWN_MAX  = 25000;
+    const RIVAL_RESPAWN_MIN_MS     = 15000;
+    const RIVAL_RESPAWN_MAX_MS     = 25000;
+
+    const rival = {
+      active: false,
+      segments: [],                    // head is segments[0]
+      direction: { dx: 1, dy: 0 },
+      growing: 0,
+      nextSpawnAt: 0,
+    };
+
+    function scheduleNextRival(now, isInitial) {
+      const min = isInitial ? RIVAL_INITIAL_SPAWN_MIN : RIVAL_RESPAWN_MIN_MS;
+      const max = isInitial ? RIVAL_INITIAL_SPAWN_MAX : RIVAL_RESPAWN_MAX_MS;
+      rival.nextSpawnAt = now + min + Math.random() * (max - min);
+    }
+
+    function isCellOccupiedByPlayer(x, y) {
+      for (const s of worm.segments) if (s.x === x && s.y === y) return true;
+      return false;
+    }
+
+    function pickRivalSpawnCell() {
+      // Try a corner far from player. Fall back to any empty edge cell.
+      const head = worm.segments[0];
+      const corners = [
+        { x: 0,               y: 0 },
+        { x: GRID.cols - 1,   y: 0 },
+        { x: 0,               y: GRID.rows - 1 },
+        { x: GRID.cols - 1,   y: GRID.rows - 1 },
+      ];
+      corners.sort((a, b) =>
+        (Math.abs(b.x - head.x) + Math.abs(b.y - head.y))
+        - (Math.abs(a.x - head.x) + Math.abs(a.y - head.y))
+      );
+      for (const c of corners) {
+        if (!isCellOccupiedByPlayer(c.x, c.y)) return c;
+      }
+      // Extremely unlikely fallback
+      return { x: Math.floor(GRID.cols / 2), y: Math.floor(GRID.rows / 2) };
+    }
+
+    function spawnRival(now) {
+      const cell = pickRivalSpawnCell();
+      // Face toward grid center so rival starts moving into play area
+      const cx = GRID.cols / 2, cy = GRID.rows / 2;
+      const dx = cell.x < cx ? 1 : -1;
+      const dy = cell.y < cy ? 1 : -1;
+      const initDir = Math.abs(cell.x - cx) > Math.abs(cell.y - cy)
+        ? { dx, dy: 0 } : { dx: 0, dy };
+
+      rival.segments = [];
+      for (let i = 0; i < RIVAL_INIT_LENGTH; i++) {
+        rival.segments.push({
+          x: cell.x - initDir.dx * i,
+          y: cell.y - initDir.dy * i,
+        });
+      }
+      rival.direction = initDir;
+      rival.growing = 0;
+      rival.active = true;
+      spawnRivalSpawnBurst(cell.x, cell.y);
+    }
+
+    function killRival(now, byPlayer) {
+      spawnRivalDeathBurst(rival.segments, byPlayer);
+      rival.active = false;
+      rival.segments = [];
+      scheduleNextRival(now, false);
+    }
+
+    function isCellRivalBody(x, y, skipHead) {
+      for (let i = skipHead ? 1 : 0; i < rival.segments.length; i++) {
+        if (rival.segments[i].x === x && rival.segments[i].y === y) return true;
+      }
+      return false;
+    }
+
+    // Greedy AI: pick a cardinal step that reduces Manhattan distance to
+    // the nearest apple while avoiding walls, own body, and player body.
+    // Never reverses. Falls back to any legal move if preferred blocked.
+    function computeRivalMove() {
+      const head = rival.segments[0];
+      // Find nearest apple
+      let target = null, best = Infinity;
+      for (const a of apples) {
+        const d = Math.abs(a.x - head.x) + Math.abs(a.y - head.y);
+        if (d < best) { best = d; target = a; }
+      }
+
+      const currDir = rival.direction;
+      // Candidate cardinal directions, no reverse of current
+      const options = [
+        { dx:  1, dy:  0 },
+        { dx: -1, dy:  0 },
+        { dx:  0, dy:  1 },
+        { dx:  0, dy: -1 },
+      ].filter(d => !(d.dx === -currDir.dx && d.dy === -currDir.dy));
+
+      // Score each option: lower is better
+      function scoreOption(d) {
+        const nx = head.x + d.dx, ny = head.y + d.dy;
+        if (nx < 0 || nx >= GRID.cols || ny < 0 || ny >= GRID.rows) return Infinity;
+        // Rival tail check (own body) — approximate: skip last segment which will move
+        for (let i = 0; i < rival.segments.length - 1; i++) {
+          if (rival.segments[i].x === nx && rival.segments[i].y === ny) return Infinity;
+        }
+        // Player body (avoid — collision kills player, but rival AI plays safe)
+        for (const s of worm.segments) {
+          if (s.x === nx && s.y === ny) return Infinity;
+        }
+        if (!target) return Math.random();      // wander
+        return Math.abs(target.x - nx) + Math.abs(target.y - ny);
+      }
+
+      options.sort((a, b) => scoreOption(a) - scoreOption(b));
+      const best2 = options[0];
+      if (!best2 || scoreOption(best2) === Infinity) {
+        // Fully blocked — accept forced death direction
+        return options[0] || currDir;
+      }
+      return best2;
+    }
+
+    // Advance rival by one tick — mirrors doTick but for the AI.
+    // Returns 'killed-by-player' | 'died' | 'ok'.
+    function doRivalTick(now) {
+      if (!rival.active) return 'ok';
+
+      const dir = computeRivalMove();
+      const oldHead = rival.segments[0];
+      const newHead = { x: oldHead.x + dir.dx, y: oldHead.y + dir.dy };
+      rival.direction = dir;
+
+      // Wall death
+      if (newHead.x < 0 || newHead.x >= GRID.cols ||
+          newHead.y < 0 || newHead.y >= GRID.rows) {
+        killRival(now, false);
+        return 'died';
+      }
+
+      // Self-collision (skip last segment if not growing)
+      const shrinkTail = rival.growing === 0;
+      const stopAt = shrinkTail ? rival.segments.length - 1 : rival.segments.length;
+      for (let i = 0; i < stopAt; i++) {
+        if (rival.segments[i].x === newHead.x && rival.segments[i].y === newHead.y) {
+          killRival(now, false);
+          return 'died';
+        }
+      }
+
+      // Rival head vs player body → player dies
+      // Note: player head already moved this tick (player moves first). If rival
+      // head lands on player's NEW head cell, that's head-to-head handled below.
+      for (let i = 0; i < worm.segments.length; i++) {
+        if (worm.segments[i].x === newHead.x && worm.segments[i].y === newHead.y) {
+          if (i === 0) {
+            // Head-to-head — both die
+            killRival(now, false);
+            triggerDeath('rival-head');
+            return 'died';
+          }
+          // Rival head into player body → player dies, rival survives + advances
+          triggerDeath('rival');
+          // Still advance rival visually
+        }
+      }
+
+      // Advance rival head
+      rival.segments.unshift(newHead);
+
+      // Eat apple?
+      for (let ai = 0; ai < apples.length; ai++) {
+        const a = apples[ai];
+        if (newHead.x === a.x && newHead.y === a.y) {
+          rival.growing += a.value;
+          spawnPickupBurst(a.x, a.y, a.value);
+          apples.splice(ai, 1);
+          respawnAfterEat();
+          break;
+        }
+      }
+
+      // Tail resolution
+      if (rival.growing === 0) rival.segments.pop();
+      else rival.growing--;
+
+      return 'ok';
+    }
+
+    function renderRival(now) {
+      if (!rival.active || rival.segments.length === 0) return;
+      const cellSize = GRID.cellSize;
+      const t = worm.interpolation;
+
+      // Distinct amber palette
+      const bodyColor = '#e88030';
+      const headColor = '#ffb060';
+      const glowColor = '#ffa050';
+
+      ctx.save();
+      ctx.lineWidth = cellSize * 0.72;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = bodyColor;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = glowColor;
+
+      ctx.beginPath();
+      // Draw head with sub-cell interp
+      const head = rival.segments[0];
+      const headPx = (head.x + 0.5 + rival.direction.dx * t) * cellSize;
+      const headPy = (head.y + 0.5 + rival.direction.dy * t) * cellSize;
+      ctx.moveTo(headPx, headPy);
+      for (let i = 0; i < rival.segments.length; i++) {
+        const s = rival.segments[i];
+        ctx.lineTo((s.x + 0.5) * cellSize, (s.y + 0.5) * cellSize);
+      }
+      ctx.stroke();
+
+      // Head cap
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = headColor;
+      ctx.beginPath();
+      ctx.arc(headPx, headPy, cellSize * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes (small, facing direction)
+      const eyeR = cellSize * 0.10;
+      const eyeOff = cellSize * 0.15;
+      const perpX = -rival.direction.dy, perpY = rival.direction.dx;
+      const eyeX1 = headPx + perpX * eyeOff + rival.direction.dx * cellSize * 0.08;
+      const eyeY1 = headPy + perpY * eyeOff + rival.direction.dy * cellSize * 0.08;
+      const eyeX2 = headPx - perpX * eyeOff + rival.direction.dx * cellSize * 0.08;
+      const eyeY2 = headPy - perpY * eyeOff + rival.direction.dy * cellSize * 0.08;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(eyeX1, eyeY1, eyeR, 0, Math.PI * 2);
+      ctx.arc(eyeX2, eyeY2, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a0800';
+      ctx.beginPath();
+      ctx.arc(eyeX1, eyeY1, eyeR * 0.5, 0, Math.PI * 2);
+      ctx.arc(eyeX2, eyeY2, eyeR * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function spawnRivalSpawnBurst(gx, gy) {
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2 + Math.random() * 0.3;
+        const s = 50 + Math.random() * 70;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+          life: 500, maxLife: 500,
+          color: i % 2 === 0 ? '#e88030' : '#ffb060',
+          size: 1.6 + Math.random() * 1,
+        });
+      }
+      particles.push({
+        x: cx, y: cy, vx: 0, vy: 0,
+        life: 480, maxLife: 480,
+        ring: true, radius: 4,
+        color: '#ff9040',
+      });
+    }
+
+    function updateRivalSpawn(now) {
+      if (game.state !== 'playing') return;
+      if (!settings.enemyRival) return;
+      if (rival.active) return;
+      if (now >= rival.nextSpawnAt) spawnRival(now);
+    }
+
+    function spawnRivalDeathBurst(segments, byPlayer) {
+      const color1 = byPlayer ? '#ffe080' : '#8a4020';
+      const color2 = byPlayer ? '#ffa040' : '#5a2810';
+      for (const s of segments) {
+        const cx = (s.x + 0.5) * GRID.cellSize;
+        const cy = (s.y + 0.5) * GRID.cellSize;
+        for (let i = 0; i < 4; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 60 + Math.random() * 100;
+          particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+            life: 550, maxLife: 550,
+            color: i % 2 === 0 ? color1 : color2,
+            size: 1.4 + Math.random() * 1,
+          });
+        }
+      }
+    }
+
     // ================= THEMES (reused from snake fancy-web) =================
     const THEMES = {
       'neon-grid': {
@@ -1592,6 +1901,8 @@
         description: 'Thief — races you for the highest-value apple. Non-lethal.' },
       { key: 'enemyWasps', label: '🐝 Wasps',
         description: 'Emerge from apples left rotting too long. LETHAL — head-contact kills you.' },
+      { key: 'enemyRival', label: '🪱 Rival',
+        description: 'AI worm competes for apples. Head-to-body = you kill it and grow. Head-to-head = both die.' },
       { key: 'enemyGardener', label: '🧑‍🌾 Gardener',
         description: 'Rare — walks in from an edge and chases your head. LETHAL. 25s to survive.' },
       // Phase 3+ enemies will land here iteratively:
@@ -1787,6 +2098,26 @@
         }
       }
 
+      // ---- Rival interactions (before advancing player head) ----
+      // Player head → rival head = both die (checked using rival head cell).
+      // Player head → rival body = rival dies, player grows by remaining length.
+      if (rival.active && rival.segments.length > 0) {
+        const rHead = rival.segments[0];
+        if (newHead.x === rHead.x && newHead.y === rHead.y) {
+          // Head-to-head
+          killRival(performance.now(), false);
+          return triggerDeath('rival-head');
+        }
+        if (isCellRivalBody(newHead.x, newHead.y, true)) {
+          // Slither.io-style bonus — grow by rival's remaining length
+          const bonus = rival.segments.length;
+          worm.growing += bonus;
+          game.score += worm.growing;               // chained-bonus math
+          updateScoreDisplay();
+          killRival(performance.now(), true);
+        }
+      }
+
       // Add new head
       worm.segments.unshift(newHead);
 
@@ -1828,6 +2159,13 @@
         triggerWin();
       }
 
+      // Advance rival AI one tick (after player). Kills / collisions handled
+      // inside doRivalTick.
+      if (settings.enemyRival && rival.active) {
+        doRivalTick(performance.now());
+        if (game.state !== 'playing') return;
+      }
+
       // Commit pending direction for NEXT tick (turn accuracy fix)
       // Consume next queued turn (Nokia-snake buffer) — one per tick, so a
       // double-tap plays back as two sequential turns.
@@ -1850,10 +2188,12 @@
         updateScoreDisplay();
       }
       let sub;
-      if (reason === 'wall')          sub = 'crashed into the wall';
-      else if (reason === 'wasp')     sub = 'stung by a wasp';
-      else if (reason === 'gardener') sub = 'trampled by the gardener';
-      else                            sub = 'tangled with your own body';
+      if (reason === 'wall')             sub = 'crashed into the wall';
+      else if (reason === 'wasp')        sub = 'stung by a wasp';
+      else if (reason === 'gardener')    sub = 'trampled by the gardener';
+      else if (reason === 'rival')       sub = 'ambushed by the rival';
+      else if (reason === 'rival-head')  sub = 'head-on with the rival';
+      else                               sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
     }
 
@@ -1902,9 +2242,12 @@
       bird.active = false;
       wasps.length = 0;
       gardener.active = false;
+      rival.active = false;
+      rival.segments = [];
       scheduleNextFrog(performance.now());
       scheduleNextBird(performance.now());
       scheduleNextGardener(performance.now());
+      scheduleNextRival(performance.now(), true);
       particles.length = 0;
       updateScoreDisplay();
       updateLengthDisplay();
@@ -2820,6 +3163,7 @@
       updateBird(dt, now);              // Wild mode enemy: Bird (Phase 1)
       updateWasps(dt, now);             // Wild mode enemy: Wasps (Phase 2)
       updateGardener(dt, now);          // Wild mode enemy: Gardener (Phase 4)
+      updateRivalSpawn(now);            // Wild mode enemy: Rival worm (Phase 3)
       updateParticles(dt);
 
       if (game.state === 'playing') {
@@ -2838,6 +3182,7 @@
       renderBird(now);
       renderWasps(now);
       renderGardener(now);
+      renderRival(now);
 
       if (game.state === 'dead') {
         // Fade worm during death
@@ -2861,6 +3206,7 @@
     scheduleNextFrog(performance.now());
     scheduleNextBird(performance.now());
     scheduleNextGardener(performance.now());
+    scheduleNextRival(performance.now(), true);
     updateTickInterval();
     updateScoreDisplay();
     updateLengthDisplay();

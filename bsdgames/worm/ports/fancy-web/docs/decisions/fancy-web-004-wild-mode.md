@@ -260,7 +260,7 @@ subsequent iterations.
 | 0 | Mode picker, multi-apple pool, rot state, delayed respawn, frog bonus, localStorage | ✅ Shipped 2026-09-17 |
 | 1 | 🐦 Bird enemy: thief AI, shadow projection, race for highest-value apple, non-lethal, checkbox toggle | ✅ Shipped 2026-09-17 |
 | 2 | 🐝 Wasp enemy: emerges from apples left to rot 25s (20s ripe → 5s rotten), chases head at sub-cell smooth motion (~82 px/sec, slower than Classic worm), LETHAL on head-contact, 30s lifespan. **Balance: at most 1 rotten apple + 1 wasp in the world at a time** — new rot cycle only starts when both slots are empty. Prevents unwinnable swarms. | ✅ Shipped 2026-09-17 |
-| 3 | 🪱 Rival worm AI + head-collision rules + slither.io-style bonus + checkbox | Pending |
+| 3 | 🪱 Rival worm: AI competitor (4-segment start, ticks with player, greedy AI targeting nearest apple, avoids walls/self/player). Slither.io interactions — player head → rival head = mutual death; player head → rival body = rival dies + player grows by remaining length + chained-bonus score; rival head → player body = player dies. Initial spawn 15-25s after game start, respawn 15-25s after death. Amber sprite, distinct from player. | ✅ Shipped 2026-09-18 |
 | 4 | 🧑‍🌾 Gardener: rare (45-60s spawn cycle) ground-walker entering from an edge cell opposite the worm head; greedy Manhattan chase at 2.5 cells/sec (slower than Classic worm 3/sec but faster than Wasp); 25s hunt lifespan then retreats; LETHAL on ~14px head-proximity contact. Adapted from snake port's eagle state machine, ported to grid-aligned walking. | ✅ Shipped 2026-09-18 |
 | 5 | Balance tuning, wave pacing, difficulty defaults | Pending |
 
