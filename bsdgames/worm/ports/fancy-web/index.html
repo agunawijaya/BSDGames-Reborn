@@ -1222,15 +1222,27 @@
       scheduleNextGardener(now);
     }
 
+    function pickGardenerTarget() {
+      // Fair chase — target whichever head is nearest by Manhattan distance.
+      const pHead = worm.segments[0];
+      let target = pHead;
+      let best = Math.abs(pHead.x - gardener.x) + Math.abs(pHead.y - gardener.y);
+      if (rival.active && rival.segments.length > 0) {
+        const rHead = rival.segments[0];
+        const rDist = Math.abs(rHead.x - gardener.x) + Math.abs(rHead.y - gardener.y);
+        if (rDist < best) { target = rHead; best = rDist; }
+      }
+      return target;
+    }
+
     function greedyStep(now) {
-      // Greedy Manhattan step toward worm head. Try preferred axis first;
-      // fall back to the other axis if blocked by grid edge. Never leaves
-      // the grid; if fully blocked (won't happen mid-grid), stays put.
-      const head = worm.segments[0];
-      const dx = Math.sign(head.x - gardener.x);
-      const dy = Math.sign(head.y - gardener.y);
-      const absDX = Math.abs(head.x - gardener.x);
-      const absDY = Math.abs(head.y - gardener.y);
+      // Greedy Manhattan step toward the nearest head (player or rival).
+      // Try preferred axis first; fall back to the other axis if blocked.
+      const target = pickGardenerTarget();
+      const dx = Math.sign(target.x - gardener.x);
+      const dy = Math.sign(target.y - gardener.y);
+      const absDX = Math.abs(target.x - gardener.x);
+      const absDY = Math.abs(target.y - gardener.y);
 
       const candidates = [];
       if (absDX >= absDY) {
@@ -1278,16 +1290,29 @@
           break;
         case 'stalking': {
           if (now - gardener.stepStart >= GARDENER_MOVE_MS) greedyStep(now);
-          // Kill check — pixel-distance to worm head cell center
+          // Kill check — pixel-distance to each head cell center. Whichever
+          // is within kill radius dies (player triggerDeath; rival killRival).
           const t = Math.min(1, (now - gardener.stepStart) / GARDENER_MOVE_MS);
           const gPx = (gardener.prevX + (gardener.x - gardener.prevX) * t + 0.5) * GRID.cellSize;
           const gPy = (gardener.prevY + (gardener.y - gardener.prevY) * t + 0.5) * GRID.cellSize;
-          const head = worm.segments[0];
-          const hPx = (head.x + 0.5) * GRID.cellSize;
-          const hPy = (head.y + 0.5) * GRID.cellSize;
-          if (Math.hypot(gPx - hPx, gPy - hPy) < GARDENER_KILL_RADIUS_PX) {
+          const pHead = worm.segments[0];
+          const pDist = Math.hypot(
+            gPx - (pHead.x + 0.5) * GRID.cellSize,
+            gPy - (pHead.y + 0.5) * GRID.cellSize
+          );
+          if (pDist < GARDENER_KILL_RADIUS_PX) {
             triggerDeath('gardener');
             return;
+          }
+          if (rival.active && rival.segments.length > 0) {
+            const rHead = rival.segments[0];
+            const rDist = Math.hypot(
+              gPx - (rHead.x + 0.5) * GRID.cellSize,
+              gPy - (rHead.y + 0.5) * GRID.cellSize
+            );
+            if (rDist < GARDENER_KILL_RADIUS_PX) {
+              killRival(now, false);
+            }
           }
           if (now - gardener.spawnTime > GARDENER_LIFESPAN_MS) {
             gardener.state = 'leaving';
@@ -2060,7 +2085,7 @@
       { key: 'enemyRival', label: '🪱 Rival',
         description: 'AI worm competes for apples. Its body is a wall — hitting it kills you. Head-to-head = both die. Trap it to force its suicide.' },
       { key: 'enemyGardener', label: '🧑‍🌾 Gardener',
-        description: 'Rare — walks in from an edge and chases your head. LETHAL. 25s to survive.' },
+        description: 'Rare — walks in from an edge and chases the NEAREST head (you or rival). LETHAL. 25s to survive.' },
       // Phase 3+ enemies will land here iteratively:
       // { key: 'enemyRival', label: '🪱 Rival', description: '...' },
       // { key: 'enemyGardener', label: '🧑‍🌾 Gardener', description: '...' },
