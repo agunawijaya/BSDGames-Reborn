@@ -226,12 +226,14 @@
           theme: s.theme || 'neon-grid',
           mode: s.mode || 'pure',              // 'pure' (single apple, BSD) | 'wild' (multi-apple + bonuses)
           bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
-          enemyBird: !!s.enemyBird,              // Phase 1 enemy — default off
+          enemyBird: !!s.enemyBird,               // Phase 1 enemy — default off
           enemyWasps: !!s.enemyWasps,             // Phase 2 enemy — default off (lethal!)
+          enemyGardener: !!s.enemyGardener,       // Phase 4 enemy — default off (lethal!)
         };
       } catch (e) {
         return { speed: 'progressive', theme: 'neon-grid', mode: 'pure',
-                 bonusFrog: true, enemyBird: false, enemyWasps: false };
+                 bonusFrog: true, enemyBird: false, enemyWasps: false,
+                 enemyGardener: false };
       }
     }
     function writeSettings() {
@@ -243,6 +245,7 @@
           bonusFrog: settings.bonusFrog,
           enemyBird: settings.enemyBird,
           enemyWasps: settings.enemyWasps,
+          enemyGardener: settings.enemyGardener,
         }));
       } catch (e) {}
     }
@@ -1006,6 +1009,274 @@
       });
     }
 
+    // ================= GARDENER ENEMY (Phase 4) =================
+    // Rare, high-stakes ground-walker. Enters at an edge cell, greedy-chases
+    // the worm's head at ~2.5 cells/sec, retreats and fades if it doesn't
+    // catch the worm within its lifespan. Adapted from the snake port's
+    // eagle state machine, translated to grid-aligned walking.
+    const GARDENER_SPAWN_MIN_MS   = 45000;
+    const GARDENER_SPAWN_MAX_MS   = 60000;
+    const GARDENER_ARRIVE_MS      = 600;
+    const GARDENER_LEAVE_MS       = 600;
+    const GARDENER_LIFESPAN_MS    = 25000;
+    const GARDENER_MOVE_MS        = 400;     // ms per grid step (2.5 cells/sec)
+    const GARDENER_KILL_RADIUS_PX = 14;
+
+    const gardener = {
+      active: false,
+      x: 0, y: 0,                  // grid cell (current)
+      prevX: 0, prevY: 0,          // grid cell (previous, for interp)
+      stepStart: 0,                // ms of last step-start
+      state: 'arriving',
+      stateStart: 0,
+      spawnTime: 0,
+      nextSpawnAt: 0,
+      armPhase: 0,
+    };
+
+    function scheduleNextGardener(now) {
+      gardener.nextSpawnAt = now + GARDENER_SPAWN_MIN_MS
+        + Math.random() * (GARDENER_SPAWN_MAX_MS - GARDENER_SPAWN_MIN_MS);
+    }
+
+    function pickEdgeSpawnCell() {
+      // Spawn opposite to worm head so the arrival is telegraphed and fair.
+      const head = worm.segments[0];
+      const side = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+      let gx, gy;
+      if (side === 'horizontal') {
+        gx = head.x < GRID.cols / 2 ? GRID.cols - 1 : 0;
+        gy = Math.floor(Math.random() * GRID.rows);
+      } else {
+        gx = Math.floor(Math.random() * GRID.cols);
+        gy = head.y < GRID.rows / 2 ? GRID.rows - 1 : 0;
+      }
+      return { x: gx, y: gy };
+    }
+
+    function spawnGardener(now) {
+      const cell = pickEdgeSpawnCell();
+      gardener.active = true;
+      gardener.x = cell.x; gardener.y = cell.y;
+      gardener.prevX = cell.x; gardener.prevY = cell.y;
+      gardener.state = 'arriving';
+      gardener.stateStart = now;
+      gardener.stepStart = now;
+      gardener.spawnTime = now;
+      gardener.armPhase = 0;
+      spawnGardenerArriveBurst(cell.x, cell.y);
+    }
+
+    function despawnGardener(now) {
+      gardener.active = false;
+      scheduleNextGardener(now);
+    }
+
+    function greedyStep(now) {
+      // Greedy Manhattan step toward worm head. Try preferred axis first;
+      // fall back to the other axis if blocked by grid edge. Never leaves
+      // the grid; if fully blocked (won't happen mid-grid), stays put.
+      const head = worm.segments[0];
+      const dx = Math.sign(head.x - gardener.x);
+      const dy = Math.sign(head.y - gardener.y);
+      const absDX = Math.abs(head.x - gardener.x);
+      const absDY = Math.abs(head.y - gardener.y);
+
+      const candidates = [];
+      if (absDX >= absDY) {
+        if (dx !== 0) candidates.push({ x: gardener.x + dx, y: gardener.y });
+        if (dy !== 0) candidates.push({ x: gardener.x, y: gardener.y + dy });
+      } else {
+        if (dy !== 0) candidates.push({ x: gardener.x, y: gardener.y + dy });
+        if (dx !== 0) candidates.push({ x: gardener.x + dx, y: gardener.y });
+      }
+
+      for (const c of candidates) {
+        if (c.x >= 0 && c.x < GRID.cols && c.y >= 0 && c.y < GRID.rows) {
+          gardener.prevX = gardener.x;
+          gardener.prevY = gardener.y;
+          gardener.x = c.x;
+          gardener.y = c.y;
+          gardener.stepStart = now;
+          return;
+        }
+      }
+      // No valid step (already on head cell); stay put.
+      gardener.stepStart = now;
+    }
+
+    function updateGardener(dt, now) {
+      if (game.state !== 'playing') return;
+      if (!settings.enemyGardener) return;
+
+      if (!gardener.active) {
+        if (now >= gardener.nextSpawnAt) spawnGardener(now);
+        return;
+      }
+
+      gardener.armPhase += dt * 0.008;
+      const stateAge = now - gardener.stateStart;
+
+      switch (gardener.state) {
+        case 'arriving':
+          if (stateAge >= GARDENER_ARRIVE_MS) {
+            gardener.state = 'stalking';
+            gardener.stateStart = now;
+            gardener.stepStart = now;
+          }
+          break;
+        case 'stalking': {
+          if (now - gardener.stepStart >= GARDENER_MOVE_MS) greedyStep(now);
+          // Kill check — pixel-distance to worm head cell center
+          const t = Math.min(1, (now - gardener.stepStart) / GARDENER_MOVE_MS);
+          const gPx = (gardener.prevX + (gardener.x - gardener.prevX) * t + 0.5) * GRID.cellSize;
+          const gPy = (gardener.prevY + (gardener.y - gardener.prevY) * t + 0.5) * GRID.cellSize;
+          const head = worm.segments[0];
+          const hPx = (head.x + 0.5) * GRID.cellSize;
+          const hPy = (head.y + 0.5) * GRID.cellSize;
+          if (Math.hypot(gPx - hPx, gPy - hPy) < GARDENER_KILL_RADIUS_PX) {
+            triggerDeath('gardener');
+            return;
+          }
+          if (now - gardener.spawnTime > GARDENER_LIFESPAN_MS) {
+            gardener.state = 'leaving';
+            gardener.stateStart = now;
+          }
+          break;
+        }
+        case 'leaving':
+          if (stateAge >= GARDENER_LEAVE_MS) despawnGardener(now);
+          break;
+      }
+    }
+
+    function renderGardener(now) {
+      if (!gardener.active) return;
+      const stateAge = now - gardener.stateStart;
+
+      // Interp sub-cell position for smooth walking
+      const t = Math.min(1, (now - gardener.stepStart) / GARDENER_MOVE_MS);
+      const gx = gardener.prevX + (gardener.x - gardener.prevX) * t;
+      const gy = gardener.prevY + (gardener.y - gardener.prevY) * t;
+      const px = (gx + 0.5) * GRID.cellSize;
+      const py = (gy + 0.5) * GRID.cellSize;
+
+      let alpha = 1;
+      if (gardener.state === 'arriving') alpha = stateAge / GARDENER_ARRIVE_MS;
+      else if (gardener.state === 'leaving') alpha = 1 - stateAge / GARDENER_LEAVE_MS;
+      alpha = Math.max(0, Math.min(1, alpha));
+
+      const r = GRID.cellSize * 0.42;
+      const walkSway = Math.sin(gardener.armPhase * 6) * 0.15;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(px, py);
+
+      // Warning glow ring under gardener
+      ctx.fillStyle = 'rgba(200,60,60,0.15)';
+      ctx.beginPath();
+      ctx.arc(0, r * 0.9, r * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.75, r * 0.75, r * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+
+      // Body — olive-green shirt with slight arm-sway rotation
+      ctx.save();
+      ctx.rotate(walkSway * 0.35);
+      ctx.fillStyle = '#4d6a3a';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.15, r * 0.55, r * 0.68, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Arms — brown gloves at sides
+      ctx.fillStyle = '#5a3d1f';
+      ctx.beginPath();
+      ctx.arc(-r * 0.6 + walkSway * r * 0.3, r * 0.25, r * 0.20, 0, Math.PI * 2);
+      ctx.arc( r * 0.6 - walkSway * r * 0.3, r * 0.25, r * 0.20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shears in right hand (small silver blades)
+      ctx.strokeStyle = '#c0d0d8';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(r * 0.6 - walkSway * r * 0.3, r * 0.05);
+      ctx.lineTo(r * 0.85 - walkSway * r * 0.3, -r * 0.25);
+      ctx.moveTo(r * 0.62 - walkSway * r * 0.3, r * 0.10);
+      ctx.lineTo(r * 0.80 - walkSway * r * 0.3, -r * 0.22);
+      ctx.stroke();
+      ctx.restore();
+
+      // Head — skin-tone circle
+      ctx.fillStyle = '#e8c088';
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.35, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Straw sun hat — wide brim + crown
+      ctx.shadowBlur = 3;
+      ctx.fillStyle = '#e0b060';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.55, r * 0.85, r * 0.24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#c89040';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.7, r * 0.42, r * 0.20, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Hat band
+      ctx.fillStyle = '#8a5828';
+      ctx.fillRect(-r * 0.4, -r * 0.58, r * 0.8, r * 0.06);
+
+      // Eyes — small dark dots peeking from under hat brim
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-r * 0.10, -r * 0.28, r * 0.05, 0, Math.PI * 2);
+      ctx.arc( r * 0.10, -r * 0.28, r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Feet — small brown dots that alternate with walkSway
+      ctx.fillStyle = '#3a2510';
+      ctx.beginPath();
+      ctx.arc(-r * 0.25, r * 0.75 + walkSway * r * 0.15, r * 0.10, 0, Math.PI * 2);
+      ctx.arc( r * 0.25, r * 0.75 - walkSway * r * 0.15, r * 0.10, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function spawnGardenerArriveBurst(gx, gy) {
+      const cx = (gx + 0.5) * GRID.cellSize;
+      const cy = (gy + 0.5) * GRID.cellSize;
+      // Dust puff — brown particles
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+        const s = 50 + Math.random() * 80;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30,
+          life: 500, maxLife: 500,
+          color: i % 2 === 0 ? '#8a6d3a' : '#c89968',
+          size: 1.8 + Math.random() * 1,
+        });
+      }
+      // Warning shockwave
+      particles.push({
+        x: cx, y: cy, vx: 0, vy: 0,
+        life: 550, maxLife: 550,
+        ring: true, radius: 4,
+        color: '#c04040',
+      });
+    }
+
     // ================= THEMES (reused from snake fancy-web) =================
     const THEMES = {
       'neon-grid': {
@@ -1321,6 +1592,8 @@
         description: 'Thief — races you for the highest-value apple. Non-lethal.' },
       { key: 'enemyWasps', label: '🐝 Wasps',
         description: 'Emerge from apples left rotting too long. LETHAL — head-contact kills you.' },
+      { key: 'enemyGardener', label: '🧑‍🌾 Gardener',
+        description: 'Rare — walks in from an edge and chases your head. LETHAL. 25s to survive.' },
       // Phase 3+ enemies will land here iteratively:
       // { key: 'enemyRival', label: '🪱 Rival', description: '...' },
       // { key: 'enemyGardener', label: '🧑‍🌾 Gardener', description: '...' },
@@ -1577,9 +1850,10 @@
         updateScoreDisplay();
       }
       let sub;
-      if (reason === 'wall')      sub = 'crashed into the wall';
-      else if (reason === 'wasp') sub = 'stung by a wasp';
-      else                        sub = 'tangled with your own body';
+      if (reason === 'wall')          sub = 'crashed into the wall';
+      else if (reason === 'wasp')     sub = 'stung by a wasp';
+      else if (reason === 'gardener') sub = 'trampled by the gardener';
+      else                            sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
     }
 
@@ -1627,8 +1901,10 @@
       frog.active = false;
       bird.active = false;
       wasps.length = 0;
+      gardener.active = false;
       scheduleNextFrog(performance.now());
       scheduleNextBird(performance.now());
+      scheduleNextGardener(performance.now());
       particles.length = 0;
       updateScoreDisplay();
       updateLengthDisplay();
@@ -2543,6 +2819,7 @@
       updateFrog(now);                  // Wild mode frog bonus
       updateBird(dt, now);              // Wild mode enemy: Bird (Phase 1)
       updateWasps(dt, now);             // Wild mode enemy: Wasps (Phase 2)
+      updateGardener(dt, now);          // Wild mode enemy: Gardener (Phase 4)
       updateParticles(dt);
 
       if (game.state === 'playing') {
@@ -2560,6 +2837,7 @@
       renderFrog(now);
       renderBird(now);
       renderWasps(now);
+      renderGardener(now);
 
       if (game.state === 'dead') {
         // Fade worm during death
@@ -2582,6 +2860,7 @@
     initApples();
     scheduleNextFrog(performance.now());
     scheduleNextBird(performance.now());
+    scheduleNextGardener(performance.now());
     updateTickInterval();
     updateScoreDisplay();
     updateLengthDisplay();
