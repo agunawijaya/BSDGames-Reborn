@@ -58,7 +58,7 @@ progress, or release a game.
 | boggle | 🟠 | AntiGravity & Agun | M | Dictionary + word-find algorithm |
 | hangman | 🟠 | Kimi | XS | Docs done; ready to implement (ADR-005 accepted) |
 | quiz | 🟠 | Agun (Kimi) | S | Docs done; ready to implement (ADR-005 accepted) |
-| wump | 🟠 | AntiGravity & Agun | S | Hunt the Wumpus — procedural cave |
+| wump | 🟢 | AntiGravity & Agun | S | **Released 2026-09-18** — canonical docs complete + `fancy-web` port at Released status (see Port Tracking). |
 
 ## Arcade & Action
 
@@ -128,8 +128,8 @@ progress, or release a game.
 |---|---:|
 | 🔴 Unclaimed | 0 |
 | 🟡 Claimed | 0 |
-| 🟠 In Progress | 40 (documentation phase; `dm` is docs-only with port skipped per ADR) |
-| 🟢 Released | 3 (`robots`, `snake`, `gomoku` — `fancy-web` shipped 2026-09-17) |
+| 🟠 In Progress | 38 (documentation phase; `dm` is docs-only with port skipped per ADR) |
+| 🟢 Released | 5 (`robots`, `snake`, `worm`, `gomoku`, `wump` — `fancy-web` shipped) |
 | ✨ Complete | 0 |
 | **Total** | **43** |
 
@@ -157,6 +157,7 @@ for the naming rules and reserved slugs.
 | snake | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Single-file Canvas 2D + vanilla JS (~1900 LOC). 8 cosmetic themes, eagle/owl state-machine chaser, apple collection, edge escape, localStorage best-score. Vite + TS + PWA deferred to v2 per port ADR `fancy-web-003`. |
 | worm | fancy-web | 🟢 | Agun (Claude) | — | Released 2026-09-17. Growing worm (BSD spec faithful: progressive growth, chained score bonus, walls lethal). Numbered apples 1-9 with size+color+digit encoding. 8 themes reused from snake port. Settings row: Classic/Fast/Progressive tick rate. Single-file HTML ~1500 LOC. |
 | gomoku | fancy-web | 🟢 | Agun | *(pending deploy)* | **Released 2026-09-17; palette shift + port docs finalised 2026-09-18.** React 18 + TypeScript + native SVG + Vite. 47/47 tests pass (11 coords + 22 engine + 14 AI); TypeScript strict; production bundle **49.66 KB gzipped** (no WebGL, no GPU required — playable on any modern browser incl. low-end mobile). Full 19×19 board, spec-compliant free-gomoku rules, heuristic AI (pattern scoring: five/open-four/closed-four/open-three) + hot-seat 2-player mode. Undo, resign, new game, swap sides, move history, SVG win-line pulse animation. Traditional Japanese board aesthetic — kaya honey wood, black grid ink, matte-slate + clamshell stones, vermillion cinnabar last-move mark (rationale in port diff-log). One port ADR (001 tech stack); port `docs/test-scenarios.md` (20 scenarios) and `docs/notes.md` in place. ✨ Complete pending: deploy live URL. |
+| wump | fancy-web | 🟢 | Agun & AntiGravity | *(pending deploy)* | **Released 2026-09-18.** Standalone HTML5 Canvas 2D + Web Audio API + decoupled engine (`src/engine.js`). 11/11 automated unit tests pass via Node test runner; zero runtime dependencies; no build step. Faithful spec engine (Dodecahedron + Dave Taylor GCD procedural caves, hazard exclusivity, pit outcrop 2/12 survival, bat chaining, crooked arrow decays, deflections, and ricochets). Tolkien Moria / Doors of Durin visual theme: glowing Ithildin runes, organic progressive white wind reveal drafts with sequential pauses, slow detailed bats, glowing moss, and procedural Web Audio Moria drone and SFX. 5 live port screenshots captured and embedded in port README. |
 
 *(Other games' ports will appear here as they are claimed. No
 port row = no port started yet; canonical docs at

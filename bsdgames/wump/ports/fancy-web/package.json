@@ -1,0 +1,20 @@
+{
+  "name": "@bsdgames/wump-fancy-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Hunt the Wumpus fancy-web port — Subterranean Moria Doors of Durin, progressive white wind drafts, dynamic cave hazards, and Web Audio synthesizer",
+  "main": "src/engine.js",
+  "scripts": {
+    "test": "node --test tests/wump.test.js"
+  },
+  "keywords": [
+    "bsdgames",
+    "wump",
+    "hunt-the-wumpus",
+    "canvas",
+    "web-audio",
+    "procedural-generation"
+  ],
+  "author": "Agun Wijaya",
+  "license": "MIT"
+}
