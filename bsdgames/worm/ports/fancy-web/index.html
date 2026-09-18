@@ -1439,20 +1439,24 @@
         }
       }
 
-      // Rival head vs player body → player dies
-      // Note: player head already moved this tick (player moves first). If rival
-      // head lands on player's NEW head cell, that's head-to-head handled below.
+      // Rival head vs player segments.
+      // - Head cell (segments[0]): head-to-head, BOTH die (symmetric).
+      // - Any body segment: RIVAL dies (player's body is a solid obstacle to
+      //   the rival, just like a wall). This means if the player traps the
+      //   rival by wrapping their body around it, the player wins — the
+      //   rival is forced to crash into player's body and dies. Player is
+      //   never killed by the rival's head (the rival AI already scores
+      //   moves into player body as Infinity and only ever takes them under
+      //   forced-death conditions anyway).
       for (let i = 0; i < worm.segments.length; i++) {
         if (worm.segments[i].x === newHead.x && worm.segments[i].y === newHead.y) {
           if (i === 0) {
-            // Head-to-head — both die
             killRival(now, false);
             triggerDeath('rival-head');
             return 'died';
           }
-          // Rival head into player body → player dies, rival survives + advances
-          triggerDeath('rival');
-          // Still advance rival visually
+          killRival(now, false);
+          return 'died';
         }
       }
 
@@ -1902,7 +1906,7 @@
       { key: 'enemyWasps', label: '🐝 Wasps',
         description: 'Emerge from apples left rotting too long. LETHAL — head-contact kills you.' },
       { key: 'enemyRival', label: '🪱 Rival',
-        description: 'AI worm competes for apples. Head-to-body = you kill it and grow. Head-to-head = both die.' },
+        description: 'AI worm competes for apples. Attack its body to kill it and grow. Head-to-head = both die. Trap it to force its suicide.' },
       { key: 'enemyGardener', label: '🧑‍🌾 Gardener',
         description: 'Rare — walks in from an edge and chases your head. LETHAL. 25s to survive.' },
       // Phase 3+ enemies will land here iteratively:
@@ -2191,7 +2195,6 @@
       if (reason === 'wall')             sub = 'crashed into the wall';
       else if (reason === 'wasp')        sub = 'stung by a wasp';
       else if (reason === 'gardener')    sub = 'trampled by the gardener';
-      else if (reason === 'rival')       sub = 'ambushed by the rival';
       else if (reason === 'rival-head')  sub = 'head-on with the rival';
       else                               sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
