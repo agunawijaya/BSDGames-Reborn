@@ -168,10 +168,6 @@
       <div class="picker-label">enemies</div>
       <div class="picker-row" id="enemyPicker"></div>
     </div>
-    <div class="picker-group-inline" id="wildBonusGroup" style="display:none">
-      <div class="picker-label">bonus</div>
-      <div class="picker-row" id="bonusPicker"></div>
-    </div>
   </div>
 
   <div class="stage">
@@ -613,7 +609,7 @@
     }
 
     function updateFrog(now) {
-      if (!settings.bonusFrog || settings.mode !== 'wild' || game.state !== 'playing') {
+      if (settings.mode !== 'wild' || game.state !== 'playing') {
         return;
       }
       if (!frog.active) {
@@ -2019,9 +2015,7 @@
 
     // ================= MODE PICKER =================
     const modePicker = document.getElementById('modePicker');
-    const bonusPicker = document.getElementById('bonusPicker');
     const enemyPicker = document.getElementById('enemyPicker');
-    const wildBonusGroup = document.getElementById('wildBonusGroup');
     const wildEnemiesGroup = document.getElementById('wildEnemiesGroup');
 
     const MODES = [
@@ -2042,9 +2036,7 @@
     });
 
     function updateWildGroupVisibility() {
-      const show = settings.mode === 'wild';
-      wildEnemiesGroup.style.display = show ? '' : 'none';
-      wildBonusGroup.style.display = show ? '' : 'none';
+      wildEnemiesGroup.style.display = settings.mode === 'wild' ? '' : 'none';
     }
 
     function setMode(key) {
@@ -2092,29 +2084,8 @@
       writeSettings();
     }
 
-    // ---- Bonus picker (Wild mode only) ----
-    const BONUSES = [
-      { key: 'bonusFrog', label: '🐸 Frog',
-        description: 'Occasional hopping frog. Eat for big score bonus.' },
-    ];
-
-    BONUSES.forEach(b => {
-      const btn = document.createElement('button');
-      btn.className = 'btn speed-btn' + (settings[b.key] ? ' active' : '');
-      btn.dataset.bonus = b.key;
-      btn.textContent = b.label;
-      btn.title = b.description;
-      btn.onclick = () => toggleBonus(b.key);
-      bonusPicker.appendChild(btn);
-    });
-
-    function toggleBonus(key) {
-      settings[key] = !settings[key];
-      bonusPicker.querySelectorAll('[data-bonus]').forEach(b => {
-        b.classList.toggle('active', settings[b.dataset.bonus]);
-      });
-      writeSettings();
-    }
+    // Bonus frog is always active in Wild mode (no user toggle) — its
+    // presence is documented in the footer info strip.
 
     // Set initial visibility
     updateWildGroupVisibility();
