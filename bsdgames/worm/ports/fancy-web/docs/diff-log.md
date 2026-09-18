@@ -272,6 +272,100 @@ one-time.
   (player ate it first, apple pool depleted, etc.). Sprite:
   procedural passerine — brown gradient body, wing flap, orange
   beak, dark wing tips, tail feathers, eye with highlight.
+- **2026-09-17 Wild Phase 2: 🐝 Wasp enemy** — Second Wild-mode
+  enemy, first LETHAL one. Apples that stay ripe 20s go rotten
+  (visual darken); left rotten another 5s → wasp bursts from
+  the apple (procedural yellow-black striped sprite with animated
+  wings, antennae, red compound eyes, stinger). Wasp then chases
+  the player head via sub-cell smooth motion at 82 px/sec — just
+  slower than Classic worm (90 px/sec) so escapable, but only
+  barely. 30s lifespan. Head-contact within 12px = death 'stung
+  by a wasp'. Same-tick playtest showed multi-wasp swarms
+  overwhelming, so balance was tightened: at most ONE rotten
+  apple + ONE wasp in the world at a time. Cycle: 20s ripe →
+  5s rotten → 30s wasp → cooldown, ~55s total per threat.
+- **2026-09-18 input rescue + Nokia queue** — Two playtest bugs
+  around input timing: (1) eating an apple at the frame edge and
+  pressing turn immediately caused death because the queued turn
+  didn't commit until the tick AFTER the apple-arrival tick, and
+  the next-tick move used the stale direction; (2) rapid
+  double-tap of two turns (e.g. ↑ then ← quickly) lost the
+  second turn — pendingDirection was a single slot, and the
+  reverse-check was against the last-committed direction (still
+  stale). Fixes: (1) input rescue — if moving in current
+  direction would kill AND the pending direction differs, commit
+  pending NOW; (2) replaced pendingDirection with a 2-slot queue
+  (directionQueue) — reverse and no-op checks are against the
+  latest queued intent, so a rapid ↑ then ← both queue and play
+  back on successive ticks. Matches Nokia snake feel.
+- **2026-09-18 Wild Phase 4 (Gardener) — before Phase 3** — Rare
+  ground-walker enemy shipped BEFORE rival worm at user request
+  ("simpler state machine, no pathfinding AI"). Spawns every
+  45-60s at the edge cell OPPOSITE the player's head (fair
+  telegraph). Straw-hat gardener sprite with olive-green shirt,
+  brown gloved hands, silver shears, animated walk-sway.
+  Greedy Manhattan step every 400ms (2.5 cells/sec — slower
+  than Classic worm 3/sec). 25s hunt lifespan then retreats.
+  LETHAL on ~14px head-proximity. Adapted from snake port's
+  eagle state machine, translated to grid-aligned walking.
+- **2026-09-18 Wild Phase 3 (Rival) — slither.io-style rules**
+  — Fifth enemy: 4-segment AI worm that ticks in lockstep with
+  the player. Greedy AI targets nearest apple by Manhattan
+  distance, avoids walls, own body, player body, and (once
+  shipped) fence. Never reverses. Initial spawn 15-25s after
+  game start, respawn 15-25s after death. Spawns at the corner
+  farthest from player head. Amber sprite (head #ffb060, body
+  #e88030) with sub-cell interp aligned to player.
+- **2026-09-18 rival Ruleset A (Snake, symmetric)** — Initial
+  rival shipped with slither.io asymmetric rules (player head →
+  rival body = rival dies + bonus; rival head → player body =
+  player dies). Two playtest issues surfaced: (a) player
+  successfully trapping rival with body wrap → rival's forced
+  move hits player body → PLAYER dies. Trap failed. (b) After
+  patching (a) to also kill the rival on the forced move,
+  player head hitting rival body still killed the rival (slither
+  bonus intact) — asymmetric and confusing; player always won
+  non-mutual encounters. Fix: switched to Ruleset A (Snake,
+  symmetric) — head into ANY body cell kills the head-owner, no
+  matter which side is attacking. Head-to-head still both die.
+  Rival body is a solid wall to the player, symmetric with
+  self-collision. Extended isDeadly() to treat rival segments
+  as walls so input rescue rescues you from rival too. Trapping
+  the rival still works because rival's forced move dies as if
+  it hit a wall.
+- **2026-09-18 Fence system (5 layouts)** — New picker row
+  ('fence') beside mode/speed with 6 options: None, H (single),
+  HH (double), Cross (+), Box (□), Corridors (≡). Fence cells
+  are static internal obstacles: lethal to player head
+  ('crashed into the fence'), lethal to rival head, block
+  gardener movement. Wasp and bird pass over (airborne). Apple,
+  frog, and rival spawns skip fence cells. All layouts hand-
+  designed to leave the worm launch corridor clear. initWorm()
+  scans for a clear row if fence overlaps the default start
+  cells (defence-in-depth). Fence layout change auto-restarts
+  the game because worm/apple/rival placements depend on layout.
+  Wooden post-and-rail visual — warm brown grain, top highlight,
+  drop shadow, nail heads — consistent across all 8 themes.
+  Uses a Set for O(1) fence-lookup during hot-path collision
+  checks.
+- **2026-09-18 UI compaction — Bonus row removed** — The
+  'BONUS: Frog' picker group only had a single item (Frog
+  checkbox with +50 label) and used a whole labelled row of
+  vertical space. Frog was already default-on and never turned
+  off in practice. Removed the group entirely; frog is now
+  always active in Wild mode. Frog scoring info moved to the
+  footer strip alongside apple-digit and chained-eating notes.
+  Settings row is now one clean horizontal line:
+  theme | mode | speed | fence | enemies.
+- **2026-09-18 Gardener fair-chase** — Playtest: gardener
+  always hunted the player, even with rival closer to it.
+  Updated pickGardenerTarget() to pick whichever head (player
+  or rival) is nearest by Manhattan distance, retargeting each
+  step. Kill check now polls both heads — whichever enters
+  ~14px kill radius dies (triggerDeath for player, killRival
+  for rival). Gardener can now incidentally take out the
+  rival for you, or become a shared threat you both maneuver
+  around.
 - **2026-09-17 frog visual + animation overhaul** — Playtest:
   frog didn't look like a frog (green blob), movement felt like
   chess-piece teleport not a leap.

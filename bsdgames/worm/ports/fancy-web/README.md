@@ -24,7 +24,40 @@ offline.
 - Any key on Game Over screen — restart (after 550 ms lockout)
 - **Cannot** reverse 180° into own neck (spec-faithful)
 
-### Settings row
+### Modes
+
+Two coexisting game modes — choose in the mode picker.
+
+| Mode | What you get |
+|---|---|
+| **Pure** *(default)* | Spec-faithful BSD `worm(6)`: single apple on the grid, no enemies, no bonuses. Meditative preservation mode. |
+| **Wild** | Arcade layer: 10-apple pool with rot state, always-on bonus frog, and up to four opt-in enemies (per checkbox). |
+
+#### Wild-mode enemies (all opt-in, checkbox-toggled)
+
+| Enemy | Behavior | Threat |
+|---|---|---|
+| 🐦 **Bird** | Thief that races you to the highest-value ripe apple. | Non-lethal — you only lose potential score if it steals first. |
+| 🐝 **Wasps** | Emerges from an apple left rotting too long (20s ripe → 5s rotten). Chases your head at ~82 px/sec. | LETHAL on head-contact. One rotten apple + one wasp at a time. |
+| 🪱 **Rival** | AI worm following the same rules as you — grows on apples, dies on wall/self, competes for food. | LETHAL body = wall (Ruleset A). Head-to-head = both die. Trap it to force its suicide. |
+| 🧑‍🌾 **Gardener** | Rare (45-60s cycle) ground-walker that enters from the far edge and hunts the nearest head — you or the rival. | LETHAL on ~14px head-proximity. 25s hunt window then retreats. |
+
+#### Fences
+
+Optional static internal obstacles — pick a layout in the fence picker:
+
+| | Name | Layout |
+|---|---|---|
+| — | **None** *(default)* | Empty grid |
+| **H** | Single H | One H at grid center |
+| **HH** | Double H | Two H's, symmetric around center |
+| **+** | Cross | Plus sign at center |
+| **□** | Box | Hollow square with 4 side openings |
+| **≡** | Corridors | Two horizontal bars with center gap |
+
+Fence cells are walls to the player, rival, and gardener. Wasp and bird pass over (airborne). Wooden post-and-rail aesthetic across all themes.
+
+### Speed settings
 
 Below the theme picker: three speed modes.
 
