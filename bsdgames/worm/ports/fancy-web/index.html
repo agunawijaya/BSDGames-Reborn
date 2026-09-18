@@ -160,6 +160,10 @@
       <div class="picker-label">speed</div>
       <div class="picker-row" id="speedPicker"></div>
     </div>
+    <div class="picker-group-inline">
+      <div class="picker-label">fence</div>
+      <div class="picker-row" id="fencePicker"></div>
+    </div>
     <div class="picker-group-inline" id="wildEnemiesGroup" style="display:none">
       <div class="picker-label">enemies</div>
       <div class="picker-row" id="enemyPicker"></div>
@@ -214,6 +218,123 @@
       rows: 20,     // 20 * 30 = 600
     };
 
+    // ================= FENCE (static internal obstacles) =================
+    // Fence cells are deadly to player, rival, and gardener. Wasp and bird
+    // are airborne — unaffected. Apple/frog/rival spawns skip fence cells.
+    // Layouts are static, rebuilt on game start / restart / picker change.
+    function makeFenceH(cx, cy, hw, hh) {
+      const cells = [];
+      for (let y = cy - hh; y <= cy + hh; y++) {
+        cells.push({ x: cx - hw, y }); cells.push({ x: cx + hw, y });
+      }
+      for (let x = cx - hw + 1; x <= cx + hw - 1; x++) cells.push({ x, y: cy });
+      return cells;
+    }
+    function makeFenceCross(cx, cy, arm) {
+      const cells = [];
+      for (let y = cy - arm; y <= cy + arm; y++) cells.push({ x: cx, y });
+      for (let x = cx - arm; x <= cx + arm; x++) {
+        if (x !== cx) cells.push({ x, y: cy });
+      }
+      return cells;
+    }
+    function makeFenceBox(x0, y0, x1, y1, openings) {
+      const cells = [];
+      for (let x = x0; x <= x1; x++) { cells.push({ x, y: y0 }); cells.push({ x, y: y1 }); }
+      for (let y = y0 + 1; y <= y1 - 1; y++) { cells.push({ x: x0, y }); cells.push({ x: x1, y }); }
+      return cells.filter(c => !openings.some(o => o.x === c.x && o.y === c.y));
+    }
+    function makeFenceCorridors(topY, bottomY, x0, x1, gap) {
+      const cells = [];
+      for (let x = x0; x <= x1; x++) {
+        if (x < gap.x0 || x > gap.x1) {
+          cells.push({ x, y: topY });
+          cells.push({ x, y: bottomY });
+        }
+      }
+      return cells;
+    }
+    const FENCE_LAYOUTS = {
+      none:      { label: 'None',      build: () => [] },
+      h:         { label: 'H',         build: () => makeFenceH(15, 10, 3, 3) },
+      hh:        { label: 'HH',        build: () => [
+                     ...makeFenceH(11, 10, 2, 3),
+                     ...makeFenceH(19, 10, 2, 3),
+                   ] },
+      cross:     { label: '+',         build: () => makeFenceCross(15, 10, 3) },
+      box:       { label: '□',         build: () => makeFenceBox(11, 7, 19, 13, [
+                     { x: 15, y: 7 }, { x: 15, y: 13 },
+                     { x: 11, y: 10 }, { x: 19, y: 10 },
+                   ]) },
+      corridors: { label: '≡',         build: () => makeFenceCorridors(
+                     5, 14, 2, 27, { x0: 13, x1: 16 }
+                   ) },
+    };
+    let fences = [];      // array of {x, y} cells
+    const fenceLookup = new Set();   // "x,y" keys for O(1) contains
+    function rebuildFences() {
+      const layout = FENCE_LAYOUTS[settings.fence] || FENCE_LAYOUTS.none;
+      fences = layout.build().filter(c =>
+        c.x >= 0 && c.x < GRID.cols && c.y >= 0 && c.y < GRID.rows
+      );
+      fenceLookup.clear();
+      for (const c of fences) fenceLookup.add(c.x + ',' + c.y);
+    }
+    function isCellFence(x, y) {
+      return fenceLookup.has(x + ',' + y);
+    }
+
+    // Wooden post-and-rail visual — warm brown across all themes.
+    // Each fence cell is drawn as a stylized wood post with vertical grain,
+    // top-lit and shadowed below. Adjacent cells' seams are softened by
+    // rounded caps and slight overlap.
+    function renderFences() {
+      if (fences.length === 0) return;
+      const cs = GRID.cellSize;
+      const inset = cs * 0.10;
+
+      ctx.save();
+      ctx.shadowBlur = 0;
+
+      for (const c of fences) {
+        const x = c.x * cs + inset;
+        const y = c.y * cs + inset;
+        const w = cs - inset * 2;
+        const h = cs - inset * 2;
+
+        // Base wood — dark brown
+        ctx.fillStyle = '#5a3a1e';
+        ctx.fillRect(x, y, w, h);
+
+        // Wood grain — medium brown vertical stripes
+        ctx.fillStyle = '#7a4e28';
+        ctx.fillRect(x + w * 0.15, y, w * 0.14, h);
+        ctx.fillRect(x + w * 0.50, y, w * 0.10, h);
+        ctx.fillRect(x + w * 0.75, y, w * 0.14, h);
+
+        // Top highlight — warm light on the upper edge
+        ctx.fillStyle = 'rgba(255,200,140,0.35)';
+        ctx.fillRect(x, y, w, h * 0.16);
+
+        // Bottom shadow — depth
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(x, y + h * 0.85, w, h * 0.15);
+
+        // Left/right edge shading
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x, y, w * 0.10, h);
+        ctx.fillRect(x + w * 0.90, y, w * 0.10, h);
+
+        // Nail heads — two small dark dots on the upper third
+        ctx.fillStyle = '#2a1a08';
+        ctx.beginPath();
+        ctx.arc(x + w * 0.30, y + h * 0.22, cs * 0.04, 0, Math.PI * 2);
+        ctx.arc(x + w * 0.70, y + h * 0.22, cs * 0.04, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     // ================= PERSISTENCE =================
     const BEST_KEY = 'worm-fancy-best';
     const SETTINGS_KEY = 'worm-fancy-settings';
@@ -223,6 +344,7 @@
         const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         return {
           speed: s.speed || 'progressive',
+          fence: (s.fence && FENCE_LAYOUTS[s.fence]) ? s.fence : 'none',
           theme: s.theme || 'neon-grid',
           mode: s.mode || 'pure',              // 'pure' (single apple, BSD) | 'wild' (multi-apple + bonuses)
           bonusFrog: s.bonusFrog !== false,    // default on in Wild mode
@@ -233,8 +355,8 @@
         };
       } catch (e) {
         return { speed: 'progressive', theme: 'neon-grid', mode: 'pure',
-                 bonusFrog: true, enemyBird: false, enemyWasps: false,
-                 enemyRival: false, enemyGardener: false };
+                 fence: 'none', bonusFrog: true, enemyBird: false,
+                 enemyWasps: false, enemyRival: false, enemyGardener: false };
       }
     }
     function writeSettings() {
@@ -243,6 +365,7 @@
           speed: settings.speed,
           theme: currentTheme,
           mode: settings.mode,
+          fence: settings.fence,
           bonusFrog: settings.bonusFrog,
           enemyBird: settings.enemyBird,
           enemyWasps: settings.enemyWasps,
@@ -294,12 +417,36 @@
     function initWorm() {
       worm.segments = [];
       const startLen = 5;
-      const startX = Math.floor(GRID.cols / 2) - 2;
-      const startY = Math.floor(GRID.rows / 2);
-      for (let i = 0; i < startLen; i++) {
-        worm.segments.push({x: startX - i, y: startY});
+      let startX = 5;
+      let startY = Math.floor(GRID.rows / 2);
+      // If fence overlaps the default start cells, fall back to scanning
+      // for a clear horizontal strip.
+      const stripClear = (sx, sy) => {
+        // Body cells
+        for (let i = 0; i < startLen; i++) {
+          if (isCellFence(sx - i, sy)) return false;
+        }
+        // Runway ahead — 3 cells so worm has time to react before first fence
+        for (let i = 1; i <= 3; i++) {
+          if (sx + i >= GRID.cols) return false;
+          if (isCellFence(sx + i, sy)) return false;
+        }
+        return true;
+      };
+      if (!stripClear(startX, startY)) {
+        outer:
+        for (const yOff of [0, -1, 1, -2, 2, -3, 3, -4, 4]) {
+          const y = startY + yOff;
+          if (y < 1 || y >= GRID.rows - 1) continue;
+          for (let sx = startLen; sx < GRID.cols - 1; sx++) {
+            if (stripClear(sx, y)) { startX = sx; startY = y; break outer; }
+          }
+        }
       }
-      worm.direction = {dx: 1, dy: 0};
+      for (let i = 0; i < startLen; i++) {
+        worm.segments.push({ x: startX - i, y: startY });
+      }
+      worm.direction = { dx: 1, dy: 0 };
       worm.directionQueue = [];
       worm.growing = 0;
       worm.tickTimer = 0;
@@ -316,6 +463,8 @@
       const s = new Set(worm.segments.map(s => `${s.x},${s.y}`));
       for (const a of apples) s.add(`${a.x},${a.y}`);
       if (frog.active) s.add(`${frog.x},${frog.y}`);
+      if (rival.active) for (const r of rival.segments) s.add(`${r.x},${r.y}`);
+      for (const f of fences) s.add(`${f.x},${f.y}`);
       return s;
     }
 
@@ -1044,16 +1193,19 @@
     function pickEdgeSpawnCell() {
       // Spawn opposite to worm head so the arrival is telegraphed and fair.
       const head = worm.segments[0];
-      const side = Math.random() < 0.5 ? 'horizontal' : 'vertical';
-      let gx, gy;
-      if (side === 'horizontal') {
-        gx = head.x < GRID.cols / 2 ? GRID.cols - 1 : 0;
-        gy = Math.floor(Math.random() * GRID.rows);
-      } else {
-        gx = Math.floor(Math.random() * GRID.cols);
-        gy = head.y < GRID.rows / 2 ? GRID.rows - 1 : 0;
+      for (let tries = 0; tries < 30; tries++) {
+        const side = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+        let gx, gy;
+        if (side === 'horizontal') {
+          gx = head.x < GRID.cols / 2 ? GRID.cols - 1 : 0;
+          gy = Math.floor(Math.random() * GRID.rows);
+        } else {
+          gx = Math.floor(Math.random() * GRID.cols);
+          gy = head.y < GRID.rows / 2 ? GRID.rows - 1 : 0;
+        }
+        if (!isCellFence(gx, gy)) return { x: gx, y: gy };
       }
-      return { x: gx, y: gy };
+      return { x: 0, y: 0 };
     }
 
     function spawnGardener(now) {
@@ -1094,7 +1246,8 @@
       }
 
       for (const c of candidates) {
-        if (c.x >= 0 && c.x < GRID.cols && c.y >= 0 && c.y < GRID.rows) {
+        if (c.x >= 0 && c.x < GRID.cols && c.y >= 0 && c.y < GRID.rows &&
+            !isCellFence(c.x, c.y)) {
           gardener.prevX = gardener.x;
           gardener.prevY = gardener.y;
           gardener.x = c.x;
@@ -1324,9 +1477,14 @@
         - (Math.abs(a.x - head.x) + Math.abs(a.y - head.y))
       );
       for (const c of corners) {
-        if (!isCellOccupiedByPlayer(c.x, c.y)) return c;
+        if (!isCellOccupiedByPlayer(c.x, c.y) && !isCellFence(c.x, c.y)) return c;
       }
-      // Extremely unlikely fallback
+      // Fallback — pick any empty non-fence non-player cell scan
+      for (let y = 0; y < GRID.rows; y++) {
+        for (let x = 0; x < GRID.cols; x++) {
+          if (!isCellOccupiedByPlayer(x, y) && !isCellFence(x, y)) return { x, y };
+        }
+      }
       return { x: Math.floor(GRID.cols / 2), y: Math.floor(GRID.rows / 2) };
     }
 
@@ -1395,10 +1553,12 @@
         for (let i = 0; i < rival.segments.length - 1; i++) {
           if (rival.segments[i].x === nx && rival.segments[i].y === ny) return Infinity;
         }
-        // Player body (avoid — collision kills player, but rival AI plays safe)
+        // Player body (avoid — collision kills rival now under Ruleset A)
         for (const s of worm.segments) {
           if (s.x === nx && s.y === ny) return Infinity;
         }
+        // Fence — static obstacle
+        if (isCellFence(nx, ny)) return Infinity;
         if (!target) return Math.random();      // wander
         return Math.abs(target.x - nx) + Math.abs(target.y - ny);
       }
@@ -1985,6 +2145,31 @@
       updateTickInterval();
     }
 
+    // ================= FENCE PICKER =================
+    const fencePicker = document.getElementById('fencePicker');
+    Object.keys(FENCE_LAYOUTS).forEach(key => {
+      const layout = FENCE_LAYOUTS[key];
+      const btn = document.createElement('button');
+      btn.className = 'btn fence-btn' + (key === settings.fence ? ' active' : '');
+      btn.dataset.fence = key;
+      btn.textContent = layout.label;
+      btn.title = `Fence layout: ${layout.label}`;
+      btn.onclick = () => setFence(key);
+      fencePicker.appendChild(btn);
+    });
+    function setFence(key) {
+      if (settings.fence === key) return;
+      settings.fence = key;
+      fencePicker.querySelectorAll('.fence-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.fence === key);
+      });
+      writeSettings();
+      rebuildFences();
+      // Fence change resets the game — worm placement, apple positions,
+      // and rival paths all depend on the fence layout.
+      restartGame();
+    }
+
     function updateTickInterval() {
       const s = settings.speed;
       let interval;
@@ -2069,6 +2254,8 @@
             if (s.x === cell.x && s.y === cell.y) return true;
           }
         }
+        // Fence is a static wall to player head
+        if (isCellFence(cell.x, cell.y)) return true;
         return false;
       }
 
@@ -2106,6 +2293,11 @@
             return triggerDeath('self');
           }
         }
+      }
+
+      // Death: fence
+      if (isCellFence(newHead.x, newHead.y)) {
+        return triggerDeath('fence');
       }
 
       // ---- Rival interactions (before advancing player head) ----
@@ -2200,6 +2392,7 @@
       else if (reason === 'gardener')    sub = 'trampled by the gardener';
       else if (reason === 'rival-head')  sub = 'head-on with the rival';
       else if (reason === 'rival-body')  sub = 'crashed into the rival';
+      else if (reason === 'fence')       sub = 'crashed into the fence';
       else                               sub = 'tangled with your own body';
       showOverlay('dead', 'CAUGHT', sub, 'press any key');
     }
@@ -2243,6 +2436,7 @@
       game.state = 'playing';
       game.score = 0;
       hideOverlay();
+      rebuildFences();
       initWorm();
       initApples();
       frog.active = false;
@@ -3184,6 +3378,7 @@
       }
 
       renderBackground(time);
+      renderFences();
       renderApples(time);
       renderFrog(now);
       renderBird(now);
@@ -3208,6 +3403,7 @@
     }
 
     // ================= INIT =================
+    rebuildFences();
     initWorm();
     initApples();
     scheduleNextFrog(performance.now());
