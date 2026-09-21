@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>trek — Command Deep Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #06081a;
+      --void-deep: #020310;
+      --panel: rgba(10, 18, 42, 0.85);
+      --panel-line: #2a3d6e;
+      --cyan: #00d4ff;
+      --cyan-dim: #4a8db5;
+      --amber: #ffb14f;
+      --red: #ff3838;
+      --gold: #ffd76a;
+      --white: #eaf4ff;
+      --text: #c8d8f2;
+      --text-dim: #7a8ba8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--void-deep);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+    #space-bg, #scene { position: absolute; inset: 0; }
+    #space-bg { z-index: 1; }
+    #scene { z-index: 2; }
+
+    /* Strategic overlay */
+    #strategic {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: radial-gradient(ellipse at 50% 40%, #0d1b3f 0%, #050818 70%, #01020a 100%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #strategic.shown { display: flex; }
+    #strategic-canvas { max-width: 90vw; max-height: 80vh; }
+
+    /* HUD panels */
+    .hud {
+      position: absolute;
+      z-index: 10;
+      background: var(--panel);
+      border: 1px solid var(--panel-line);
+      border-radius: 4px;
+      padding: 10px 14px;
+      color: var(--text);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.08), inset 0 0 20px rgba(10, 18, 42, 0.4);
+    }
+    .hud h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--panel-line);
+      text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+    }
+
+    /* Top bezel */
+    #top-bezel {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 46px;
+      z-index: 15;
+      background: linear-gradient(180deg, rgba(6, 12, 30, 0.95) 0%, rgba(6, 12, 30, 0.4) 100%);
+      border-bottom: 1px solid var(--panel-line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      color: var(--cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-shadow: 0 0 4px rgba(0, 212, 255, 0.5);
+    }
+    #top-bezel .ship-tag {
+      color: var(--white);
+      font-weight: 900;
+      letter-spacing: 0.3em;
+    }
+    #top-bezel .indicator {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      margin-right: 10px;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    #view-toggles { display: flex; gap: 6px; }
+    #view-toggles button {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--panel-line);
+      border-radius: 3px;
+      padding: 4px 12px;
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.15s ease;
+    }
+    #view-toggles button:hover { color: var(--cyan); border-color: var(--cyan); }
+    #view-toggles button.active {
+      color: var(--white);
+      background: rgba(0, 212, 255, 0.14);
+      border-color: var(--cyan);
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+    }
+
+    /* Ship status */
+    #ship-status { top: 60px; left: 20px; width: 280px; }
+    #ship-status-body .row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 5px 0; font-size: 11px;
+    }
+    #ship-status-body .label { color: var(--text-dim); letter-spacing: 0.1em; min-width: 70px; }
+    #ship-status-body .bar {
+      flex: 1; height: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--panel-line);
+      border-radius: 2px;
+      margin: 0 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    #ship-status-body .fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan-dim) 0%, var(--cyan) 100%);
+      box-shadow: 0 0 6px var(--cyan);
+      transition: width 0.3s ease;
+    }
+    #ship-status-body .fill.warn {
+      background: linear-gradient(90deg, #a86f24 0%, var(--amber) 100%);
+      box-shadow: 0 0 6px var(--amber);
+    }
+    #ship-status-body .fill.crit {
+      background: linear-gradient(90deg, #7a1414 0%, var(--red) 100%);
+      box-shadow: 0 0 6px var(--red);
+    }
+    #ship-status-body .val {
+      color: var(--white); font-weight: 600;
+      min-width: 60px; text-align: right;
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+    }
+
+    /* Systems */
+    #systems { top: 60px; right: 20px; width: 220px; }
+    #systems-body .sys-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 4px 0; font-size: 11px;
+    }
+    #systems-body .name { color: var(--text-dim); letter-spacing: 0.05em; }
+    #systems-body .state {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px; letter-spacing: 0.1em;
+      padding: 1px 6px; border-radius: 2px;
+      font-weight: 600;
+    }
+    #systems-body .state.ok { color: var(--cyan); background: rgba(0, 212, 255, 0.1); }
+    #systems-body .state.warn { color: var(--amber); background: rgba(255, 177, 79, 0.15); }
+    #systems-body .state.crit { color: var(--red); background: rgba(255, 56, 56, 0.15); animation: pulse 1s infinite; }
+
+    /* Sector info */
+    #sector-info { top: 260px; right: 20px; width: 220px; }
+    #sector-info-body .row {
+      display: flex; justify-content: space-between;
+      font-size: 11px; margin: 4px 0;
+    }
+    #sector-info-body .lbl { color: var(--text-dim); }
+    #sector-info-body .v { color: var(--white); font-family: 'Orbitron', monospace; letter-spacing: 0.1em; }
+    #sector-info-body .v.danger { color: var(--red); }
+
+    /* Event log */
+    #event-log { bottom: 100px; right: 20px; width: 340px; max-height: 200px; overflow: hidden; }
+    #event-log-body { max-height: 160px; overflow-y: auto; }
+    #event-log-body .evt {
+      font-size: 11px; margin: 3px 0;
+      padding: 2px 6px;
+      border-left: 2px solid var(--panel-line);
+      color: var(--text);
+      line-height: 1.4;
+    }
+    #event-log-body .evt.hit { color: var(--red); border-color: var(--red); }
+    #event-log-body .evt.ok { color: var(--cyan); border-color: var(--cyan); }
+    #event-log-body .evt.warn { color: var(--amber); border-color: var(--amber); }
+    #event-log-body .evt small { color: var(--text-dim); }
+
+    /* Command console */
+    #cmd-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 12;
+      background: linear-gradient(0deg, rgba(6, 12, 30, 0.98) 0%, rgba(6, 12, 30, 0.7) 100%);
+      border-top: 1px solid var(--panel-line);
+      padding: 12px 20px 14px;
+    }
+    #cmd-hint {
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      min-height: 14px;
+    }
+    #cmd-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 20px;
+      color: var(--cyan);
+      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+    }
+    #cmd-line .prompt { color: var(--amber); font-weight: 600; }
+    #cmd-buffer { color: var(--white); letter-spacing: 0.06em; }
+    #cmd-line .cursor {
+      display: inline-block;
+      width: 10px; height: 20px;
+      background: var(--cyan);
+      margin-left: 2px;
+      animation: cursor-blink 1s steps(2) infinite;
+    }
+    @keyframes cursor-blink { 50% { opacity: 0; } }
+
+    /* Corner labels */
+    .corner {
+      position: absolute; z-index: 8;
+      color: var(--cyan-dim);
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-shadow: 0 0 4px rgba(0, 212, 255, 0.3);
+      pointer-events: none;
+    }
+    .corner.bl { bottom: 92px; left: 20px; }
+
+    /* Strategic map HUD */
+    #strategic-hud {
+      position: absolute; top: 60px; left: 20px;
+      color: var(--cyan); z-index: 15;
+    }
+    #strategic-hud h2 {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.5);
+      margin-bottom: 4px;
+    }
+    #strategic-hud .sub {
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+    #strategic-legend {
+      position: absolute;
+      bottom: 30px; left: 20px;
+      z-index: 15;
+      color: var(--text-dim);
+      font-size: 11px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    #strategic-legend .legend-item { display: flex; align-items: center; gap: 6px; }
+    #strategic-legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.you { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .dot.klingon { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .dot.base { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+    /* Title screen */
+    #title-screen {
+      position: fixed; inset: 0;
+      z-index: 100;
+      background: radial-gradient(ellipse at 50% 30%, #0a1230 0%, #030510 60%, #010208 100%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+    #title-screen.shown { display: flex; }
+    #title-inner {
+      position: relative;
+      width: min(760px, 92vw);
+      max-height: 92vh;
+      border: 2px solid var(--panel-line);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(6, 12, 30, 0.95) 0%, rgba(2, 6, 16, 0.98) 100%);
+      box-shadow:
+        inset 0 0 60px rgba(0, 212, 255, 0.05),
+        0 0 60px rgba(0, 212, 255, 0.18),
+        0 30px 60px rgba(0, 0, 0, 0.7);
+      padding: 44px 40px 32px;
+      text-align: center;
+      color: var(--text);
+      overflow-y: auto;
+    }
+    #title-name {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(66px, 12vw, 108px);
+      color: var(--white);
+      letter-spacing: 0.28em;
+      line-height: 1;
+      margin-left: 0.28em;
+      text-shadow:
+        0 0 8px var(--cyan),
+        0 0 24px rgba(0, 212, 255, 0.55),
+        0 0 40px rgba(0, 212, 255, 0.3);
+      animation: title-pulse 3.4s ease-in-out infinite;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+    @keyframes title-pulse {
+      0%, 100% { text-shadow: 0 0 8px var(--cyan), 0 0 24px rgba(0, 212, 255, 0.55), 0 0 40px rgba(0, 212, 255, 0.3); }
+      50%      { text-shadow: 0 0 12px var(--cyan), 0 0 32px rgba(0, 212, 255, 0.75), 0 0 60px rgba(0, 212, 255, 0.5); }
+    }
+    #title-subtitle {
+      font-family: 'Orbitron', monospace;
+      font-size: 22px;
+      color: var(--cyan);
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+      margin-top: -4px;
+      margin-bottom: 8px;
+    }
+    #title-tagline {
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      line-height: 1.6;
+      margin-top: 4px;
+      margin-bottom: 30px;
+    }
+    #title-tagline code { color: var(--amber); background: transparent; }
+    .title-block { margin-top: 12px; }
+    .title-label {
+      color: var(--amber);
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      text-shadow: 0 0 3px rgba(255, 177, 79, 0.4);
+    }
+    #difficulty-picker {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .diff-btn {
+      background: rgba(4, 10, 20, 0.6);
+      color: var(--text);
+      border: 1px solid var(--panel-line);
+      border-radius: 4px;
+      padding: 14px 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .diff-btn:hover {
+      background: rgba(0, 212, 255, 0.08);
+      color: var(--cyan);
+      border-color: var(--panel-line);
+    }
+    .diff-btn.active {
+      background: rgba(0, 212, 255, 0.14);
+      color: var(--white);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+    }
+    .diff-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      letter-spacing: 0.2em;
+      font-weight: 600;
+    }
+    .diff-desc {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    #start-btn {
+      margin-top: 24px;
+      background: linear-gradient(180deg, rgba(0, 212, 255, 0.15) 0%, rgba(60, 140, 180, 0.1) 100%);
+      color: var(--white);
+      border: 1px solid var(--cyan);
+      border-radius: 5px;
+      padding: 14px 40px;
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      letter-spacing: 0.3em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.25);
+      animation: begin-pulse 2s ease-in-out infinite;
+      font-weight: 600;
+    }
+    #start-btn:hover {
+      background: linear-gradient(180deg, rgba(0, 212, 255, 0.3) 0%, rgba(60, 140, 180, 0.2) 100%);
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.5);
+    }
+    @keyframes begin-pulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.25); }
+      50%      { box-shadow: 0 0 25px rgba(0, 212, 255, 0.5); }
+    }
+    #title-help {
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      margin-top: 18px;
+    }
+    #title-help kbd {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      background: #050d18;
+      color: var(--white);
+      border: 1px solid var(--panel-line);
+      border-bottom-width: 2px;
+      border-radius: 2px;
+      padding: 1px 6px;
+      font-size: 11px;
+    }
+    #title-attribution {
+      color: var(--text-dim);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      margin-top: 12px;
+      opacity: 0.7;
+    }
+
+    /* Game over */
+    #game-over {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #game-over.shown { display: flex; }
+    #game-over-inner {
+      max-width: 500px;
+      text-align: center;
+      padding: 40px;
+      border: 2px solid var(--panel-line);
+      border-radius: 8px;
+      background: radial-gradient(circle at center, #0a1230 0%, #050818 100%);
+      box-shadow: 0 0 60px rgba(0, 212, 255, 0.2);
+    }
+    #game-over-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 44px;
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+    }
+    #game-over-title.win {
+      color: var(--cyan);
+      text-shadow: 0 0 15px var(--cyan);
+    }
+    #game-over-title.loss {
+      color: var(--red);
+      text-shadow: 0 0 15px var(--red);
+    }
+    #game-over-text {
+      color: var(--white);
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+    #game-over-stats {
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+    #game-over-hint {
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      animation: cursor-blink 1.4s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+
+    <canvas id="space-bg"></canvas>
+    <canvas id="scene"></canvas>
+
+    <div id="strategic">
+      <div id="strategic-hud">
+        <h2>Galaxy Chart</h2>
+        <div class="sub">USS Enterprise NCC-1701 · Long-range scan</div>
+      </div>
+      <canvas id="strategic-canvas" width="900" height="700"></canvas>
+      <div id="strategic-legend">
+        <div class="legend-item"><span class="dot you"></span> your quadrant</div>
+        <div class="legend-item"><span class="dot klingon"></span> Klingon activity</div>
+        <div class="legend-item"><span class="dot base"></span> starbase</div>
+      </div>
+    </div>
+
+    <div id="top-bezel">
+      <span>
+        <span class="indicator"></span>
+        <span class="ship-tag">USS ENTERPRISE NCC-1701</span>
+        &nbsp;·&nbsp; <span id="stardate">Stardate —</span>
+        &nbsp;·&nbsp; <span id="sector-label">Sector —</span>
+      </span>
+      <div id="view-toggles">
+        <button class="active" data-view="combat">Tactical</button>
+        <button data-view="strategic">Galaxy Chart</button>
+      </div>
+    </div>
+
+    <div class="hud" id="ship-status">
+      <h3>Ship Status</h3>
+      <div id="ship-status-body"></div>
+    </div>
+
+    <div class="hud" id="systems">
+      <h3>Systems</h3>
+      <div id="systems-body"></div>
+    </div>
+
+    <div class="hud" id="sector-info">
+      <h3>Sector Contacts</h3>
+      <div id="sector-info-body"></div>
+    </div>
+
+    <div class="hud" id="event-log">
+      <h3>Bridge Log</h3>
+      <div id="event-log-body"></div>
+    </div>
+
+    <div class="corner bl">TACTICAL · CHANNEL 121.9</div>
+
+    <div id="cmd-panel">
+      <div id="cmd-hint">phaser · torpedo · move · srscan · lrscan · shields · dock · damages · help · quit</div>
+      <div id="cmd-line">
+        <span class="prompt">Command &gt;</span>
+        <span id="cmd-buffer"></span>
+        <span class="cursor"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="title-screen" class="shown">
+    <div id="title-inner">
+      <h1 id="title-name">TREK</h1>
+      <div id="title-subtitle">Command Deep Space</div>
+      <div id="title-tagline">
+        A spiritual successor to BSD <code>trek(6)</code><br>
+        Eric Allman · University of California · 1980
+      </div>
+
+      <div class="title-block">
+        <div class="title-label">SELECT DIFFICULTY</div>
+        <div id="difficulty-picker"></div>
+      </div>
+
+      <button id="start-btn">▶ BEGIN MISSION ◀</button>
+
+      <div id="title-help">
+        type commands · <kbd>?</kbd> or <kbd>help</kbd> for reference · <kbd>V</kbd> to switch views
+      </div>
+      <div id="title-attribution">
+        Port by Agun Wijaya · Claude Opus · MIT license
+      </div>
+    </div>
+  </div>
+
+  <div id="game-over">
+    <div id="game-over-inner">
+      <h1 id="game-over-title">VICTORY</h1>
+      <div id="game-over-text"></div>
+      <div id="game-over-stats"></div>
+      <div id="game-over-hint">▸ ENTER / SPACE · NEW MISSION ◂</div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
