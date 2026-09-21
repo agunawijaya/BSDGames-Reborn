@@ -39,8 +39,37 @@ let game = null;
 let currentView = 'combat';
 let cmdText = '';
 let selectedDifficulty = 'standard';
-let stars = [];
 let animT = 0;
+
+// Space backdrop image (deep-space nebula + starfield).
+// Preloaded so the render loop can draw it every frame without a flash.
+const bgImage = new Image();
+let bgLoaded = false;
+bgImage.onload = () => { bgLoaded = true; };
+bgImage.onerror = () => { bgLoaded = false; };
+bgImage.src = 'references/background_01.jpg';
+
+/** Draw the space image cover-fit (fill viewport, crop excess) with a
+ *  subtle "camera float" so the scene doesn't feel frozen. */
+function drawSpaceImage(ctx, w, h, t) {
+  if (!bgLoaded) {
+    // Fallback while image loads
+    ctx.fillStyle = '#020310';
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  const imgW = bgImage.naturalWidth;
+  const imgH = bgImage.naturalHeight;
+  const scale = Math.max(w / imgW, h / imgH) * 1.06; // slight overscan for float room
+  const dW = imgW * scale;
+  const dH = imgH * scale;
+  // Very slow sine drift — barely perceptible, keeps the scene alive.
+  const driftX = Math.sin(t * 0.00015) * 22;
+  const driftY = Math.cos(t * 0.00010) * 16;
+  const dX = (w - dW) / 2 + driftX;
+  const dY = (h - dH) / 2 + driftY;
+  ctx.drawImage(bgImage, dX, dY, dW, dH);
+}
 // Effect overlays (transient FX)
 let phaserFx = null;   // { from, to, t }
 let torpedoFx = null;  // { from, to, t, trail }
@@ -67,54 +96,23 @@ function fitCanvases() {
 window.addEventListener('resize', fitCanvases);
 
 function regenStars() {
-  stars = [];
-  const n = Math.floor((W * H) / 3200);
-  for (let i = 0; i < n; i++) {
-    stars.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      depth: 0.2 + Math.random() * 0.8,
-      brightness: 0.3 + Math.random() * 0.7,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.5 + Math.random() * 2,
-    });
-  }
+  // Kept as a no-op stub for the resize handler contract; the background
+  // image replaces the programmatic starfield.
 }
 
-const NEBULAE = [
-  { x: 0.18, y: 0.30, r: 0.35, color: 'rgba(180, 80, 180, 0.32)' },
-  { x: 0.72, y: 0.65, r: 0.42, color: 'rgba(50, 130, 200, 0.26)' },
-  { x: 0.45, y: 0.15, r: 0.28, color: 'rgba(255, 150, 80, 0.14)' },
-  { x: 0.85, y: 0.20, r: 0.24, color: 'rgba(120, 60, 210, 0.22)' },
-];
-
 // ---------------------------------------------------------------------------
-// Background render (stars + nebulae)
+// Background render — deep-space nebula image with subtle drift
 // ---------------------------------------------------------------------------
 
 function renderBackground(t) {
-  bgCtx.fillStyle = '#040718';
+  drawSpaceImage(bgCtx, W, H, t);
+  // Slight vignette so HUD panels read cleanly against the image
+  const grad = bgCtx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.75);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.7, 'rgba(0,0,10,0.35)');
+  grad.addColorStop(1, 'rgba(0,0,10,0.75)');
+  bgCtx.fillStyle = grad;
   bgCtx.fillRect(0, 0, W, H);
-  for (const n of NEBULAE) {
-    const cx = n.x * W, cy = n.y * H, rr = n.r * Math.min(W, H);
-    const g = bgCtx.createRadialGradient(cx, cy, 0, cx, cy, rr);
-    g.addColorStop(0, n.color);
-    g.addColorStop(0.5, n.color.replace(/[\d.]+\)$/, '0.08)'));
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    bgCtx.fillStyle = g;
-    bgCtx.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
-  }
-  for (const s of stars) {
-    const tw = 0.5 + 0.5 * Math.sin(t * 0.001 * s.speed + s.phase);
-    const a = s.brightness * (0.7 + 0.3 * tw);
-    const size = 0.5 + s.depth * 1.5;
-    const dx = (t * 0.0025 * s.depth) % W;
-    const x = (s.x + dx) % W;
-    bgCtx.fillStyle = `rgba(240, 250, 255, ${a})`;
-    bgCtx.beginPath();
-    bgCtx.arc(x, s.y, size, 0, Math.PI * 2);
-    bgCtx.fill();
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -436,33 +434,11 @@ function renderStrategic() {
   const h = stratCanvas.height;
   c.clearRect(0, 0, w, h);
 
-  const bg = c.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6);
-  bg.addColorStop(0, '#0f2050');
-  bg.addColorStop(0.6, '#0a1230');
-  bg.addColorStop(1, '#020618');
-  c.fillStyle = bg; c.fillRect(0, 0, w, h);
-
-  // Random stars — cached on first render so the layout is stable
-  // (linear pseudo-random like (i * prime) % dim creates diagonal
-  // lattice stripes, not the intended random field).
-  if (!renderStrategic._starCache) {
-    const cache = [];
-    for (let i = 0; i < 300; i++) {
-      cache.push({
-        x: Math.random(),
-        y: Math.random(),
-        alpha: 0.2 + Math.random() * 0.7,
-        r: 0.5 + Math.random() * 1.5,
-      });
-    }
-    renderStrategic._starCache = cache;
-  }
-  for (const st of renderStrategic._starCache) {
-    c.fillStyle = `rgba(255,255,255,${st.alpha})`;
-    c.beginPath();
-    c.arc(st.x * w, st.y * h, st.r, 0, Math.PI * 2);
-    c.fill();
-  }
+  // Deep-space image backdrop (same source as the tactical view)
+  drawSpaceImage(c, w, h, animT);
+  // Darken so the 8×8 grid + quadrant labels stay legible over the nebula.
+  c.fillStyle = 'rgba(4, 8, 24, 0.55)';
+  c.fillRect(0, 0, w, h);
 
   const gridSize = Math.min(w, h) - 100;
   const gridX = (w - gridSize) / 2;
