@@ -442,11 +442,26 @@ function renderStrategic() {
   bg.addColorStop(1, '#020618');
   c.fillStyle = bg; c.fillRect(0, 0, w, h);
 
-  // Random stars
-  for (let i = 0; i < 300; i++) {
-    const sx = ((i * 7919) % w), sy = ((i * 1237) % h);
-    c.fillStyle = `rgba(255,255,255,${0.2 + (i % 5) * 0.15})`;
-    c.beginPath(); c.arc(sx, sy, ((i % 3) + 1) * 0.6, 0, Math.PI * 2); c.fill();
+  // Random stars — cached on first render so the layout is stable
+  // (linear pseudo-random like (i * prime) % dim creates diagonal
+  // lattice stripes, not the intended random field).
+  if (!renderStrategic._starCache) {
+    const cache = [];
+    for (let i = 0; i < 300; i++) {
+      cache.push({
+        x: Math.random(),
+        y: Math.random(),
+        alpha: 0.2 + Math.random() * 0.7,
+        r: 0.5 + Math.random() * 1.5,
+      });
+    }
+    renderStrategic._starCache = cache;
+  }
+  for (const st of renderStrategic._starCache) {
+    c.fillStyle = `rgba(255,255,255,${st.alpha})`;
+    c.beginPath();
+    c.arc(st.x * w, st.y * h, st.r, 0, Math.PI * 2);
+    c.fill();
   }
 
   const gridSize = Math.min(w, h) - 100;
