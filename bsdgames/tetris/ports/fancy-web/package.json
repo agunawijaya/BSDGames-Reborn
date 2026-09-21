@@ -1,0 +1,19 @@
+{
+  "name": "@bsdgames/tetris-fancy-web",
+  "version": "0.1.0",
+  "description": "Fancy-web port of BSD tetris with non-rectangular boards and survival mode.",
+  "private": true,
+  "scripts": {
+    "serve": "python -m http.server 8080",
+    "test": "node tests/test-smoke.js",
+    "test:comprehensive": "node tests/test-comprehensive.js"
+  },
+  "keywords": [
+    "bsdgames",
+    "tetris",
+    "fancy-web",
+    "browser-game"
+  ],
+  "author": "Agun",
+  "license": "MIT"
+}
