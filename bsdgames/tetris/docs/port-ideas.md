@@ -15,6 +15,157 @@
 > If this game were being designed *today*, with no era constraints,
 > what would we do?
 
+## Competitive Landscape
+
+Tetris is possibly the most saturated genre in gaming. Any port must
+acknowledge who already owns the space, and what ceilings they've
+set. Being honest about this saves us from shipping "generic Tetris
+#4001" and forces the design toward a defensible identity.
+
+### The current ceilings
+
+- **[tetr.io](https://tetr.io/)** — the modern competitive standard.
+  Browser-based, extremely polished, 100+ player battle royale
+  ("TETRA LEAGUE"), custom rulesets, replay system, deep skill
+  ceiling. Free. This is where the competitive audience lives; we
+  will not out-compete it on pure gameplay depth.
+- **[Tetris Effect: Connected](https://www.tetriseffect.game/)** —
+  Enhance's audiovisual masterpiece. Sets the ceiling for
+  atmosphere: every piece placement is scored, every stage has a
+  bespoke visual + musical journey (jellyfish, deep space, tribal
+  drums). $40 paid product. We will not out-produce it on polish.
+- **[Not Tetris 2](https://stabyourself.net/nottetris2/)** —
+  Stabyourself's physics-based Tetris. Pieces obey gravity and
+  rotation like rigid bodies; lines clear by *area covered*, not
+  by full rows. Free, viral in the mid-2010s. The novelty-Tetris
+  slot is taken.
+- **[Tetris 99](https://tetris99.nintendo.com/)** (Nintendo
+  Switch) — 99-player royale, sends garbage to targeted opponents.
+  Owns the mainstream battle-royale slot on console.
+- **Mobile clones** — infinite, mostly ad-driven, most people's
+  default "casual tetris" (King's *Tetris Blitz*, EA's official
+  *Tetris*, dozens of clones). Owns the casual mobile slot.
+- **[Jstris](https://jstris.jezevec10.com/)** — competitive
+  browser Tetris predating tetr.io, still popular for practice
+  and sprint runs. Owns the "purist competitive practice" slot.
+
+### What's still open
+
+- **Historical / archaeological framing.** No mainstream Tetris
+  presents itself as a *museum of the game's own history*. The
+  1984 Elektronika-60 original, the 1988 Spectrum-Holobyte MS-DOS
+  port, the 1989 Game Boy version, the 1992 BSD Chuck Simmons
+  terminal port, the 2001 Tetris Worlds era — each has a distinct
+  computing-culture footprint. Nobody has bundled that lineage as
+  interactive gameplay.
+- **Physical / craft aesthetic.** Everyone has a "neon
+  cyberpunk" theme; a *wooden puzzle box* aesthetic (real grain,
+  chisel marks, blocks that clack instead of ping) has been
+  attempted (see [Tetris Effect's wood stage briefly](https://youtu.be/qyoUqoc0ZOs)),
+  but not as the entire product identity.
+- **Contemplative / no-fail modes.** Tetris Effect has "Zen"
+  modes, but a Tetris designed around *slowness* — meditative, no
+  score, ambient — remains niche and could be a distinctive local
+  identity.
+- **BSD lineage / historical accuracy angle.** The Chuck Simmons
+  1992 port is a specific artifact with its own quirks (single
+  CCW rotation only, `random() % 7` bag, cumulative-clear scoring).
+  A port that *preserves* those quirks as an "authentic 1992
+  terminal" mode inside a modern shell is a niche nobody occupies.
+
+### Positioning statement (working)
+
+> Not "another Tetris." A **Tetris archaeology**: the specific
+> 1992 BSD terminal artifact, framed inside a modern shell that
+> lets the player peel back layers of the game's own history.
+
+The full hook this positioning implies is described in
+[Distinctive Hook](#distinctive-hook) below.
+
+## Distinctive Hook
+
+Two candidate hooks. **Neither is committed** — this section
+brainstorms; the choice becomes a per-game ADR. Both accept that
+we cannot win on gameplay depth (tetr.io) or production polish
+(Tetris Effect), so we must win on *identity*.
+
+### Hook A — "Terminal Archaeology" *(recommended)*
+
+**Premise:** The port is a **playable museum of Tetris history**.
+Five eras, five terminals, one game.
+
+| # | Era | Terminal | What changes |
+|--:|---|---|---|
+| 1 | 1984 | Elektronika 60 (Pajitnov's original) | Text mode, `[]` blocks, no colour, tight command grammar |
+| 2 | 1988 | Spectrum-Holobyte MS-DOS | CGA 4-colour, PC-speaker beeps, Russian folk-tune snippet |
+| 3 | 1989 | Nintendo Game Boy | 4-shade green LCD, 8×8 pixel blocks, Type-A/B music (public-domain reinterpretations) |
+| 4 | 1992 | **BSD Chuck Simmons terminal** *(the identity anchor)* | Curses-style block glyphs, single-CCW rotation, `random() % 7` bag, cumulative-clear scoring — spec-faithful |
+| 5 | 200x | Modern browser | SRS + 7-bag + hold + ghost + hard drop — the tetr.io baseline |
+
+Player unlocks eras by completing lines in the previous one. Each
+era carries small mechanical shifts *appropriate to its computing
+constraints*: input lag on the Elektronika, refresh flicker on
+CGA, DAS/ARR quirks on the Game Boy. Gameplay is recognisably
+Tetris throughout; the *feel* narrates the game's own history.
+
+Signature moments:
+
+- Boot sequence for each era (BIOS beep, kernel dmesg, GB startup
+  chime — public-domain reinterpretations).
+- CRT phosphor shader that changes character per era (green DEC
+  VT100 for BSD, amber for MS-DOS, LCD ghosting for Game Boy).
+- End-of-era transition: your last stack "dissolves" and reflows
+  into the next terminal's pixel grid.
+
+Why this fits **this project**:
+
+- Same "computing archaeology" identity as the shipped
+  [`wump/ports/fancy-web/`](../../wump/ports/fancy-web/) (Moria
+  aesthetic) and the [`adventure` port's](../../adventure/ports/fancy-web/)
+  Ithildin script details. The port is a natural extension of the
+  BSD Games project's own thesis: *these programs are historical
+  artifacts worth preserving with reverence.*
+- No commercial competitor can replicate this without licensing
+  the BSD lineage. The moat is authenticity, not budget.
+
+### Hook B — "Wooden Well"
+
+**Premise:** Tetris rendered as a **physical wooden puzzle** — no
+neon, no lasers. Blocks are turned oak with visible grain; the
+well is a lacquered pine box; line clears trigger a wood-chisel
+strike and splinters that fall out the bottom.
+
+Signature moments:
+
+- Each tetromino type has a distinct wood species (oak I, walnut
+  O, maple T, cherry L, teak J, ash S, ebony Z). Grain rotates
+  with the piece.
+- Sounds are sampled: wood-on-wood clacks, hollow "tock" for a
+  lock, saw-buzz for line clear, warm bass drone for level up.
+- Post-clear, the well shows sawdust settling on the bottom edge
+  for a beat before fully clearing.
+
+Why it fits **this project**:
+
+- Aligns with the physical-materials aesthetic direction the
+  [`gomoku` fancy-web port](../../gomoku/ports/fancy-web/) took
+  (kaya wood board, clamshell stones) and the wooden fences in
+  [`worm` Wild mode](../../worm/ports/fancy-web/).
+- Removes the "Tetris = electronic arcade" default; positions the
+  port as a *tactile object* rather than a *screen experience*.
+
+Weakness: less thematic depth than Hook A. Wooden aesthetic alone
+may not carry a full product; likely stronger as a *theme within*
+Hook A's modern-era shell than as the whole identity.
+
+### Recommendation
+
+Hook A ("Terminal Archaeology") is the stronger identity. Hook B
+becomes an unlockable theme inside Hook A's modern era rather
+than a competing product concept. **This is a proposal, not a
+decision** — the final choice becomes ADR
+`tetris/docs/decisions/002-port-identity-hook.md` (still to write).
+
 ## 1. Gameplay Modernisation
 
 ### AI

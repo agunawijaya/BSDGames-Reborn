@@ -5,6 +5,147 @@ modern spiritual successor of BSD Worm.
 
 ---
 
+## Competitive Landscape
+
+BSD `worm(6)` sits inside the *growing-worm* genre — the same
+family as Nokia Snake — and that genre is one of the most
+saturated in casual gaming. Any port must acknowledge who
+already occupies the space and where the gap is.
+
+### The current ceilings
+
+- **Nokia 3310 *Snake* (1997)** — the cultural anchor. Not a
+  product any more, but every casual player's mental model of
+  "snake game." Sets the *baseline* expectations for the entire
+  genre.
+- **[Google Snake](https://www.google.com/fbx?fbx=snake_arcade)** —
+  the casual browser default. Six unlockable modes (walls,
+  portals, twin, small map, statue trail, etc.). Free, zero
+  friction. Owns the *5-minute browser session* slot.
+- **[Slither.io](https://slither.io/)** — massively multiplayer
+  online worm. 2016-era viral hit, still going. Owns the
+  *browser MMO* slot for the genre.
+- **[Powerline.io](https://powerline.io/)** — competitive
+  lightcycle-snake hybrid. Owns the *competitive PVP browser*
+  slot.
+- **[Little Big Snake](https://littlebigsnake.com/)** — the
+  slither.io successor with progression, bosses, and stronger
+  visual identity. Owns the *casual-with-progression* slot.
+- **[Wormate.io](https://wormate.io/)** — cute-decorated
+  slither variant. Owns the *casual visually-friendly* slot.
+- **Mobile ports and clones** — hundreds. Ad-supported. Owns
+  the casual mobile slot.
+
+### What's still open
+
+- **BSD-faithful growing-worm.** No modern browser worm
+  faithfully implements the *chained bonus + progressive
+  growth* math that BSD `worm(6)` originated in 1980. Everyone
+  copied the "eat fruit → +1 length" mechanic but discarded
+  the *digit food (1-9) with delayed multi-tick growth* system.
+  This is a real, defensible historical niche.
+- **Symmetric ecology.** No worm game treats rival worms as
+  bound by the same rules as the player (die on wall, die on
+  self, hunt the same food). Slither.io breaks symmetry for
+  spectacle; a *fair-chase* worm ecology is rare.
+- **Static-fence puzzle worm.** Worms with maze walls are
+  common (Google Snake has "wall" mode) but static-fence
+  layouts as *puzzle constraints* rather than random walls
+  are underexplored.
+- **Speed-tier selection as an identity choice** (not a
+  difficulty setting). The BSD 1×/second pace is deliberately
+  meditative; presenting it alongside modern arcade speeds as
+  equally legitimate options is a design statement, not a
+  concession.
+
+---
+
+## Distinctive Hook — What Shipped
+
+This section is retrospective. The
+[`fancy-web` port shipped 2026-09-17](../../worm/ports/fancy-web/README.md)
+and was updated through late 2026-09 with Wild mode + fair-chase
+gardener + wooden fences. What follows describes the identity the
+released product actually delivers.
+
+**Positioning:** *the growing-worm genre, told through its BSD
+lineage — with a fair-chase ecology and puzzle-fence layer that
+nobody else has attempted.*
+
+### The three anchors of the shipped identity
+
+**1. Pure Mode preserves BSD `worm(6)` verbatim.**
+
+- Single apple, no enemies, no bonuses. Just the digit-food (1-9)
+  → multi-tick delayed growth → chained-bonus math from Michael
+  Toy's 1980 original.
+- Positioned as *meditative preservation mode* — you get the
+  actual 1980 game, on a modern canvas, without arcade layers.
+- This is the historical / archaeological identity anchor
+  consistent with `wump` (Moria), `adventure` (illustrated
+  point-and-click), and the proposed `tetris` / `atc` port
+  hooks.
+
+**2. Wild Mode adds a symmetric arcade ecology.**
+
+- 10-apple pool with a ripe → rotten → decay lifecycle (20s
+  ripe → 5s rotten → gone).
+- Four opt-in enemies, each with a distinct threat class:
+  - **Bird** — non-lethal thief; races you to the ripest apple.
+  - **Wasp** — lethal chaser that spawns from rotten apples.
+  - **Rival worm** — a full symmetric AI worm playing by the
+    same rules you do (grows on apples, dies on wall/self,
+    body = wall to you and to itself).
+  - **Gardener** — a rare (45-60s) fair-chase hunter that
+    enters from the far edge and targets the *nearest head* —
+    you or the rival, no favouritism. Retreats after a 25s
+    hunt window.
+- The symmetry is the point. In slither.io, other worms are
+  spectacle; in our Wild mode, they are *bound by the same
+  rules you are*. This is a
+  [game-design principle](../../../docs/decisions/002-porting-philosophy.md)
+  we hold across ports.
+
+**3. Wooden puzzle fences.**
+
+- Six fence layouts (None, Single H, Double H, Cross, Box,
+  Corridors) act as static internal walls. Rendered as
+  wooden post-and-rail structures across all 8 themes —
+  matches the physical-materials aesthetic direction of
+  [`gomoku` fancy-web](../../gomoku/ports/fancy-web/) (kaya
+  board, clamshell stones).
+- Fence cells are walls to the player, rival, and gardener.
+  Wasp and bird pass over (airborne). This asymmetry is *by
+  physical logic*, not player-favour — reinforces the
+  ecology's coherence.
+
+### What we deliberately did NOT do
+
+- **We did not merge in Nokia-snake mechanics.** BSD `worm(6)`
+  is the *growing* game; BSD `snake(6)` is the *chase* game.
+  We ship them as two distinct products with two distinct
+  identities. The `snake` port has raptors chasing you; the
+  `worm` port has you being the worm. Different tables.
+- **We did not implement slither.io-style multiplayer.** The
+  identity is *symmetric single-machine ecology* — the rival
+  worm plays by our rules, and it's local. Adding online
+  multiplayer would collapse into "slither.io #10001."
+- **We did not use random maze walls.** Six curated layouts,
+  each with a distinct name and shape. Puzzle constraints,
+  not procedural noise.
+
+### The moat
+
+- Nobody else is preserving BSD `worm(6)`'s digit-food chained-
+  bonus math faithfully.
+- Nobody else is doing fair-chase rival worms with symmetric
+  rules.
+- Nobody else is doing wooden puzzle fences in a
+  growing-worm game.
+- Single-file, no-dependency, offline-first, ~1500 LOC.
+
+---
+
 ## 1. Gameplay Modernization
 
 ### Dynamic Tick Rate Scaling (Speed Curves)

@@ -22,6 +22,142 @@ it.**
 
 ---
 
+## Competitive Landscape
+
+`robots` occupies a genuinely quiet niche. Unlike Tetris or Snake,
+the BSDGames `robots` mechanic — grid-step turn-based survival
+against greedy 8-direction chasers, with random teleport as the
+only escape — has almost no modern browser competition. This is
+an opportunity, not a red flag.
+
+### The current ceilings
+
+- **[Chu's Chess Robots](https://www.chessrobots.com/)** and
+  various *[robots.js](https://github.com/tmcw/robots)* type
+  ports — direct terminal-style ports of the mechanic on the
+  web. Small audiences, minimal polish, generally faithful but
+  visually inert.
+- **[Into the Breach](https://subsetgames.com/itb.html)**
+  (Subset Games) — spiritual cousin. Grid-tactics with enemies
+  that telegraph next turn. Sets the ceiling for
+  *forward-planning turn-based* on grid. Paid indie, high
+  production. We won't compete on depth.
+- **[Hoplite](https://www.magmaportal.com/hoplite.html)** and
+  the wider grid-roguelike genre — turn-based positional
+  combat on hex grids. Owns the "roguelike puzzle-tactics"
+  slot.
+- **[Chess.com](https://www.chess.com/) puzzles** — turn-based
+  positional survival puzzles at the trivial extreme. Owns the
+  casual daily-puzzle slot for turn-based positional play.
+- **Google's *[Robots](https://en.wikipedia.org/wiki/Robots_(game))*
+  Chrome extensions** and various open-source clones — direct
+  ASCII ports. Function, but no distinctive identity.
+- **[7DRL](https://7drl.com/) roguelike jams** — regularly
+  produce robots-adjacent tactical survival roguelikes.
+  Owns the experimental / prototype slot.
+
+### What's still open
+
+- **A visually-arresting, mainstream-web-quality `robots`.** No
+  competitor has attempted a *presentation-first* port. Every
+  existing browser `robots` looks like a terminal artefact,
+  which is on-brand for retro purists but excludes 99% of
+  modern players.
+- **The "planet-in-space" framing.** Nobody has treated the
+  60×23 grid as *an actual physical place* (a platform, a floor,
+  a scene) rather than an abstract playfield.
+- **Isometric 3D turn-based survival on the web.** Into the
+  Breach is desktop; Hoplite is mobile; no browser R3F/Three.js
+  isometric grid-survival game exists at high polish.
+- **Safe-wait as a spectator moment.** BSD `robots` has the
+  `w` "wait until safe" command, which classically resolves
+  instantly. Presenting each turn *visibly* while safe-wait
+  runs — so you can watch robots crash into each other — is
+  underexplored and turns a UX shortcut into gameplay theatre.
+
+---
+
+## Distinctive Hook — What Shipped
+
+This section is retrospective. The
+[`fancy-web` port shipped 2026-09-17](../../robots/ports/fancy-web/README.md);
+what follows describes the identity the released product actually
+delivers.
+
+**Positioning:** *`robots` as a scene from a hand-crafted
+isometric puzzle game — the 60×23 grid reimagined as a luminous
+platform floating in space.*
+
+### The three anchors of the shipped identity
+
+**1. The platform is a place, not a grid.**
+
+- Isometric 3D rendering via `@react-three/fiber` + Three.js.
+  Orthographic camera at ~30° tilt.
+- Zoom out and the platform reads like a **distant planet
+  ringed by an aura halo**. Zoom in and you play a close-up
+  turn-by-turn game with a walking human character.
+- The camera adaptively follows the player at high zoom; halo
+  silently fades so the tiles read cleanly at close range.
+- Reference points: Monument Valley, Into the Breach, Mini
+  Metro. Nobody else in the browser-`robots` slot targets
+  this production tier.
+
+**2. The player and enemies are physical objects with animation.**
+
+- **Voxel human player** with a full walk cycle: legs and arms
+  swing counter-phase; body rotates to face movement direction;
+  hop is parabolic between grid cells.
+- **Hover-bot enemies** — yellow chassis, red LED eyes, subtle
+  bob-hover animation. Menacing on approach, satisfying to
+  bait into collisions.
+- **Scrap piles** are distinct volumetric objects, not `*`
+  glyphs. They stack visually when multiple robots collide on
+  the same tile.
+
+**3. Safe-wait as theatre.**
+
+- The canonical `w` command traditionally resolves instantly
+  (you either survive or die on a single line of output).
+- Our port plays each turn out *visibly* during safe-wait —
+  robots step, collide, crash into piles one turn at a time
+  with animation. Any keypress interrupts.
+- This turns a UX shortcut into a spectator moment: you
+  set up a chain and *watch it resolve*. Signature
+  interaction that no other `robots` port has.
+- Deviates from spec in *timing*, not *outcome*, which is
+  documented under
+  [port ADR 002 (safe-wait deviation)](../../robots/ports/fancy-web/docs/decisions/).
+
+### What we deliberately did NOT do
+
+- **We did not preserve terminal ASCII rendering** in the
+  default view. There is no `+ @ *` glyph mode. This is a
+  clean break from the retro-preservation instinct — the port
+  is unambiguously a *modern reimagining*, not a terminal
+  emulator. Terminal-style rendering may return as an
+  optional theme in a v2 port ADR.
+- **We did not implement AI variants.** The greedy 2-line
+  `sign()` AI ships as the only enemy behaviour. This
+  preserves the mechanic identity; AI variants remain a
+  documented modernisation option (Section 1) for future
+  ports.
+- **We did not add multiplayer.** The port is strictly
+  single-player, consistent with the original. Async score
+  competition and ghost mode remain deferred.
+
+### The moat
+
+- Nobody else is doing isometric 3D + WebGL for `robots`.
+- Nobody else is treating the grid as a *place* (halo-lit
+  platform in a starfield).
+- Nobody else is playing safe-wait as animated theatre.
+- 289 KB gzipped, TypeScript strict, 33/33 tests pass —
+  production quality is the moat that the retro-terminal
+  competitors don't reach.
+
+---
+
 ## 1. Gameplay Modernisation
 
 ### AI
