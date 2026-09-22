@@ -5,6 +5,7 @@
 import { createGame, executeCommand, snapshot, SYSTEM_ORDER } from './engine.js';
 import { parseCommand, PARSE, describeCommand } from './parser.js';
 import { GALAXY_SIZE, QUADRANT_SIZE, CELL } from './galaxy.js';
+import { computeHints } from './hints.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,9 +39,15 @@ const helpClose = $('help-close');
 const refPanel = $('ref-panel');
 const refBtn = $('ref-btn');
 const refClose = $('ref-close');
+const cheatPanel = $('cheat-panel');
+const cheatBtn = $('cheat-btn');
+const cheatClose = $('cheat-close');
+const cheatList = $('cheat-list');
+const cheatEmpty = $('cheat-empty');
 
 const HELP_SEEN_KEY = 'trek-fancyweb-help-seen';
 const REF_VISIBLE_KEY = 'trek-fancyweb-ref-visible';
+const CHEAT_VISIBLE_KEY = 'trek-fancyweb-cheat-visible';
 
 const bgCtx = bgCanvas.getContext('2d');
 const sceneCtx = sceneCanvas.getContext('2d');
@@ -726,6 +733,9 @@ function renderHUD() {
     return `<div class="evt ${cls}">${escapeHtml(e.msg)} <small>· sd ${e.stardate.toFixed(1)}</small></div>`;
   }).join('');
   eventLog.innerHTML = evtHtml;
+
+  // Refresh dynamic cheat on every HUD tick (once per command / event).
+  renderCheat();
 }
 
 function escapeHtml(s) {
@@ -840,6 +850,7 @@ function onKeyDown(e) {
   // Global shortcuts (in-game)
   if (e.key === '?') { showHelp(); e.preventDefault(); return; }
   if (e.key === '\\') { toggleRefPanel(); e.preventDefault(); return; }
+  if (e.key === '`') { toggleCheatPanel(); e.preventDefault(); return; }
 
   if (e.key === 'Enter') {
     submitCommand();
@@ -887,6 +898,45 @@ function setRefVisible(v) {
 }
 function toggleRefPanel() {
   setRefVisible(!refPanel.classList.contains('shown'));
+}
+
+function setCheatVisible(v) {
+  cheatPanel.classList.toggle('shown', v);
+  cheatBtn.classList.toggle('active', v);
+  try { localStorage.setItem(CHEAT_VISIBLE_KEY, v ? '1' : '0'); } catch (_) {}
+  if (v) renderCheat();
+}
+function toggleCheatPanel() {
+  setCheatVisible(!cheatPanel.classList.contains('shown'));
+}
+
+function renderCheat() {
+  if (!game || !cheatPanel.classList.contains('shown')) return;
+  const snap = snapshot(game);
+  const hints = computeHints(snap);
+  if (!hints.length) {
+    cheatEmpty.style.display = '';
+    cheatList.innerHTML = '';
+    return;
+  }
+  cheatEmpty.style.display = 'none';
+  // Show top 5 hints (rest are usually less urgent)
+  const shown = hints.slice(0, 5);
+  cheatList.innerHTML = shown.map(h => {
+    const badge = h.priority === 'urgent' ? '!' : h.priority === 'ok' ? '·' : '▸';
+    const cmdHtml = h.cmd
+      ? `<span class="hint-cmd">${escapeHtml(h.cmd)}</span>`
+      : `<span class="hint-done">no command — advisory</span>`;
+    return `
+      <div class="hint-row priority-${h.priority}">
+        <div class="hint-badge">${badge}</div>
+        <div class="hint-content">
+          <div class="hint-line"><span class="hint-tag">${h.tag}</span>${cmdHtml}</div>
+          <div class="hint-explain">${escapeHtml(h.explain)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function toggleView(view) {
@@ -968,6 +1018,12 @@ function boot() {
   // Restore reference panel visibility from prior session (default: shown)
   const refShouldShow = (localStorage.getItem(REF_VISIBLE_KEY) ?? '1') === '1';
   setRefVisible(refShouldShow);
+
+  // Cheat panel wiring + restore state (default: shown — user asked for it)
+  cheatBtn.addEventListener('click', toggleCheatPanel);
+  cheatClose.addEventListener('click', () => setCheatVisible(false));
+  const cheatShouldShow = (localStorage.getItem(CHEAT_VISIBLE_KEY) ?? '1') === '1';
+  setCheatVisible(cheatShouldShow);
 
   // First-time users: auto-show the tutorial modal after title screen dismissed.
   // Handled inside startNewGame() so it appears against the actual game.
