@@ -458,6 +458,368 @@
       opacity: 0.7;
     }
 
+    /* -------- Reference panel (compact floating, always available) -------- */
+    #ref-panel {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      z-index: 20;
+      width: 320px;
+      max-height: calc(100vh - 220px);
+      background: rgba(4, 8, 20, 0.94);
+      border: 1px solid var(--panel-line);
+      border-radius: 6px;
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.15);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    #ref-panel.shown {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #ref-panel header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, #0d1830 0%, #050818 100%);
+      border-bottom: 1px solid var(--panel-line);
+    }
+    #ref-panel .ref-title {
+      color: var(--cyan);
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.4);
+    }
+    #ref-close {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--panel-line);
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #ref-close:hover { color: var(--cyan); border-color: var(--cyan); }
+    .ref-body {
+      padding: 10px 12px 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .ref-body::-webkit-scrollbar { width: 6px; }
+    .ref-body::-webkit-scrollbar-thumb { background: var(--panel-line); border-radius: 3px; }
+    .ref-section { margin-bottom: 12px; }
+    .ref-section:last-child { margin-bottom: 0; }
+    .ref-h {
+      color: var(--amber);
+      letter-spacing: 0.2em;
+      font-size: 10px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      padding-bottom: 3px;
+      border-bottom: 1px dashed var(--panel-line);
+    }
+    .ref-row {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      margin: 3px 0;
+    }
+    .ref-row span { color: var(--text-dim); font-size: 11px; flex: 1; }
+    .ref-body code {
+      display: inline-block;
+      font-family: 'VT323', 'Share Tech Mono', monospace;
+      background: #04080a;
+      color: var(--white);
+      border: 1px solid var(--panel-line);
+      border-radius: 2px;
+      padding: 1px 6px;
+      font-size: 13px;
+      min-width: 56px;
+      text-align: center;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.4);
+    }
+    .ref-body kbd {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      background: #04080a;
+      color: var(--white);
+      border: 1px solid var(--panel-line);
+      border-bottom-width: 2px;
+      border-radius: 2px;
+      padding: 1px 6px;
+      font-size: 11px;
+    }
+    .ref-bearing {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin: 6px 0;
+      text-align: center;
+    }
+    .ref-bearing .cell {
+      background: #04080a;
+      border: 1px solid var(--panel-line);
+      border-radius: 2px;
+      padding: 4px;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    .ref-bearing .cell b {
+      color: var(--cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      display: block;
+    }
+    .ref-bearing .cell.mid {
+      color: var(--amber);
+      background: transparent;
+      border: none;
+    }
+
+    /* -------- Help / tutorial modal (comprehensive) -------- */
+    #help-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 250;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #help-overlay.shown { display: flex; }
+    #help-inner {
+      max-width: 860px;
+      width: 100%;
+      max-height: 92vh;
+      background: radial-gradient(ellipse at top, #0a1230 0%, #030510 100%);
+      border: 2px solid var(--cyan);
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
+      padding: 32px 40px;
+      overflow-y: auto;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      line-height: 1.6;
+      position: relative;
+    }
+    #help-inner::-webkit-scrollbar { width: 10px; }
+    #help-inner::-webkit-scrollbar-thumb { background: var(--panel-line); border-radius: 5px; }
+    #help-close {
+      position: sticky;
+      float: right;
+      top: 0;
+      background: transparent;
+      color: var(--cyan);
+      border: 1px solid var(--cyan);
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 4px 12px;
+      cursor: pointer;
+      z-index: 2;
+    }
+    #help-close:hover {
+      background: rgba(0, 212, 255, 0.15);
+      color: var(--white);
+    }
+    #help-inner h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 34px;
+      color: var(--white);
+      text-shadow: 0 0 10px var(--cyan);
+      letter-spacing: 0.15em;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    #help-inner .subtitle {
+      color: var(--cyan);
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+    #help-inner h2 {
+      color: var(--amber);
+      font-size: 15px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-top: 26px;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--panel-line);
+      text-shadow: 0 0 3px rgba(255, 177, 79, 0.35);
+    }
+    #help-inner p { margin-bottom: 10px; }
+    #help-inner code, #help-inner kbd {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      background: #04080a;
+      color: var(--white);
+      border: 1px solid var(--panel-line);
+      border-radius: 2px;
+      padding: 1px 6px;
+      margin: 0 2px;
+    }
+    #help-inner kbd { border-bottom-width: 2px; }
+    #help-inner .cmd-table {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 6px 14px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    #help-inner .cmd-table .cmd {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--white);
+      background: #04080a;
+      border-left: 3px solid var(--cyan);
+      padding: 4px 10px;
+      font-size: 14px;
+    }
+    #help-inner .cmd-table .desc { padding: 4px 0; }
+    #help-inner .glyph-list {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 8px 14px;
+      align-items: start;
+      margin: 12px 0;
+    }
+    #help-inner .glyph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 212, 255, 0.06);
+      border: 1px solid var(--panel-line);
+      border-radius: 3px;
+      padding: 6px;
+      color: var(--cyan);
+      min-height: 44px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 600;
+      font-size: 12px;
+      text-align: center;
+    }
+    #help-inner .glyph.enemy { color: var(--red); background: rgba(255, 56, 56, 0.08); }
+    #help-inner .glyph.base  { color: var(--gold); background: rgba(255, 215, 106, 0.08); }
+    #help-inner .glyph.you   { color: var(--white); background: rgba(0, 212, 255, 0.12); }
+    #help-inner .bearing-chart {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(3, 60px);
+      gap: 4px;
+      justify-content: center;
+      margin: 12px auto;
+    }
+    #help-inner .bearing-chart .b {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #04080a;
+      border: 1px solid var(--panel-line);
+      border-radius: 3px;
+      color: var(--cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+    }
+    #help-inner .bearing-chart .b small {
+      color: var(--text-dim);
+      font-size: 9px;
+    }
+    #help-inner .bearing-chart .b.mid {
+      background: transparent;
+      border: none;
+      color: var(--amber);
+    }
+    #help-inner ul.lose-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+    }
+    #help-inner ul.lose-list li {
+      padding: 6px 12px;
+      margin-bottom: 4px;
+      border-left: 3px solid var(--red);
+      background: rgba(255, 56, 56, 0.06);
+      color: var(--text);
+      font-size: 13px;
+    }
+    #help-inner ul.win-list li {
+      border-left-color: var(--cyan);
+      background: rgba(0, 212, 255, 0.06);
+    }
+    #help-inner ul.tips-list {
+      margin-left: 22px;
+    }
+    #help-inner ul.tips-list li {
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    #help-inner .example-flow {
+      background: #04080a;
+      border-left: 3px solid var(--amber);
+      padding: 12px 16px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    #help-inner .example-flow .step {
+      display: flex;
+      gap: 10px;
+      margin: 4px 0;
+    }
+    #help-inner .example-flow .num {
+      color: var(--amber);
+      font-weight: bold;
+      min-width: 24px;
+    }
+    #help-inner .enemy-table {
+      display: grid;
+      grid-template-columns: 200px 1fr 120px 120px;
+      gap: 6px 12px;
+      margin: 12px 0;
+      font-size: 12px;
+      align-items: center;
+    }
+    #help-inner .enemy-table .h {
+      color: var(--amber);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--panel-line);
+      padding-bottom: 3px;
+      margin-bottom: 3px;
+    }
+    #help-inner .enemy-table .n { color: var(--white); font-family: 'Orbitron', monospace; }
+    #help-inner .enemy-table .d { color: var(--text-dim); font-size: 11px; }
+    #help-inner .enemy-table .s { color: var(--cyan); font-family: 'Share Tech Mono', monospace; }
+    #help-inner .footer-hint {
+      margin-top: 30px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      padding-top: 20px;
+      border-top: 1px solid var(--panel-line);
+    }
+
     /* Game over */
     #game-over {
       position: fixed;
@@ -540,6 +902,8 @@
       <div id="view-toggles">
         <button class="active" data-view="combat">Tactical</button>
         <button data-view="strategic">Galaxy Chart</button>
+        <button id="ref-btn" title="Toggle command reference (\ key)">≡ ref</button>
+        <button id="help-btn" title="Show tutorial (? key)">? help</button>
       </div>
     </div>
 
@@ -574,6 +938,222 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Compact command-reference panel (always available) -->
+  <aside id="ref-panel">
+    <header>
+      <span class="ref-title">≡ COMMAND REFERENCE</span>
+      <button id="ref-close" title="Hide (\ key)">✕</button>
+    </header>
+    <div class="ref-body">
+      <div class="ref-section">
+        <div class="ref-h">Weapons</div>
+        <div class="ref-row"><code>phaser 500</code><span>fire phasers with N energy</span></div>
+        <div class="ref-row"><code>torpedo 3</code><span>fire torpedo at bearing (0..12)</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-h">Movement</div>
+        <div class="ref-row"><code>move 3 2</code><span>course + warp factor</span></div>
+        <div class="ref-row"><code>warp 4</code><span>warp factor shortcut</span></div>
+        <div class="ref-row"><code>impulse 3</code><span>short-range impulse move</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-h">Bearing Clock</div>
+        <div class="ref-bearing">
+          <div class="cell"><b>4.5</b>NW</div>
+          <div class="cell"><b>3</b>N</div>
+          <div class="cell"><b>1.5</b>NE</div>
+          <div class="cell"><b>6</b>W</div>
+          <div class="cell mid">·</div>
+          <div class="cell"><b>0/12</b>E</div>
+          <div class="cell"><b>7.5</b>SW</div>
+          <div class="cell"><b>9</b>S</div>
+          <div class="cell"><b>10.5</b>SE</div>
+        </div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-h">Scans &amp; Info</div>
+        <div class="ref-row"><code>srscan</code><span>short-range (current quadrant)</span></div>
+        <div class="ref-row"><code>lrscan</code><span>long-range (adjacent quadrants)</span></div>
+        <div class="ref-row"><code>damages</code><span>subsystem damage report</span></div>
+        <div class="ref-row"><code>computer</code><span>trajectory calculator</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-h">Defense &amp; Support</div>
+        <div class="ref-row"><code>shields up</code><span>raise shields</span></div>
+        <div class="ref-row"><code>shields down</code><span>lower shields</span></div>
+        <div class="ref-row"><code>shields 300</code><span>transfer N energy to shields</span></div>
+        <div class="ref-row"><code>dock</code><span>dock at adjacent starbase (refuel)</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-h">Special Keys</div>
+        <div class="ref-row"><kbd>Enter</kbd><span>execute command</span></div>
+        <div class="ref-row"><kbd>Backspace</kbd><span>delete last char</span></div>
+        <div class="ref-row"><kbd>Esc</kbd><span>clear buffer</span></div>
+        <div class="ref-row"><kbd>V</kbd><span>toggle tactical / chart view</span></div>
+        <div class="ref-row"><kbd>?</kbd><span>full tutorial</span></div>
+        <div class="ref-row"><kbd>\</kbd><span>toggle this reference</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Full tutorial modal -->
+  <div id="help-overlay">
+    <div id="help-inner">
+      <button id="help-close">✕ close</button>
+      <h1>TREK — How to Play</h1>
+      <div class="subtitle">Command Deep Space · BSD trek(6) spiritual successor</div>
+
+      <h2>The Mission</h2>
+      <p>
+        You are captain of the <b>USS Enterprise NCC-1701</b>. The Federation
+        is under attack. Klingon warships have infiltrated Federation space
+        across an <b>8×8 galaxy</b> of quadrants. Your mission: hunt down
+        and destroy every Klingon before the stardate budget runs out — or
+        the Federation falls.
+      </p>
+
+      <h2>The Screen</h2>
+      <div class="glyph-list">
+        <div class="glyph you">USS<br>ENTERPRISE</div>
+        <div>
+          <b>Your ship.</b> Detailed federation cruiser sprite with saucer
+          section, secondary hull, twin warp nacelles, and NCC-1701 registry.
+          Cyan running lights. When shields are up, a translucent cyan bubble
+          surrounds the ship.
+        </div>
+        <div class="glyph enemy">K-SHIP</div>
+        <div>
+          <b>Klingon warship.</b> Four types (see below). Each is drawn
+          rotated so its bow faces the Enterprise. Red running lights and a
+          red menacing glow.
+        </div>
+        <div class="glyph base">★<br>BASE</div>
+        <div>
+          <b>Federation starbase.</b> Gold cross marker. Dock adjacent to
+          fully repair systems, refuel, and rearm.
+        </div>
+        <div class="glyph">☀ STAR</div>
+        <div>
+          <b>Star.</b> Solid navigation obstacle. Torpedoes hitting a star
+          are absorbed silently. Don't collide.
+        </div>
+      </div>
+
+      <h2>Enemy Roster</h2>
+      <p>Four enemy types spawn across the galaxy. Rarer types are far more dangerous:</p>
+      <div class="enemy-table">
+        <div class="h">Enemy</div><div class="h">Notes</div><div class="h">Energy</div><div class="h">Attack</div>
+        <div class="n">Klingon Warship</div><div class="d">Basic enemy — 65% of spawns</div><div class="s">200–400</div><div class="s">25–65 dmg</div>
+        <div class="n">Klingon Battlecruiser</div><div class="d">Heavier variant — 22% of spawns</div><div class="s">450–700</div><div class="s">40–90 dmg</div>
+        <div class="n">Romulan Warbird</div><div class="d">Wide wingspan — 10% of spawns</div><div class="s">350–550</div><div class="s">35–80 dmg</div>
+        <div class="n">Klingon Super-Commander</div><div class="d">Boss tier — 3% of spawns</div><div class="s">900–1200</div><div class="s">70–130 dmg</div>
+      </div>
+
+      <h2>The HUD</h2>
+      <p>Four panels are always visible:</p>
+      <p>
+        <b>Ship Status (top-left):</b> shields / hull / energy / torpedoes
+        as coloured bars. Bars turn amber below 50%, red below 25%. The
+        arrow next to shields indicates <b>up (↑)</b> or <b>down (↓)</b>.
+      </p>
+      <p>
+        <b>Systems (top-right):</b> status of your 8 subsystems.
+        <b>OK</b> = green, <b>WEAK</b> = amber, <b>DAMAGED</b> = pulsing red.
+        Damaged systems refuse to operate: e.g., damaged phasers can't fire.
+      </p>
+      <p>
+        <b>Sector Contacts (right):</b> what's in your current quadrant —
+        klingons, starbases, stars — plus total klingons remaining and
+        stardate budget.
+      </p>
+      <p>
+        <b>Bridge Log (bottom-right):</b> rolling event log —
+        kills (cyan), hits taken (red), damage warnings (amber), general
+        events (grey).
+      </p>
+
+      <h2>Commands</h2>
+      <p>Type each command at the <code>Command &gt;</code> prompt and press <kbd>Enter</kbd>. Most commands have a short alias.</p>
+      <div class="cmd-table">
+        <div class="cmd">phaser 500</div>  <div class="desc">Fire phasers with 500 energy at all Klingons in this quadrant. Damage split, attenuated by distance.</div>
+        <div class="cmd">torpedo 3</div>   <div class="desc">Fire photon torpedo at bearing 3 (see clock below). Costs 50 energy + 1 torpedo. Hits first target on path.</div>
+        <div class="cmd">move 3 2</div>   <div class="desc">Course 3 (bearing), warp factor 2. Consumes energy (≈ warp²×10) + stardate. Warp &lt; 1 = impulse (within sector).</div>
+        <div class="cmd">impulse 3</div>   <div class="desc">Short impulse move — bearing 3, warp 0.5. Cheap sector-level move.</div>
+        <div class="cmd">srscan</div>     <div class="desc">Refresh short-range scan (current quadrant details).</div>
+        <div class="cmd">lrscan</div>     <div class="desc">Long-range scan — reveal adjacent quadrants (fog-of-war on Galaxy Chart lifts).</div>
+        <div class="cmd">damages</div>    <div class="desc">Print full subsystem damage report.</div>
+        <div class="cmd">dock</div>       <div class="desc">Dock at adjacent starbase — full refuel, repair, rearm.</div>
+        <div class="cmd">shields up</div> <div class="desc">Raise shields (initial 500, costs 50 energy).</div>
+        <div class="cmd">shields down</div><div class="desc">Lower shields.</div>
+        <div class="cmd">shields 300</div><div class="desc">Transfer 300 energy from reserves into shields.</div>
+        <div class="cmd">computer</div>   <div class="desc">Trajectory calculator (helper).</div>
+        <div class="cmd">help</div>       <div class="desc">Show inline command reference.</div>
+        <div class="cmd">quit</div>       <div class="desc">End mission (counts as loss).</div>
+      </div>
+
+      <h2>Bearing — Clock Face Convention</h2>
+      <p>Course and torpedo bearings use a 12-hour clock face. <b>0 (or 12) = East</b>, <b>3 = North</b>, <b>6 = West</b>, <b>9 = South</b>. Fractional bearings work (e.g. 1.5 = NE):</p>
+      <div class="bearing-chart">
+        <div class="b">4.5<small>NW</small></div>
+        <div class="b">3<small>N</small></div>
+        <div class="b">1.5<small>NE</small></div>
+        <div class="b">6<small>W</small></div>
+        <div class="b mid">·</div>
+        <div class="b">0/12<small>E</small></div>
+        <div class="b">7.5<small>SW</small></div>
+        <div class="b">9<small>S</small></div>
+        <div class="b">10.5<small>SE</small></div>
+      </div>
+
+      <h2>Views</h2>
+      <p>
+        <b>Tactical (default):</b> current quadrant combat scene — ships, weapons, stars, starbase.
+        <b>Galaxy Chart:</b> 8×8 strategic map. Scanned quadrants show Klingon count; unscanned quadrants are darkened (fog of war).
+        Switch views with the <kbd>V</kbd> key or the buttons in the top bezel.
+      </p>
+
+      <h2>Winning</h2>
+      <ul class="lose-list win-list">
+        <li>✓ Destroy <b>every Klingon</b> in the galaxy before your stardate budget expires.</li>
+      </ul>
+
+      <h2>Losing</h2>
+      <ul class="lose-list">
+        <li>✗ Stardate budget runs out — Federation defeated.</li>
+        <li>✗ Enterprise hull destroyed (hull ≤ 0).</li>
+        <li>✗ Life support fails (system heavily damaged).</li>
+        <li>✗ Energy reserves exhausted.</li>
+      </ul>
+
+      <h2>Walk-through: Your First Kill</h2>
+      <div class="example-flow">
+        <div class="step"><span class="num">1.</span> Mission opens at a safe quadrant. Type <code>lrscan</code> to reveal adjacent quadrants and see which contain Klingons (red markers on Galaxy Chart).</div>
+        <div class="step"><span class="num">2.</span> Switch to Galaxy Chart with <kbd>V</kbd>. Note the direction to the nearest Klingon quadrant.</div>
+        <div class="step"><span class="num">3.</span> Warp there. Example: <code>move 0 2</code> = course East, warp 2. Costs ~40 energy, ~2 stardates.</div>
+        <div class="step"><span class="num">4.</span> On arrival, raise shields: <code>shields up</code>. Then transfer more energy: <code>shields 500</code>.</div>
+        <div class="step"><span class="num">5.</span> Attack: <code>phaser 400</code> to fire phasers, or <code>torpedo 6</code> to launch a torpedo (bearing 6 = West).</div>
+        <div class="step"><span class="num">6.</span> Klingons return fire. Repeat attack until all destroyed. Bridge log shows kills.</div>
+        <div class="step"><span class="num">7.</span> Between fights: <code>damages</code> to check systems, <code>dock</code> at nearest starbase to fully repair.</div>
+      </div>
+
+      <h2>Tips for Beginners</h2>
+      <ul class="tips-list">
+        <li><b>Always raise shields</b> before entering a hostile quadrant.</li>
+        <li><b>Phasers</b> hit everything in the quadrant, damage split by target count. <b>Torpedoes</b> hit one target on trajectory.</li>
+        <li>Save torpedoes for <b>tough enemies</b> (Battlecruisers, Super-Commanders).</li>
+        <li><b>Docking</b> fully repairs systems <i>and</i> refills energy/torps/shields. Use it after tough fights.</li>
+        <li>Every command <b>consumes stardate</b>. Long routes waste time — plan with the Galaxy Chart.</li>
+        <li>If your <b>hull &lt; 40%</b>, run to a starbase. Don't stay in a fight.</li>
+        <li>The <b>Super-Commander</b> (3% spawn) can one-shot a weakened Enterprise. Full shields + full torpedoes before engaging.</li>
+      </ul>
+
+      <div class="footer-hint">
+        Press <kbd>?</kbd> or click <kbd>? help</kbd> anytime to see this again.<br>
+        Press <kbd>\</kbd> for the compact command reference panel.
+      </div>
+    </div>
   </div>
 
   <div id="title-screen" class="shown">

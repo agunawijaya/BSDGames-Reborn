@@ -21,7 +21,9 @@ const systemsHost = $('systems-body');
 const sectorInfoHost = $('sector-info-body');
 const stardateEl = $('stardate');
 const sectorEl = $('sector-label');
-const viewButtons = document.querySelectorAll('#view-toggles button');
+// Only view-mode buttons (skip help / ref buttons which live in the same
+// container but have their own active-state semantics).
+const viewButtons = document.querySelectorAll('#view-toggles button[data-view]');
 const gameOverEl = $('game-over');
 const gameOverTitle = $('game-over-title');
 const gameOverText = $('game-over-text');
@@ -29,6 +31,16 @@ const gameOverStats = $('game-over-stats');
 const startBtn = $('start-btn');
 const titleScreen = $('title-screen');
 const difficultyPicker = $('difficulty-picker');
+
+const helpOverlay = $('help-overlay');
+const helpBtn = $('help-btn');
+const helpClose = $('help-close');
+const refPanel = $('ref-panel');
+const refBtn = $('ref-btn');
+const refClose = $('ref-close');
+
+const HELP_SEEN_KEY = 'trek-fancyweb-help-seen';
+const REF_VISIBLE_KEY = 'trek-fancyweb-ref-visible';
 
 const bgCtx = bgCanvas.getContext('2d');
 const sceneCtx = sceneCanvas.getContext('2d');
@@ -801,17 +813,33 @@ function endGame(won, reason) {
 
 function onKeyDown(e) {
   if (e.repeat) return;
+
+  // Help modal handling — supersedes everything except title screen
+  if (helpOverlay.classList.contains('shown')) {
+    if (e.key === 'Escape' || e.key === '?') {
+      hideHelp();
+      e.preventDefault();
+    }
+    return;
+  }
+
   if (titleScreen.classList.contains('shown')) {
+    if (e.key === '?') { showHelp(); e.preventDefault(); return; }
     if (e.key === 'Enter' || e.key === ' ') startNewGame();
     return;
   }
   if (gameOverEl.classList.contains('shown')) {
+    if (e.key === '?') { showHelp(); e.preventDefault(); return; }
     if (e.key === 'Enter' || e.key === ' ') {
       gameOverEl.classList.remove('shown');
       titleScreen.classList.add('shown');
     }
     return;
   }
+
+  // Global shortcuts (in-game)
+  if (e.key === '?') { showHelp(); e.preventDefault(); return; }
+  if (e.key === '\\') { toggleRefPanel(); e.preventDefault(); return; }
 
   if (e.key === 'Enter') {
     submitCommand();
@@ -844,6 +872,21 @@ function onKeyDown(e) {
     refreshHint();
     e.preventDefault();
   }
+}
+
+function showHelp() { helpOverlay.classList.add('shown'); }
+function hideHelp() {
+  helpOverlay.classList.remove('shown');
+  try { localStorage.setItem(HELP_SEEN_KEY, '1'); } catch (_) {}
+}
+
+function setRefVisible(v) {
+  refPanel.classList.toggle('shown', v);
+  refBtn.classList.toggle('active', v);
+  try { localStorage.setItem(REF_VISIBLE_KEY, v ? '1' : '0'); } catch (_) {}
+}
+function toggleRefPanel() {
+  setRefVisible(!refPanel.classList.contains('shown'));
 }
 
 function toggleView(view) {
@@ -896,6 +939,14 @@ function startNewGame() {
   viewButtons.forEach(b => b.classList.toggle('active', b.dataset.view === 'combat'));
   refreshHint();
   renderHUD();
+
+  // First-time visitors: pop the tutorial 400 ms after mission start so
+  // it appears against the actual scene instead of the title.
+  try {
+    if (!localStorage.getItem(HELP_SEEN_KEY)) {
+      setTimeout(() => showHelp(), 400);
+    }
+  } catch (_) {}
 }
 
 function boot() {
@@ -904,6 +955,22 @@ function boot() {
   document.addEventListener('keydown', onKeyDown);
   startBtn.addEventListener('click', startNewGame);
   viewButtons.forEach(b => b.addEventListener('click', () => toggleView(b.dataset.view)));
+
+  // Help + reference panel wiring
+  helpBtn.addEventListener('click', showHelp);
+  helpClose.addEventListener('click', hideHelp);
+  helpOverlay.addEventListener('click', (e) => {
+    if (e.target === helpOverlay) hideHelp();
+  });
+  refBtn.addEventListener('click', toggleRefPanel);
+  refClose.addEventListener('click', () => setRefVisible(false));
+
+  // Restore reference panel visibility from prior session (default: shown)
+  const refShouldShow = (localStorage.getItem(REF_VISIBLE_KEY) ?? '1') === '1';
+  setRefVisible(refShouldShow);
+
+  // First-time users: auto-show the tutorial modal after title screen dismissed.
+  // Handled inside startNewGame() so it appears against the actual game.
 
   function frame(t) {
     animT = t;
