@@ -20,7 +20,8 @@ How the port is structured, layer by layer. Companion to
 ┌──────────────────────────────────────────────────────────────┐
 │  src/main.js — orchestration                                 │
 │  • DOM refs, input handling, view-toggle keybind             │
-│  • Asset loading (backdrops, ship sprites, blast SVGs)       │
+│  • Asset loading (7 backdrops, 6 ship PNGs, star + blast SVG)│
+│  • Backdrop picker (hash of qx,qy → one of seven images)     │
 │  • Render loop (bg, scene, HUD)                              │
 │  • Effect FX (phaser, torpedo, klingon fire, explosion)      │
 │  • localStorage persistence (help-seen, ref, cheat)          │
@@ -132,10 +133,17 @@ How the port is structured, layer by layer. Companion to
 
 - Boots on `DOMContentLoaded`, fits canvases, buffers difficulty
   buttons, wires input handlers, installs the render loop.
-- **Asset loading:** background image, one Enterprise sprite, four
-  enemy sprites, two blast SVGs. Each has an `onload`/`onerror` gate
-  and a programmatic fallback (or "sit dark until ready") so a slow
-  network never blocks gameplay.
+- **Asset loading:** seven backdrop images (`background_01..07`), one
+  Enterprise sprite, four enemy sprites, the Starfleet base sprite,
+  the star SVG, and two blast SVGs. Each has an `onload`/`onerror`
+  gate and a programmatic fallback (or "sit dark until ready") so a
+  slow network never blocks gameplay.
+- **Backdrop picker (`currentBgState()`):** given the current
+  `game.ship.qx/qy`, picks one of the seven backdrops via
+  `hash(qx, qy) mod 7`. Warping to a new quadrant visibly changes the
+  sky; revisiting a quadrant restores the same sky. If the picked
+  backdrop hasn't finished loading, falls back to any loaded backdrop
+  rather than flashing to a blank navy fill.
 - **Render loop:** every animation frame paints (a) the space
   backdrop with subtle sine drift, (b) the combat scene (ships,
   shields, weapons, explosions), and (c) if visible, the strategic
@@ -249,7 +257,8 @@ kind of y-inversion bug that made the ship warp backwards
 ## Rendering layers (z-order, low → high)
 
 ```
-z=1  #space-bg canvas       backdrop image + subtle drift
+z=1  #space-bg canvas       backdrop image (varies per quadrant) +
+                            subtle drift
 z=2  #scene canvas          ships, shields, weapons, explosions,
                             corner labels
 z=3  #strategic overlay     8×8 galaxy chart (when active)

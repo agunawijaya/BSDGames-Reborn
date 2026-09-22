@@ -145,10 +145,12 @@ At [`../../docs/`](../../docs/) — same for every port of `trek`.
 
 **v1 (current):**
 - ✅ Headless engine (galaxy + quadrant + ship + combat)
-- ✅ Cinematic combat scene (painted backdrop, PNG ship sprites,
-  weapons FX, multi-layer explosion animations)
-- ✅ Painted Enterprise + four Klingon variants + Federation
-  starbase
+- ✅ Cinematic combat scene: painted PNG ship sprites, painted SVG
+  star, weapons FX, multi-layer explosion animations
+- ✅ Painted Enterprise + four Klingon variants + capital-class
+  6-cell Starfleet base
+- ✅ Seven painted deep-space backdrops, one per quadrant — warping
+  visibly changes the sky
 - ✅ Strategic galaxy chart view (fog of war, klingon indicators)
 - ✅ Typed command grammar (phaser, torpedo, move, dock, shields, etc.)
 - ✅ HUD panels (ship status, systems damage, sector info, bridge log)
@@ -163,6 +165,8 @@ At [`../../docs/`](../../docs/) — same for every port of `trek`.
   autoplay stress)
 
 **v2 (deferred):**
+- Content-aware backdrop mood mapping (hostile / safe / dense-stars
+  instead of hash-based identity)
 - Klingon AI variants (aggressive, cloaked, cowardly)
 - Photon trajectory computer (helps aim torpedoes)
 - Cinematic bridge cutaways for major moments

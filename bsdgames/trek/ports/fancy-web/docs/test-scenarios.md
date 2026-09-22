@@ -2,7 +2,7 @@
 
 Manual verification checklist. Automated coverage is in
 [`../tests/`](../tests/) (45 tests as of 2026-09-22). This document
-covers the paths you should walk before releasing a change.
+covers 17 walk-throughs you should run before releasing a change.
 
 Every scenario has an **expected result** — if the actual behaviour
 diverges, that's a bug or a documentation gap.
@@ -191,6 +191,42 @@ against the y-inversion regression documented in
 
 ---
 
+## S8b — Backdrop changes on warp
+
+**Steps**
+
+1. Note the space backdrop (nebula colours, star density) in the
+   starting quadrant.
+2. `move 3 2` (warp jump).
+3. Compare backdrop after arrival.
+4. `move 9 2` back to the starting quadrant.
+
+**Expected**
+
+- After step 2, the backdrop image is **visibly different** — colours,
+  cloud shapes, or star density differ from the starting quadrant.
+- After step 4, the starting quadrant's backdrop is **the same** as
+  in step 1 (deterministic hash of qx,qy).
+- If a backdrop is still loading when the pick fires, the renderer
+  shows any loaded backdrop rather than a blank navy fill.
+
+## S8c — Painted starbase renders at capital-class scale
+
+**Steps**
+
+1. `lrscan` until a starbase quadrant is discovered.
+2. Warp to that quadrant.
+3. Observe the starbase sprite on the tactical view.
+
+**Expected**
+
+- Starbase sprite is `starfleet_base.png`, rendered ~6 sector cells
+  wide (roughly 60 % of the quadrant's screen height).
+- Warm gold drop-glow around the sprite.
+- Label `STARFLEET BASE` in Orbitron 11px sits clearly below the
+  sprite footprint (not overlapping).
+- Any Klingon in the same quadrant is visibly smaller than the base.
+
 ## S9 — Docking fully repairs
 
 **Steps**
@@ -259,9 +295,10 @@ against the y-inversion regression documented in
 
 - <kbd>V</kbd> toggles Tactical ↔ Galaxy Chart.
 - Buttons in bezel also toggle. Active button gets a cyan highlight.
-- Galaxy Chart shows 8×8 grid with the same backdrop image behind a
-  dark overlay. Scanned quadrants show Klingon counts + starbase
-  markers; unscanned quadrants are darkened (fog of war).
+- Galaxy Chart shows 8×8 grid with the current quadrant's backdrop
+  behind a dark overlay (backdrop matches the last tactical view).
+  Scanned quadrants show Klingon counts + starbase markers;
+  unscanned quadrants are darkened (fog of war).
 - Your quadrant is highlighted cyan with an `E` marker + `YOU`
   label.
 
@@ -301,10 +338,13 @@ against the y-inversion regression documented in
 **Expected**
 
 - Title screen appears (HTML + CSS still work).
-- If images fail entirely, scene canvas shows a dark navy fill.
+- If images fail entirely, scene canvas shows a dark navy fill
+  (`currentBgState()` returns the same failing pick).
 - Enterprise still draws as a programmatic vector fallback (from
   `drawEnterprise` fallback path).
 - Each Klingon draws as a programmatic vector fallback.
+- Starbase falls back to the gold framed cross.
+- Stars fall back to the radial-gradient orb (SVG failed → old path).
 - The game is still playable — no JS errors.
 
 Restore network and refresh to verify sprites re-load.

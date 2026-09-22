@@ -13,9 +13,14 @@ All art lives under `references/` and follows:
 - **Ship sprites**: `<faction>_<class>_top_<seq>.<ext>` — e.g.
   `klingon_battlecruiser_top_01.png`. `top` = top-down orientation.
   `<seq>` allows multiple candidates so we can A/B without renaming.
-- **Backdrops**: `background_<NN>.<ext>` — currently NN = 01..07.
+- **Backdrops**: `background_<NN>.<ext>` — currently NN = 01..07,
+  all loaded and picked per quadrant.
 - **Effects**: `blast_<NN>.svg` — vector so they scale cleanly.
 - **Stations**: `<faction>_<type>.<ext>` — `starfleet_base.png`.
+- **Environment sprites**: `<object>_<colour>.svg` — e.g.
+  `star_yellow.svg`. SVG for anything drawn many times per frame at
+  varying sizes (stars in every populated quadrant); PNG for anything
+  one-shot at a fixed size (ship sprites, starbase).
 
 The loader in `main.js` hard-codes the exact filename it uses. Adding
 a second option isn't automatic — deliberate choice, so we don't ship

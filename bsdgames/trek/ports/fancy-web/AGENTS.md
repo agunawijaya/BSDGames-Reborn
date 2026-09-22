@@ -18,8 +18,9 @@ BSD source; core mechanics must not.
 they form the *BSD typed-command simulator* pair (atc = radar
 controller, trek = ship captain).
 
-Visual language: deep space nebulae + parallax stars + programmatic
-ship sprites + cyan/amber/red palette. See
+Visual language: painted deep-space nebula backdrops (seven images,
+one per quadrant) + painted PNG ship sprites + painted SVG star +
+capital-class Starfleet base sprite + cyan/amber/red palette. See
 [`docs/decisions/001-tech-stack.md`](./docs/decisions/001-tech-stack.md).
 
 ## Engine mechanics — do not deviate
@@ -65,15 +66,29 @@ Full grammar in `src/parser.js`. Verbs + short aliases:
   gold `#ffd76a`, dark navy void. No pink/pastel.
 - **Fonts:** Orbitron for headings/HUD labels, Share Tech Mono for
   body text.
-- **Ship sprites** — programmatic Canvas 2D drawings, not raster
-  assets. Enterprise = federation cruiser silhouette
-  (saucer + secondary hull + nacelles). Klingon = angular
-  bird-of-prey (rebrand-friendly design).
+- **Ship sprites** — painted PNG assets in `references/` (Enterprise +
+  four Klingon variants). Each Klingon sprite has a per-type
+  `bowOffset` in `ENEMY_SPRITE_META` so the ship rotates its bow at
+  the Enterprise regardless of the source PNG's natural orientation.
+  Programmatic vector fallbacks kept for offline / asset-fail paths.
+- **Starbase sprite** — painted PNG `starfleet_base.png`, rendered
+  6-cell wide (capital-class scale, visibly dwarfs Klingon warships).
+- **Star sprite** — painted SVG `star_yellow.svg` (halo + cross rays
+  + hot core). Programmatic radial-gradient fallback kept.
 - **Weapons FX:** phaser = cyan beam with glow, torpedo = orange
-  particle-trail projectile. Shield hits = translucent bubble.
-- **Nebulae** — 4 radial gradient blobs in background (rose, teal,
-  gold, purple).
-- **Parallax stars** — 3 depth layers, subtle rightward drift.
+  particle-trail projectile. Shield hits = translucent bubble sized
+  to the sprite's true width (nacelle-to-nacelle for Enterprise,
+  proportional to `widthMult` for Klingons).
+- **Explosion FX on kills:** four visual layers (fading enemy
+  silhouette + radial gold flash + one of two blast SVGs
+  scaled + spinning + orbiting debris sparks). Deterministic per-cell
+  choice of blast_01 vs blast_02.
+- **Backdrops** — seven painted images `background_01..07`, all
+  preloaded. `currentBgState()` picks one via `hash(qx, qy) mod 7`
+  so warping changes the sky and revisiting a quadrant restores the
+  same sky. Do not revert to programmatic nebulae or parallax
+  starfields — the painted backdrops are load-bearing for scene
+  coherence.
 
 ## What NOT to do
 
@@ -94,12 +109,30 @@ trek/ports/fancy-web/
 │   ├── galaxy.js       # 8×8 galaxy + quadrant + sector model
 │   ├── engine.js       # game state, commands, tick, combat
 │   ├── parser.js       # command grammar parser
+│   ├── hints.js        # priority-sorted cheat hint computer
 │   └── main.js         # DOM + canvas rendering + input orchestration
+├── references/
+│   ├── background_01..07.*         # painted quadrant backdrops
+│   ├── uss_enterprise_top_01.png
+│   ├── klingon_top_01.png          # warship
+│   ├── klingon_battlecruiser_top_01.png
+│   ├── klingon_super_top_01.png
+│   ├── romulan_warbird_top_01.png
+│   ├── starfleet_base.png
+│   ├── star_yellow.svg             # painted star sprite
+│   └── blast_01.svg, blast_02.svg  # explosion sprites
 ├── tests/
-│   ├── engine.test.js
-│   └── parser.test.js
+│   ├── engine.test.js              # 17 tests
+│   ├── parser.test.js              # 11 tests
+│   ├── hints.test.js               # 10 tests
+│   ├── shortcut-conflict.test.js   # 4 tests
+│   ├── autoplay.test.js            # 3 stress tests
+│   └── autoplay-trace.js           # standalone diagnostic
 ├── docs/
 │   ├── diff-log.md
+│   ├── architecture.md
+│   ├── test-scenarios.md
+│   ├── notes.md
 │   └── decisions/
 │       ├── README.md
 │       └── 001-tech-stack.md
