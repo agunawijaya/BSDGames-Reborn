@@ -101,6 +101,13 @@ for (const [type, meta] of Object.entries(ENEMY_SPRITE_META)) {
   enemySprites[type] = state;
 }
 
+// Starfleet base sprite — refuel / repair station. Painted top-down PNG.
+const starbaseImage = new Image();
+let starbaseLoaded = false;
+starbaseImage.onload = () => { starbaseLoaded = true; };
+starbaseImage.onerror = () => { starbaseLoaded = false; };
+starbaseImage.src = 'references/starfleet_base.png';
+
 // Explosion sprites — two SVG variants used interchangeably. The
 // original files had a black background rect; we set fill-opacity: 0
 // on it so the explosion blends over the space backdrop.
@@ -452,19 +459,36 @@ function drawStar(cx, cy, r) {
   sceneCtx.fill();
 }
 
-function drawStarbase(cx, cy, r) {
-  sceneCtx.strokeStyle = '#ffd76a';
-  sceneCtx.shadowColor = '#ffd76a';
-  sceneCtx.shadowBlur = 10;
-  sceneCtx.lineWidth = 3;
-  sceneCtx.beginPath();
-  sceneCtx.rect(cx - r, cy - r, r * 2, r * 2);
-  sceneCtx.moveTo(cx - r * 0.6, cy - r * 0.6);
-  sceneCtx.lineTo(cx + r * 0.6, cy + r * 0.6);
-  sceneCtx.moveTo(cx + r * 0.6, cy - r * 0.6);
-  sceneCtx.lineTo(cx - r * 0.6, cy + r * 0.6);
-  sceneCtx.stroke();
-  sceneCtx.shadowBlur = 0;
+function drawStarbase(cx, cy, targetWidth) {
+  const c = sceneCtx;
+  // Preferred: painted PNG sprite
+  if (starbaseLoaded) {
+    const img = starbaseImage;
+    const s = targetWidth / img.naturalWidth;
+    const w = img.naturalWidth * s;
+    const h = img.naturalHeight * s;
+    c.save();
+    // Warm gold glow so the station reads as "safe haven"
+    c.shadowColor = 'rgba(255, 215, 106, 0.55)';
+    c.shadowBlur = Math.max(14, targetWidth * 0.14);
+    c.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+    c.restore();
+    return;
+  }
+  // Fallback: gold framed cross (used while PNG loads or if it fails)
+  const r = targetWidth * 0.35;
+  c.strokeStyle = '#ffd76a';
+  c.shadowColor = '#ffd76a';
+  c.shadowBlur = 10;
+  c.lineWidth = 3;
+  c.beginPath();
+  c.rect(cx - r, cy - r, r * 2, r * 2);
+  c.moveTo(cx - r * 0.6, cy - r * 0.6);
+  c.lineTo(cx + r * 0.6, cy + r * 0.6);
+  c.moveTo(cx + r * 0.6, cy - r * 0.6);
+  c.lineTo(cx - r * 0.6, cy + r * 0.6);
+  c.stroke();
+  c.shadowBlur = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -500,7 +524,9 @@ function renderCombat(t) {
   // Starbase
   if (contents.starbase) {
     const p = cell(contents.starbase.sx, contents.starbase.sy);
-    drawStarbase(p.x, p.y, cellSize * 0.35);
+    // targetWidth ≈ 2 cells so the station reads as a substantial
+    // fixture, comparable in visual weight to a battlecruiser.
+    drawStarbase(p.x, p.y, cellSize * 2.0);
     sceneCtx.font = 'bold 9px "Orbitron", monospace';
     sceneCtx.fillStyle = '#ffd76a';
     sceneCtx.textAlign = 'center';
@@ -1167,10 +1193,12 @@ function boot() {
   const refShouldShow = (localStorage.getItem(REF_VISIBLE_KEY) ?? '1') === '1';
   setRefVisible(refShouldShow);
 
-  // Cheat panel wiring + restore state (default: shown — user asked for it)
+  // Cheat panel wiring + restore state. Default OFF at game start so
+  // new players get the raw experience; they can opt in via the `▶ cheat`
+  // button or the backtick key once they hit their first wall.
   cheatBtn.addEventListener('click', toggleCheatPanel);
   cheatClose.addEventListener('click', () => setCheatVisible(false));
-  const cheatShouldShow = (localStorage.getItem(CHEAT_VISIBLE_KEY) ?? '1') === '1';
+  const cheatShouldShow = (localStorage.getItem(CHEAT_VISIBLE_KEY) ?? '0') === '1';
   setCheatVisible(cheatShouldShow);
 
   // First-time users: auto-show the tutorial modal after title screen dismissed.

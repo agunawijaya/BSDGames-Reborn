@@ -97,12 +97,16 @@ port preserves the same generic terminology used by BSD trek.
 
 - **Vanilla JavaScript** (ES modules, no framework, no bundler)
 - **Canvas 2D** for cinematic space rendering:
-  - Parallax star field (3 depth layers)
-  - Painted nebula gradients
-  - Programmatic ship sprites (Enterprise + Klingon)
-  - Phaser beam glow + impact effects
+  - Painted deep-space nebula backdrop (subtle camera drift)
+  - Painted PNG sprites for USS Enterprise, four Klingon ship types
+    (warship, battlecruiser, super-commander, Romulan warbird), and
+    the Starfleet base
+  - Phaser beam glow + impact flash
   - Photon torpedo particle trails
-  - Shield bubble effects
+  - Translucent shield bubbles sized to the ship's true width
+  - Multi-layer explosion FX on kills (fading silhouette + radial
+    flash + SVG blast + orbiting debris)
+  - Programmatic vector fallbacks if any PNG fails to load
 - **CSS 3** for HUD overlays with backdrop-blur
 - **Google Fonts:** Orbitron (sci-fi headings) + Share Tech Mono (body)
 - **No dependencies.** No build step.
@@ -114,8 +118,15 @@ Rationale: see
 
 - **[`docs/diff-log.md`](./docs/diff-log.md)** — what was preserved,
   changed, added, or deferred vs BSD `trek(6)`.
+- **[`docs/architecture.md`](./docs/architecture.md)** — file
+  responsibilities, effect payload contract, rendering layers.
+- **[`docs/test-scenarios.md`](./docs/test-scenarios.md)** — manual
+  verification checklist (15 scenarios).
+- **[`docs/notes.md`](./docs/notes.md)** — freeform dev notes:
+  asset naming, deferred-v2 roadmap, testing tips.
 - **[`docs/decisions/`](./docs/decisions/)** — port-level ADRs.
-- **[`tests/`](./tests/)** — 28 tests (engine + parser).
+- **[`tests/`](./tests/)** — 45 tests (engine, parser, hints,
+  shortcut guards, autoplay stress).
 
 ## Canonical game docs
 
@@ -132,13 +143,22 @@ At [`../../docs/`](../../docs/) — same for every port of `trek`.
 
 **v1 (current):**
 - ✅ Headless engine (galaxy + quadrant + ship + combat)
-- ✅ Cinematic combat scene (parallax stars, ship sprites, weapons FX)
+- ✅ Cinematic combat scene (painted backdrop, PNG ship sprites,
+  weapons FX, multi-layer explosion animations)
+- ✅ Painted Enterprise + four Klingon variants + Federation
+  starbase
 - ✅ Strategic galaxy chart view (fog of war, klingon indicators)
 - ✅ Typed command grammar (phaser, torpedo, move, dock, shields, etc.)
 - ✅ HUD panels (ship status, systems damage, sector info, bridge log)
 - ✅ Title screen with difficulty picker (novice/standard/expert)
+- ✅ Comprehensive tutorial modal (auto-shows on first visit)
+- ✅ Compact command reference panel (`\` key)
+- ✅ Dynamic cheat panel with 12 hint types (backtick key)
+- ✅ Autoplay stress test — 90 % novice win rate proves the game is
+  winnable following the cheat
 - ✅ Win / loss conditions (klingons destroyed, hull, energy, stardate)
-- ✅ 28/28 tests pass
+- ✅ 45/45 tests pass (engine + parser + hints + shortcut guards +
+  autoplay stress)
 
 **v2 (deferred):**
 - Klingon AI variants (aggressive, cloaked, cowardly)
