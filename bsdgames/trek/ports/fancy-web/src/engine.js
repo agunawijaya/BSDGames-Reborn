@@ -363,10 +363,13 @@ function doMove(game, course, warp, effects) {
     return { ok: true, effects };
   }
 
-  // Warp — quadrant-level jump
+  // Warp — quadrant-level jump. bearingToVector already returns dy in
+  // game-coord orientation (dy > 0 = South, dy < 0 = North), matching
+  // the impulse branch above. Add — don't subtract — or the ship
+  // travels perpendicular / opposite of intent.
   const distance = warp;
   const newQx = Math.round(game.ship.qx + dx * distance);
-  const newQy = Math.round(game.ship.qy - dy * distance);  // y flipped (game convention)
+  const newQy = Math.round(game.ship.qy + dy * distance);
   const c = clampQuadrant(newQx, newQy);
   if (c.x === game.ship.qx && c.y === game.ship.qy) {
     return { ok: false, error: 'Warp too small — nowhere to go' };

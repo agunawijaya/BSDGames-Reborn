@@ -44,6 +44,22 @@ function findNearestKlingonQuadrant(galaxy, qx, qy) {
   return best;
 }
 
+/** Find the nearest unscanned quadrant — used to keep the exploration
+ *  going after all locally known klingon quadrants are cleared. */
+function findNearestUnscannedQuadrant(galaxy, qx, qy) {
+  let best = null;
+  let bestDist = Infinity;
+  for (let y = 0; y < GALAXY_SIZE; y++) {
+    for (let x = 0; x < GALAXY_SIZE; x++) {
+      const q = galaxy.quadrants[y][x];
+      if (q.scanned) continue;
+      const d = chebDist(qx, qy, x, y);
+      if (d < bestDist) { bestDist = d; best = { qx: x, qy: y, dist: d }; }
+    }
+  }
+  return best;
+}
+
 /** Find the nearest scanned quadrant with a starbase. */
 function findNearestStarbaseQuadrant(galaxy, qx, qy) {
   let best = null;
@@ -200,7 +216,10 @@ export function computeHints(snap) {
     // Recommend phaser energy = total enemy energy × attenuation buffer
     // (average distance attenuation ~0.65). Cap at ship reserves.
     const totalEnergyOfEnemies = living.reduce((s, k) => s + Math.max(0, k.energy), 0);
-    const recommended = Math.min(ship.energy - 500, Math.ceil(totalEnergyOfEnemies * 1.5));
+    // Fire at least 100 units even when target is nearly dead — otherwise
+    // the cheat goes silent for a wounded klingon (recommended < 100) and
+    // the autoplay stalls with "READY" hints while a hostile remains.
+    const recommended = Math.min(ship.energy - 500, Math.max(100, Math.ceil(totalEnergyOfEnemies * 1.5)));
     if (recommended >= 100 && ship.systems.phasers <= 3) {
       hints.push({
         priority: 'normal',
@@ -267,6 +286,22 @@ export function computeHints(snap) {
         cmd: `move ${bearing} ${warp}`,
         explain: `Nearest known Klingon quadrant ${nearest.qx + 1}-${nearest.qy + 1} (${nearest.count} target${nearest.count > 1 ? 's' : ''}, ${nearest.dist} away).`,
       });
+    } else {
+      // No known klingon quadrants but klingons still remaining somewhere.
+      // Explore the nearest unscanned quadrant so lrscan reveals more.
+      const unscannedTarget = findNearestUnscannedQuadrant(galaxy, ship.qx, ship.qy);
+      if (unscannedTarget) {
+        const dx = unscannedTarget.qx - ship.qx;
+        const dy = unscannedTarget.qy - ship.qy;
+        const bearing = bearingClock(dx, dy).toFixed(1);
+        const warp = suggestWarp(unscannedTarget.dist);
+        hints.push({
+          priority: 'normal',
+          tag: 'EXPLORE',
+          cmd: `move ${bearing} ${warp}`,
+          explain: `No known Klingon activity nearby. Warp to unscanned quadrant ${unscannedTarget.qx + 1}-${unscannedTarget.qy + 1} to expand map.`,
+        });
+      }
     }
   }
 
