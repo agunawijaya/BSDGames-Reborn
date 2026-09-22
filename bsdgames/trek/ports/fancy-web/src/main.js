@@ -49,6 +49,13 @@ bgImage.onload = () => { bgLoaded = true; };
 bgImage.onerror = () => { bgLoaded = false; };
 bgImage.src = 'references/background_01.jpg';
 
+// USS Enterprise top-down PNG sprite (transparent background).
+const shipImage = new Image();
+let shipLoaded = false;
+shipImage.onload = () => { shipLoaded = true; };
+shipImage.onerror = () => { shipLoaded = false; };
+shipImage.src = 'references/uss_enterprise_top_01.png';
+
 /** Draw the space image cover-fit (fill viewport, crop excess) with a
  *  subtle "camera float" so the scene doesn't feel frozen. */
 function drawSpaceImage(ctx, w, h, t) {
@@ -119,14 +126,47 @@ function renderBackground(t) {
 // Ship sprites
 // ---------------------------------------------------------------------------
 
-function drawEnterprise(cx, cy, scale = 1.4, angle = 0) {
+// Native pixel width of the fallback programmatic ship — used to convert
+// the caller's `targetWidth` (in pixels) into a `scale` factor when the
+// image sprite is not yet loaded.
+const ENTERPRISE_FALLBACK_NATIVE_WIDTH = 140;
+
+/**
+ * Draw the USS Enterprise centered at (cx, cy).
+ * @param cx canvas x centre
+ * @param cy canvas y centre
+ * @param targetWidth desired on-screen width in pixels
+ * @param angle optional rotation (radians), default 0 (bow facing +X)
+ */
+function drawEnterprise(cx, cy, targetWidth, angle = 0) {
   const c = sceneCtx;
+  // Preferred: the PNG sprite (transparent background)
+  if (shipLoaded) {
+    const iw = shipImage.naturalWidth;
+    const ih = shipImage.naturalHeight;
+    const s = targetWidth / iw;
+    const w = iw * s;
+    const h = ih * s;
+    c.save();
+    c.translate(cx, cy);
+    if (angle !== 0) c.rotate(angle);
+    // Subtle cyan glow behind the ship for atmosphere
+    c.shadowColor = 'rgba(140, 220, 255, 0.45)';
+    c.shadowBlur = Math.max(12, targetWidth * 0.08);
+    c.drawImage(shipImage, -w / 2, -h / 2, w, h);
+    c.restore();
+    return;
+  }
+
+  // Fallback: programmatic vector ship (used while PNG loads or if it
+  // fails to load). Uses the original numeric coordinates; targetWidth
+  // is converted to a scale factor.
+  const scale = targetWidth / ENTERPRISE_FALLBACK_NATIVE_WIDTH;
   c.save();
   c.translate(cx, cy);
   c.rotate(angle);
   c.scale(scale, scale);
 
-  // Nacelle glows
   for (const y of [-25, 25]) {
     const g = c.createRadialGradient(-40, y, 0, -40, y, 22);
     g.addColorStop(0, 'rgba(140, 220, 255, 0.75)');
@@ -134,45 +174,37 @@ function drawEnterprise(cx, cy, scale = 1.4, angle = 0) {
     c.fillStyle = g;
     c.fillRect(-70, y - 25, 60, 60);
   }
-  // Nacelles
   c.fillStyle = '#5a6d8e';
   c.fillRect(-60, -35, 55, 10);
   c.fillRect(-60, 25, 55, 10);
   c.fillStyle = '#a0e0ff';
   c.fillRect(-60, -33, 5, 6);
   c.fillRect(-60, 27, 5, 6);
-  // Pylons
   c.strokeStyle = '#4a5c7a';
   c.lineWidth = 4;
   c.beginPath();
   c.moveTo(-10, -20); c.lineTo(-10, -30);
   c.moveTo(-10, 20); c.lineTo(-10, 30);
   c.stroke();
-  // Secondary hull
   c.fillStyle = '#8395b8';
   c.beginPath(); c.ellipse(-8, 0, 44, 14, 0, 0, Math.PI * 2); c.fill();
   c.strokeStyle = '#3d4c68'; c.lineWidth = 1.2; c.stroke();
-  // Neck
   c.beginPath();
   c.moveTo(15, -6); c.lineTo(30, -12); c.lineTo(30, 12); c.lineTo(15, 6);
   c.closePath(); c.fill(); c.stroke();
-  // Primary saucer
   c.fillStyle = '#a0b3d4';
   c.beginPath(); c.ellipse(45, 0, 34, 30, 0, 0, Math.PI * 2); c.fill(); c.stroke();
   c.beginPath(); c.ellipse(45, 0, 24, 21, 0, 0, Math.PI * 2);
   c.strokeStyle = 'rgba(60, 76, 104, 0.5)'; c.lineWidth = 1; c.stroke();
-  // Bridge
   c.fillStyle = '#c8d8f2';
   c.beginPath(); c.arc(52, 0, 6, 0, Math.PI * 2); c.fill();
   c.strokeStyle = '#5a6d8e'; c.stroke();
-  // Running lights
   c.fillStyle = '#00d4ff'; c.shadowColor = '#00d4ff'; c.shadowBlur = 4;
   c.beginPath();
   c.arc(45, -28, 1.5, 0, Math.PI * 2);
   c.arc(45, 28, 1.5, 0, Math.PI * 2);
   c.arc(60, 0, 1.5, 0, Math.PI * 2);
   c.fill(); c.shadowBlur = 0;
-  // Registry
   c.fillStyle = 'rgba(50, 64, 92, 0.7)';
   c.font = 'bold 8px "Orbitron", monospace';
   c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -305,8 +337,10 @@ function renderCombat(t) {
 
   // Enterprise
   const ep = cell(snap.ship.sx, snap.ship.sy);
-  if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, cellSize * 0.65, 0.22);
-  drawEnterprise(ep.x, ep.y, cellSize * 0.018);
+  if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, cellSize * 1.1, 0.22);
+  // targetWidth ≈ 2.6 cells across — big enough to see saucer detail,
+  // still fits inside a single sector at normal zoom.
+  drawEnterprise(ep.x, ep.y, cellSize * 2.6);
 
   // Phaser fx
   if (phaserFx) {
