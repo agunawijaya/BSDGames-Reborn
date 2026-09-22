@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-60 -60 120 120" width="120" height="120">
+  <defs>
+    <radialGradient id="halo" cx="0" cy="0" r="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fff2c0" stop-opacity="0.95"/>
+      <stop offset="22%" stop-color="#ffcc78" stop-opacity="0.65"/>
+      <stop offset="55%" stop-color="#ff7a30" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ff3010" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="core" cx="0" cy="0" r="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="55%" stop-color="#fff4b0" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#ffb84a" stop-opacity="0.55"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Warm outer halo -->
+  <circle cx="0" cy="0" r="55" fill="url(#halo)"/>
+
+  <!-- Cardinal rays (long, bright) -->
+  <g fill="#fff2b0" opacity="0.82">
+    <polygon points="0,-55 3.5,-6 -3.5,-6"/>
+    <polygon points="0,55 3.5,6 -3.5,6"/>
+    <polygon points="-55,0 -6,-3.5 -6,3.5"/>
+    <polygon points="55,0 6,-3.5 6,3.5"/>
+  </g>
+
+  <!-- Diagonal rays (shorter, dimmer) -->
+  <g fill="#ffe090" opacity="0.42" transform="rotate(45)">
+    <polygon points="0,-40 2.5,-4.5 -2.5,-4.5"/>
+    <polygon points="0,40 2.5,4.5 -2.5,4.5"/>
+    <polygon points="-40,0 -4.5,-2.5 -4.5,2.5"/>
+    <polygon points="40,0 4.5,-2.5 4.5,2.5"/>
+  </g>
+
+  <!-- Hot core -->
+  <circle cx="0" cy="0" r="13" fill="url(#core)"/>
+  <circle cx="0" cy="0" r="4.5" fill="#ffffff"/>
+</svg>

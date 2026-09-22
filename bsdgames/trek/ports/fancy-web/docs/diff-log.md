@@ -129,12 +129,29 @@ Federation-generic terminology throughout (no IP references).
 ### Painted starbase sprite
 `references/starfleet_base.png` replaces the programmatic gold cross
 that stood in for a Federation refuel station. The station renders
-at ~2 cells wide with a warm gold drop-glow — visually reads as a
-"safe haven" from a distance, complementing the hostile red glow
-around Klingons.
-
+at ~6 cells wide (capital-class scale — visibly dwarfs Klingon warships
+in the same quadrant) with a warm gold drop-glow, and a
+`STARFLEET BASE` label offset clear of the sprite footprint.
 Programmatic cross kept as a fallback path in case the PNG fails to
 load.
+
+### Painted star sprite (SVG)
+Stars in the current quadrant now render from
+`references/star_yellow.svg` — a bespoke lens-flare-style vector
+(halo + four bright cardinal rays + four dim diagonal rays + hot white
+core). Same file loaded once, drawn at the caller's target radius per
+star. Programmatic radial gradient kept as a fallback path.
+
+### Per-quadrant backdrops
+`background_01..07` are all preloaded. The picked backdrop is chosen
+deterministically from `hash(qx, qy) mod 7`, so:
+- warping to a new quadrant visibly changes the sky
+- returning to a previously-visited quadrant restores the same sky
+- the Galaxy Chart view uses the sky above the ship's current quadrant
+
+If the picked backdrop isn't loaded yet, the renderer falls back to
+whichever backdrop *is* loaded rather than flashing to a blank
+navy fill.
 
 ### Full object roster (post-MVP)
 
@@ -142,8 +159,8 @@ load.
 |---|---|---|
 | ENTERPRISE | Your ship | Painted PNG (federation cruiser) |
 | KLINGON × 4 | Warship / Battlecruiser / Super / Warbird | Painted PNGs per type |
-| STARBASE | Federation refuel + repair station | Painted PNG (`starfleet_base.png`) |
-| STAR | Navigation obstacle (blocks torpedoes) | Radial gradient orb |
+| STARBASE | Federation refuel + repair station | Painted PNG (`starfleet_base.png`, 6-cell scale) |
+| STAR | Navigation obstacle (blocks torpedoes) | Painted SVG (`star_yellow.svg`) |
 | EMPTY | Vacuum | — |
 
 Non-cell visual layers (weapons + effects): phaser beams, torpedo
@@ -254,11 +271,13 @@ Detailed narratives in the individual commit messages of 2026-09-22.
 - **Damage animation on Enterprise sprite** — visible scars, sparks,
   hull rupture states based on hull %.
 - **Long-range sensor scan animation** — sweep effect when scanning.
-- **Contextual backdrops** — different `background_XX.jpg` per
-  quadrant type (hostile / safe / starbase / dense stars) so the
-  visual reflects the sector's state. Seven candidate backdrop images
-  are already in `references/`; a `pickBackgroundForQuadrant`
-  function would map them contextually.
+- **Content-aware backdrop mapping** — backdrops currently vary by
+  quadrant *identity* (hash of qx,qy). A v2 refinement would inspect
+  quadrant contents (hostile / safe / starbase / dense stars) and pick
+  a matching image, so hostile quadrants look ominous, starbase
+  quadrants look calm, etc. Requires categorising each of the seven
+  backdrops by mood, which is easier to do visually than
+  programmatically.
 - **Deploy to live URL** — Cloudflare Pages / Vercel candidate.
 - **Port-specific screenshots** for README.
 

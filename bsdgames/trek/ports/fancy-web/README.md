@@ -97,10 +97,12 @@ port preserves the same generic terminology used by BSD trek.
 
 - **Vanilla JavaScript** (ES modules, no framework, no bundler)
 - **Canvas 2D** for cinematic space rendering:
-  - Painted deep-space nebula backdrop (subtle camera drift)
+  - Seven painted deep-space nebulae, one per quadrant (subtle camera
+    drift) — warping visibly changes the sky
   - Painted PNG sprites for USS Enterprise, four Klingon ship types
     (warship, battlecruiser, super-commander, Romulan warbird), and
-    the Starfleet base
+    the Starfleet base (capital-class 6-cell scale)
+  - Painted SVG star (halo + cross rays + hot core)
   - Phaser beam glow + impact flash
   - Photon torpedo particle trails
   - Translucent shield bubbles sized to the ship's true width

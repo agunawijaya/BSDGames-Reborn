@@ -60,13 +60,47 @@ let cmdText = '';
 let selectedDifficulty = 'standard';
 let animT = 0;
 
-// Space backdrop image (deep-space nebula + starfield).
-// Preloaded so the render loop can draw it every frame without a flash.
-const bgImage = new Image();
-let bgLoaded = false;
-bgImage.onload = () => { bgLoaded = true; };
-bgImage.onerror = () => { bgLoaded = false; };
-bgImage.src = 'references/background_01.jpg';
+// Space backdrops — seven painted nebulae. Each quadrant deterministically
+// picks one via a hash of (qx, qy), so warping to a new quadrant visibly
+// changes the sky and re-entering the same quadrant restores the same
+// backdrop. If the current pick isn't loaded yet, we fall back to
+// whichever backdrop *is* loaded (usually 01) rather than showing a blank.
+const BG_SRCS = [
+  'references/background_01.jpg',
+  'references/background_02.jpg',
+  'references/background_03.jpg',
+  'references/background_04.jpg',
+  'references/background_05.jpeg',
+  'references/background_06.jpg',
+  'references/background_07.webp',
+];
+const bgImages = BG_SRCS.map(src => {
+  const img = new Image();
+  const state = { img, loaded: false };
+  img.onload = () => { state.loaded = true; };
+  img.onerror = () => { state.loaded = false; };
+  img.src = src;
+  return state;
+});
+
+function currentBgState() {
+  const q = game?.ship;
+  const idx = q
+    ? ((q.qx * 13 + q.qy * 7) % bgImages.length + bgImages.length) % bgImages.length
+    : 0;
+  const pick = bgImages[idx];
+  if (pick.loaded) return pick;
+  // Preferred pick still loading — use any loaded backdrop as a stand-in
+  return bgImages.find(b => b.loaded) || pick;
+}
+
+// Star sprite — painted SVG loaded once and reused for every in-quadrant
+// star. Falls back to a programmatic radial gradient if the SVG fails.
+const starImage = new Image();
+let starLoaded = false;
+starImage.onload = () => { starLoaded = true; };
+starImage.onerror = () => { starLoaded = false; };
+starImage.src = 'references/star_yellow.svg';
 
 // USS Enterprise top-down PNG sprite (transparent background).
 const shipImage = new Image();
@@ -122,16 +156,17 @@ const blastImages = BLAST_SRCS.map(src => {
 });
 
 /** Draw the space image cover-fit (fill viewport, crop excess) with a
- *  subtle "camera float" so the scene doesn't feel frozen. */
+ *  subtle "camera float" so the scene doesn't feel frozen. The picked
+ *  image varies per quadrant, so warp jumps visibly change the sky. */
 function drawSpaceImage(ctx, w, h, t) {
-  if (!bgLoaded) {
-    // Fallback while image loads
+  const bg = currentBgState();
+  if (!bg.loaded) {
     ctx.fillStyle = '#020310';
     ctx.fillRect(0, 0, w, h);
     return;
   }
-  const imgW = bgImage.naturalWidth;
-  const imgH = bgImage.naturalHeight;
+  const imgW = bg.img.naturalWidth;
+  const imgH = bg.img.naturalHeight;
   const scale = Math.max(w / imgW, h / imgH) * 1.06; // slight overscan for float room
   const dW = imgW * scale;
   const dH = imgH * scale;
@@ -140,7 +175,7 @@ function drawSpaceImage(ctx, w, h, t) {
   const driftY = Math.cos(t * 0.00010) * 16;
   const dX = (w - dW) / 2 + driftX;
   const dY = (h - dH) / 2 + driftY;
-  ctx.drawImage(bgImage, dX, dY, dW, dH);
+  ctx.drawImage(bg.img, dX, dY, dW, dH);
 }
 // Effect overlays (transient FX)
 let phaserFx = null;   // { from, to, t }
@@ -445,18 +480,27 @@ function drawShield(cx, cy, r, alpha = 0.18) {
 }
 
 function drawStar(cx, cy, r) {
-  const g = sceneCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  const c = sceneCtx;
+  // Preferred: painted SVG (halo + cross-rays + hot core). Size so the
+  // outer halo of the SVG (radius 55 in a 120-viewBox) maps to `r`.
+  if (starLoaded) {
+    const targetW = r * (120 / 55) * 2; // full sprite width matching desired halo radius r
+    c.drawImage(starImage, cx - targetW / 2, cy - targetW / 2, targetW, targetW);
+    return;
+  }
+  // Fallback: programmatic radial gradient (used while SVG loads or fails)
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, r);
   g.addColorStop(0, 'rgba(255, 220, 160, 0.9)');
   g.addColorStop(0.3, 'rgba(255, 160, 100, 0.4)');
   g.addColorStop(1, 'rgba(255, 100, 50, 0)');
-  sceneCtx.fillStyle = g;
-  sceneCtx.beginPath();
-  sceneCtx.arc(cx, cy, r, 0, Math.PI * 2);
-  sceneCtx.fill();
-  sceneCtx.fillStyle = '#ffe8b8';
-  sceneCtx.beginPath();
-  sceneCtx.arc(cx, cy, r * 0.14, 0, Math.PI * 2);
-  sceneCtx.fill();
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(cx, cy, r, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#ffe8b8';
+  c.beginPath();
+  c.arc(cx, cy, r * 0.14, 0, Math.PI * 2);
+  c.fill();
 }
 
 function drawStarbase(cx, cy, targetWidth) {
@@ -521,16 +565,16 @@ function renderCombat(t) {
     drawStar(p.x, p.y, cellSize * 0.55);
   }
 
-  // Starbase
+  // Starbase — sized 6 cells wide so the station reads as a proper
+  // capital-class installation (dwarfing Klingon warships nearby).
+  // Label pushed clear of the sprite footprint.
   if (contents.starbase) {
     const p = cell(contents.starbase.sx, contents.starbase.sy);
-    // targetWidth ≈ 2 cells so the station reads as a substantial
-    // fixture, comparable in visual weight to a battlecruiser.
-    drawStarbase(p.x, p.y, cellSize * 2.0);
-    sceneCtx.font = 'bold 9px "Orbitron", monospace';
+    drawStarbase(p.x, p.y, cellSize * 6.0);
+    sceneCtx.font = 'bold 11px "Orbitron", monospace';
     sceneCtx.fillStyle = '#ffd76a';
     sceneCtx.textAlign = 'center';
-    sceneCtx.fillText('BASE', p.x, p.y + cellSize * 0.55);
+    sceneCtx.fillText('STARFLEET BASE', p.x, p.y + cellSize * 3.3);
   }
 
   // Enterprise position (used by both klingon targeting and drawing below)

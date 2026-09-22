@@ -22,31 +22,26 @@ a second option isn't automatic — deliberate choice, so we don't ship
 a mystery sprite pick per-play. To swap in a variant, edit the `.src`
 assignment.
 
-## Adding a new backdrop
+## Backdrop-per-quadrant
 
-To move from "single backdrop" to "one backdrop per quadrant type",
-the change lives in `main.js#drawSpaceImage`. Instead of always
-drawing `bgImage`, take the current `game.ship.quadrant` and dispatch:
+Ships as of 2026-09-22: all seven backdrops (`background_01..07`) are
+preloaded. `currentBgState()` picks one via
+`hash(qx, qy) mod 7`, so every quadrant has its own sky and revisiting
+a quadrant restores the same one. `drawSpaceImage` reads from the
+picked state; if that pick isn't loaded yet it falls back to whichever
+backdrop *is* loaded (typically 01, the first to arrive).
 
-```js
-function pickBackdropForQuadrant(q) {
-  if (q.klingons > 0) return backgrounds.hostile;
-  if (q.starbases > 0) return backgrounds.starbase;
-  if (q.stars >= 5) return backgrounds.starfield;
-  return backgrounds.deepspace;
-}
-```
+The picker is intentionally content-agnostic — it varies by quadrant
+identity, not by whether the quadrant is hostile / safe / dense. That
+was a deliberate first step: I couldn't pre-classify the seven images
+without seeing them, and identity-based variety already fixes the
+"my sky never changes" complaint.
 
-Currently the file has seven backgrounds staged (`background_01`..
-`background_07`). Only `background_01` is loaded. To activate:
-
-1. Preload the additional images alongside `bgImage`.
-2. Introduce the picker keyed on quadrant contents.
-3. Fade-cross-fade transitions between backdrops when the ship warps
-   (blend factor over ~15 frames).
-
-Left as a v2 item because the current single backdrop reads well
-enough and the added complexity doesn't have a matching payoff yet.
+For a v2 refinement — content-aware mapping — the change site is
+`currentBgState()`. Introduce a mood table (`background_02` = hostile,
+`background_03` = starbase, etc.) and pick based on
+`game.galaxy.quadrants[qy][qx]` contents. Cross-fade over ~15 frames on
+warp would sell the transition cinematically.
 
 ## Cheat panel default
 
@@ -122,7 +117,7 @@ regression.
 
 | Feature | Effort | Blocks |
 |---|---|---|
-| Contextual backdrops per quadrant type | S | — |
+| Content-aware backdrop mapping (mood by quadrant contents) | S | Manual image classification |
 | Klingon AI variety (aggressive / cloaked / runner) | M | Engine cheat re-tuning |
 | Web Audio ambience + weapon SFX | M | User audio-consent gesture |
 | Bridge cutaway scenes on major events | L | New illustration set |
