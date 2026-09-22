@@ -101,6 +101,19 @@ for (const [type, meta] of Object.entries(ENEMY_SPRITE_META)) {
   enemySprites[type] = state;
 }
 
+// Explosion sprites — two SVG variants used interchangeably. The
+// original files had a black background rect; we set fill-opacity: 0
+// on it so the explosion blends over the space backdrop.
+const BLAST_SRCS = ['references/blast_01.svg', 'references/blast_02.svg'];
+const blastImages = BLAST_SRCS.map(src => {
+  const img = new Image();
+  const state = { img, loaded: false };
+  img.onload = () => { state.loaded = true; };
+  img.onerror = () => { state.loaded = false; };
+  img.src = src;
+  return state;
+});
+
 /** Draw the space image cover-fit (fill viewport, crop excess) with a
  *  subtle "camera float" so the scene doesn't feel frozen. */
 function drawSpaceImage(ctx, w, h, t) {
@@ -126,6 +139,11 @@ function drawSpaceImage(ctx, w, h, t) {
 let phaserFx = null;   // { from, to, t }
 let torpedoFx = null;  // { from, to, t, trail }
 let hitFx = [];        // [{ x, y, t }]
+// Explosion FX — visual replacement for destroyed klingons.
+// Each entry: { sx, sy, type, t, duration, blastIdx }
+// Rendered as: fading ship sprite (0 → transparent over frames 0-18) +
+// growing blast sprite (0 → full over frames 6-30) + radial burst flash.
+let explosionFx = [];
 
 // ---------------------------------------------------------------------------
 // Canvas sizing
@@ -322,6 +340,92 @@ function drawKlingon(cx, cy, targetWidth, type = 'warship', angle = Math.PI) {
   c.restore();
 }
 
+/**
+ * Draw an explosion FX at a sector cell. Combines four layers for a
+ * cinematic hit:
+ *   1. A vanishing enemy silhouette so the ship isn't gone before the
+ *      shot appears to land (fades over frames 0..18).
+ *   2. A bright radial flash that peaks at frame ~10.
+ *   3. One of the two blast SVGs, scaling from 0.3 → 1.15 and fading
+ *      over the tail of the animation.
+ *   4. Small debris sparks orbiting outward.
+ *
+ * duration is measured in animation frames (assumed ~60 fps).
+ */
+function drawExplosion(cx, cy, targetWidth, type, tFrames, duration) {
+  const c = sceneCtx;
+  const life = tFrames / duration;
+  if (life >= 1) return;
+
+  // Layer 1: fading ship silhouette (only for the first third)
+  if (life < 0.4) {
+    const shipAlpha = 1 - (life / 0.4);
+    const sprite = enemySprites[type];
+    if (sprite && sprite.loaded) {
+      c.save();
+      c.globalAlpha = shipAlpha;
+      c.translate(cx, cy);
+      c.rotate(-sprite.meta.bowOffset);  // draw in native orientation
+      c.filter = 'brightness(1.4) contrast(1.2)';  // hot-white flash on hull
+      const img = sprite.img;
+      const s = targetWidth / img.naturalWidth;
+      c.drawImage(img, -img.naturalWidth * s / 2, -img.naturalHeight * s / 2,
+                  img.naturalWidth * s, img.naturalHeight * s);
+      c.restore();
+      c.filter = 'none';
+    }
+  }
+
+  // Layer 2: white core flash
+  const flashPeak = 0.15;
+  const flashLife = Math.abs(life - flashPeak) / flashPeak;
+  const flashAlpha = Math.max(0, 1 - flashLife);
+  if (flashAlpha > 0) {
+    const flashR = targetWidth * (0.4 + 0.8 * life);
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, flashR);
+    g.addColorStop(0, `rgba(255, 255, 240, ${flashAlpha})`);
+    g.addColorStop(0.3, `rgba(255, 200, 100, ${flashAlpha * 0.6})`);
+    g.addColorStop(1, 'rgba(255, 60, 20, 0)');
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(cx, cy, flashR, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // Layer 3: blast SVG sprite
+  const blastIdx = Math.abs(Math.floor((cx + cy) / 50)) % blastImages.length;
+  const blast = blastImages[blastIdx];
+  if (blast && blast.loaded && life > 0.05) {
+    const blastLife = (life - 0.05) / 0.95;
+    const blastScale = 0.35 + blastLife * 0.9;
+    const blastAlpha = blastLife < 0.5 ? 1 : Math.max(0, 1 - (blastLife - 0.5) * 2);
+    const size = targetWidth * 1.4 * blastScale;
+    const rot = life * 1.2;  // slight spin
+    c.save();
+    c.globalAlpha = blastAlpha;
+    c.translate(cx, cy);
+    c.rotate(rot);
+    c.drawImage(blast.img, -size / 2, -size / 2, size, size);
+    c.restore();
+  }
+
+  // Layer 4: debris sparks
+  if (life < 0.8) {
+    const sparks = 12;
+    for (let i = 0; i < sparks; i++) {
+      const angle = (i / sparks) * Math.PI * 2 + life * 3;
+      const d = targetWidth * (0.3 + life * 1.1);
+      const sx = cx + Math.cos(angle) * d;
+      const sy = cy + Math.sin(angle) * d;
+      const sparkAlpha = Math.max(0, 1 - life * 1.3);
+      c.fillStyle = `rgba(255, ${180 + Math.floor(60 * (1 - life))}, 80, ${sparkAlpha})`;
+      c.beginPath();
+      c.arc(sx, sy, Math.max(1, targetWidth * 0.04 * (1 - life)), 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+}
+
 function drawShield(cx, cy, r, alpha = 0.18) {
   const g = sceneCtx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r);
   g.addColorStop(0, 'rgba(125, 196, 255, 0)');
@@ -422,6 +526,19 @@ function renderCombat(t) {
     drawKlingon(p.x, p.y, shipWidth, type, angle);
   }
 
+  // Explosion FX at destroyed-klingon positions. Rendered above the
+  // enemy loop (which skips destroyed ships) so the FX covers the empty
+  // sector cell for the duration of the hit animation.
+  explosionFx = explosionFx.filter(ex => ex.t < ex.duration);
+  for (const ex of explosionFx) {
+    ex.t += 1;
+    if (ex.t < 0) continue;  // hold for delayed-start explosions (torpedo)
+    const p = cell(ex.sx, ex.sy);
+    const meta = ENEMY_SPRITE_META[ex.type] || ENEMY_SPRITE_META.warship;
+    const shipWidth = cellSize * meta.widthMult;
+    drawExplosion(p.x, p.y, shipWidth, ex.type, ex.t, ex.duration);
+  }
+
   // Enterprise. Shield radius = 62% of sprite width so the bubble
   // covers the full 2.28:1 sprite (nacelle-to-nacelle) with margin.
   if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, enterpriseWidth * 0.62, 0.22);
@@ -430,7 +547,9 @@ function renderCombat(t) {
   // Phaser fx
   if (phaserFx) {
     phaserFx.t += 1;
-    const pulse = Math.max(0, 1 - phaserFx.t / 40);
+    // Beam lifetime tuned to overlap the explosion FX (55 frames) so the
+    // shot is visibly still travelling as the target explodes.
+    const pulse = Math.max(0, 1 - phaserFx.t / 50);
     for (const target of phaserFx.targets) {
       const from = ep;
       const to = cell(target.sx, target.sy);
@@ -799,8 +918,25 @@ function submitCommand() {
   for (const eff of (res.effects || [])) {
     if (eff.type === 'phaser') {
       phaserFx = { t: 0, targets: eff.damages.map(d => ({ sx: d.sx, sy: d.sy })) };
+      // Spawn an explosion at each destroyed target so the ship isn't
+      // gone before the shot appears to land.
+      for (const d of eff.damages) {
+        if (d.destroyed) {
+          explosionFx.push({ sx: d.sx, sy: d.sy, type: d.type || 'warship', t: 0, duration: 55 });
+        }
+      }
     } else if (eff.type === 'torpedo') {
       torpedoFx = { t: 0, hit: eff.hit };
+      if (eff.destroyedKlingon) {
+        explosionFx.push({
+          sx: eff.destroyedKlingon.sx,
+          sy: eff.destroyedKlingon.sy,
+          type: eff.destroyedKlingon.type || 'warship',
+          // Delay start slightly so the torpedo visibly reaches the target first.
+          t: -15,
+          duration: 55,
+        });
+      }
     } else if (eff.type === 'klingonFire') {
       hitFx.push({ sx: eff.from[0], sy: eff.from[1], t: 0 });
     }
@@ -993,6 +1129,7 @@ function startNewGame() {
   hitFx = [];
   phaserFx = null;
   torpedoFx = null;
+  explosionFx = [];
   titleScreen.classList.remove('shown');
   gameOverEl.classList.remove('shown');
   currentView = 'combat';

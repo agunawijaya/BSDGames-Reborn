@@ -217,18 +217,22 @@ function doPhaser(game, energy, effects) {
     const attenuation = Math.max(0.2, 1 - dist * 0.06);
     const damageDealt = Math.floor(perTarget * attenuation);
     k.energy -= damageDealt;
-    dmgs.push({ target: k.id, sx: k.sx, sy: k.sy, damage: damageDealt });
+    // Include type + destroyed flag so the renderer can play the
+    // right explosion sprite at the target position, even though the
+    // engine's `destroyed` state removes the ship from the sector map
+    // on the same tick.
+    const entry = { target: k.id, sx: k.sx, sy: k.sy, damage: damageDealt, destroyed: false, type: k.type };
     if (k.energy <= 0) {
       k.destroyed = true;
+      entry.destroyed = true;
       game.kills++;
       game.klingonsRemaining--;
-      // Update quadrant summary
       currentQuadrant(game).klingons--;
-      // Clear sector cell
       currentContents(game).sectors[k.sy][k.sx] = CELL.EMPTY;
       const typeName = ENEMY_STATS[k.type]?.name || 'Klingon';
       logEvent(game, 'kill', `${typeName} ${k.id} destroyed at (${k.sx},${k.sy})`);
     }
+    dmgs.push(entry);
   }
   effects.push({ type: 'phaser', energy, damages: dmgs });
   logEvent(game, 'phaser', `Phasers fire ${energy} units → ${targets.length} target(s)`);
@@ -301,7 +305,14 @@ function doTorpedo(game, bearing, effects) {
       game.klingonsRemaining--;
       currentQuadrant(game).klingons--;
       contents.sectors[hit.sy][hit.sx] = CELL.EMPTY;
-      logEvent(game, 'kill', `Torpedo destroys Klingon ${k.id}`);
+      // Attach destroyed-target info to the effect so the renderer can
+      // play an explosion sprite at the exact hit cell.
+      const lastEffect = effects[effects.length - 1];
+      if (lastEffect && lastEffect.type === 'torpedo') {
+        lastEffect.destroyedKlingon = { sx: k.sx, sy: k.sy, type: k.type };
+      }
+      const typeName = ENEMY_STATS[k.type]?.name || 'Klingon';
+      logEvent(game, 'kill', `Torpedo destroys ${typeName} ${k.id}`);
     }
   } else if (hit.cell === CELL.STAR) {
     logEvent(game, 'miss', `Torpedo struck a star at (${hit.sx},${hit.sy})`);
