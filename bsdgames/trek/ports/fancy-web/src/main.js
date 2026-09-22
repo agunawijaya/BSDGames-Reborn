@@ -75,16 +75,21 @@ shipImage.onload = () => { shipLoaded = true; };
 shipImage.onerror = () => { shipLoaded = false; };
 shipImage.src = 'references/uss_enterprise_top_01.png';
 
-// Enemy ships — each type has its own sprite, bow-offset (radians), and
-// preferred render size (multiplier applied to base cell width). Bow
-// offset = the direction the bow naturally points in the raw image,
-// used so `angle` in drawKlingon can be interpreted as "point bow at
-// this direction" regardless of source orientation.
+// Enemy ships — each type has its own sprite, bow-offset (radians),
+// and preferred render size (multiplier applied to base cell width).
+// bowOffset = the direction the bow naturally points in the raw
+// image, used so `angle` in drawKlingon can be interpreted as "point
+// bow at this direction" regardless of source orientation.
+//   0        = bow points +X (right / East)
+//  -π/2      = bow points -Y (up / North in image)
+//   π        = bow points -X (left / West)
+//   π/2      = bow points +Y (down / South in image)
+// Verified against the 2026-09-22 refreshed sprite set.
 const ENEMY_SPRITE_META = {
-  warship:       { src: 'references/klingon_top_01.png',              bowOffset: -Math.PI / 2, widthMult: 2.0 },
+  warship:       { src: 'references/klingon_top_01.png',               bowOffset: Math.PI,      widthMult: 2.0 },
   battlecruiser: { src: 'references/klingon_battlecruiser_top_01.png', bowOffset: Math.PI,      widthMult: 2.5 },
-  super:         { src: 'references/klingon_super_top_01.png',        bowOffset: -Math.PI / 2, widthMult: 2.8 },
-  warbird:       { src: 'references/romulan_warbird_top_01.png',      bowOffset: Math.PI,      widthMult: 2.6 },
+  super:         { src: 'references/klingon_super_top_01.png',         bowOffset: -Math.PI / 2, widthMult: 2.8 },
+  warbird:       { src: 'references/romulan_warbird_top_01.png',       bowOffset: Math.PI,      widthMult: 2.6 },
 };
 const enemySprites = {};
 for (const [type, meta] of Object.entries(ENEMY_SPRITE_META)) {
@@ -400,23 +405,27 @@ function renderCombat(t) {
 
   // Enterprise position (used by both klingon targeting and drawing below)
   const ep = cell(snap.ship.sx, snap.ship.sy);
+  const enterpriseWidth = cellSize * 2.6;
 
   // Klingons — sprite + size depend on enemy type; each ship's bow
-  // rotates to face the Enterprise so combat feels engaged.
+  // rotates to face the Enterprise so combat feels engaged. Shield
+  // radius sized to fully enclose the sprite regardless of ship type.
   for (const k of contents.klingons) {
     if (k.destroyed) continue;
     const p = cell(k.sx, k.sy);
     const type = k.type || 'warship';
     const meta = ENEMY_SPRITE_META[type] || ENEMY_SPRITE_META.warship;
     const angle = Math.atan2(ep.y - p.y, ep.x - p.x);
-    drawShield(p.x, p.y, cellSize * 0.55, 0.14 + 0.05 * Math.sin(t * 0.004));
-    drawKlingon(p.x, p.y, cellSize * meta.widthMult, type, angle);
+    const shipWidth = cellSize * meta.widthMult;
+    const shieldR = shipWidth * 0.62; // covers longest span with margin
+    drawShield(p.x, p.y, shieldR, 0.14 + 0.05 * Math.sin(t * 0.004));
+    drawKlingon(p.x, p.y, shipWidth, type, angle);
   }
 
-  if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, cellSize * 1.1, 0.22);
-  // targetWidth ≈ 2.6 cells across — big enough to see saucer detail,
-  // still fits inside a single sector at normal zoom.
-  drawEnterprise(ep.x, ep.y, cellSize * 2.6);
+  // Enterprise. Shield radius = 62% of sprite width so the bubble
+  // covers the full 2.28:1 sprite (nacelle-to-nacelle) with margin.
+  if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, enterpriseWidth * 0.62, 0.22);
+  drawEnterprise(ep.x, ep.y, enterpriseWidth);
 
   // Phaser fx
   if (phaserFx) {
