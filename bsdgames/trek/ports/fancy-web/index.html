@@ -1175,7 +1175,7 @@
         <div class="ref-row"><kbd>Enter</kbd><span>execute command</span></div>
         <div class="ref-row"><kbd>Backspace</kbd><span>delete last char</span></div>
         <div class="ref-row"><kbd>Esc</kbd><span>clear buffer</span></div>
-        <div class="ref-row"><kbd>V</kbd><span>toggle tactical / chart view</span></div>
+        <div class="ref-row"><kbd>V</kbd><span>toggle view (only when buffer empty)</span></div>
         <div class="ref-row"><kbd>?</kbd><span>full tutorial</span></div>
         <div class="ref-row"><kbd>\</kbd><span>toggle this reference</span></div>
       </div>
@@ -1295,7 +1295,9 @@
       <p>
         <b>Tactical (default):</b> current quadrant combat scene — ships, weapons, stars, starbase.
         <b>Galaxy Chart:</b> 8×8 strategic map. Scanned quadrants show Klingon count; unscanned quadrants are darkened (fog of war).
-        Switch views with the <kbd>V</kbd> key or the buttons in the top bezel.
+        Switch views with the <kbd>V</kbd> key (only when the command
+        line is empty — otherwise 'v' goes into your command, e.g.
+        the 'v' in "move"), or the buttons in the top bezel anytime.
       </p>
 
       <h2>Winning</h2>

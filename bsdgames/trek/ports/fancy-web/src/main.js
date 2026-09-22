@@ -870,8 +870,10 @@ function onKeyDown(e) {
     refreshHint();
     return;
   }
-  // Toggle views
-  if (e.key === 'v' || e.key === 'V') {
+  // Toggle views — only when the command buffer is empty. Otherwise
+  // the 'v' in commands like "move" would be intercepted. Mid-typing,
+  // use the top-bezel button to switch views.
+  if ((e.key === 'v' || e.key === 'V') && cmdText === '' && !e.ctrlKey && !e.metaKey) {
     toggleView(currentView === 'combat' ? 'strategic' : 'combat');
     e.preventDefault();
     return;
