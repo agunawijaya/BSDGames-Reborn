@@ -17,6 +17,38 @@ export const CELL = {
   STAR: 4,
 };
 
+// Enemy types and their stats. Each spawn rolls a type based on
+// SPAWN_WEIGHTS; ships of different types have different energy pools
+// and attack strength.
+export const ENEMY = {
+  WARSHIP:       'warship',
+  BATTLECRUISER: 'battlecruiser',
+  SUPER:         'super',
+  WARBIRD:       'warbird',
+};
+
+export const ENEMY_STATS = {
+  warship:       { name: 'Klingon Warship',       energy: [200, 400],  attack: [25, 65]  },
+  battlecruiser: { name: 'Klingon Battlecruiser', energy: [450, 700],  attack: [40, 90]  },
+  super:         { name: 'Klingon Super-Commander', energy: [900, 1200], attack: [70, 130] },
+  warbird:       { name: 'Romulan Warbird',       energy: [350, 550],  attack: [35, 80]  },
+};
+
+// Weighted distribution — sum to 1.0. Basic warship most common, super
+// commander rare, warbird occasional, battlecruiser medium.
+const SPAWN_WEIGHTS = [
+  { type: ENEMY.SUPER,         cum: 0.03 }, // 3%
+  { type: ENEMY.WARBIRD,       cum: 0.13 }, // 10%
+  { type: ENEMY.BATTLECRUISER, cum: 0.35 }, // 22%
+  { type: ENEMY.WARSHIP,       cum: 1.00 }, // 65%
+];
+
+function pickEnemyType(rng) {
+  const r = rng();
+  for (const w of SPAWN_WEIGHTS) if (r < w.cum) return w.type;
+  return ENEMY.WARSHIP;
+}
+
 // ---------------------------------------------------------------------------
 // Deterministic RNG (Mulberry32)
 // ---------------------------------------------------------------------------
@@ -156,16 +188,21 @@ export function populateQuadrant(galaxy, qx, qy, rng, enterprisePos = null) {
     sectors[enterprisePos.y][enterprisePos.x] = CELL.ENTERPRISE;
   }
 
-  // Place klingons
+  // Place klingons (varied enemy types)
   for (let i = 0; i < q.klingons; i++) {
     const pos = pickEmptySector(sectors, rng);
     if (!pos) break;
     sectors[pos.y][pos.x] = CELL.KLINGON;
+    const type = pickEnemyType(rng);
+    const stats = ENEMY_STATS[type];
+    const [eLo, eHi] = stats.energy;
     contents.klingons.push({
       id: `K${qx}${qy}-${i}`,
       sx: pos.x,
       sy: pos.y,
-      energy: 200 + Math.floor(rng() * 200),  // 200-400
+      type,
+      energy: eLo + Math.floor(rng() * (eHi - eLo)),
+      attack: stats.attack,
       destroyed: false,
     });
   }

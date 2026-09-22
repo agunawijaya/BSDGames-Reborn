@@ -6,6 +6,7 @@
 
 import {
   GALAXY_SIZE, QUADRANT_SIZE, CELL, DIFFICULTY,
+  ENEMY_STATS,
   createGalaxy, populateQuadrant, makeRng,
   clampQuadrant, clampSector, sectorDist, quadDist,
 } from './galaxy.js';
@@ -225,7 +226,8 @@ function doPhaser(game, energy, effects) {
       currentQuadrant(game).klingons--;
       // Clear sector cell
       currentContents(game).sectors[k.sy][k.sx] = CELL.EMPTY;
-      logEvent(game, 'kill', `Klingon ${k.id} destroyed at (${k.sx},${k.sy})`);
+      const typeName = ENEMY_STATS[k.type]?.name || 'Klingon';
+      logEvent(game, 'kill', `${typeName} ${k.id} destroyed at (${k.sx},${k.sy})`);
     }
   }
   effects.push({ type: 'phaser', energy, damages: dmgs });
@@ -478,7 +480,9 @@ function klingonReturnFire(game, effects) {
   for (const k of attackers) {
     const dist = sectorDist(shipPos, { x: k.sx, y: k.sy });
     const attenuation = Math.max(0.2, 1 - dist * 0.08);
-    const rawDamage = Math.floor((30 + game.rng() * 50) * attenuation);
+    // Enemy-type-specific attack range (fallback if legacy klingon has no attack array)
+    const attack = k.attack || [30, 80];
+    const rawDamage = Math.floor((attack[0] + game.rng() * (attack[1] - attack[0])) * attenuation);
 
     // Shields absorb first
     let hullDamage = rawDamage;

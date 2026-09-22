@@ -56,6 +56,27 @@ shipImage.onload = () => { shipLoaded = true; };
 shipImage.onerror = () => { shipLoaded = false; };
 shipImage.src = 'references/uss_enterprise_top_01.png';
 
+// Enemy ships — each type has its own sprite, bow-offset (radians), and
+// preferred render size (multiplier applied to base cell width). Bow
+// offset = the direction the bow naturally points in the raw image,
+// used so `angle` in drawKlingon can be interpreted as "point bow at
+// this direction" regardless of source orientation.
+const ENEMY_SPRITE_META = {
+  warship:       { src: 'references/klingon_top_01.png',              bowOffset: -Math.PI / 2, widthMult: 2.0 },
+  battlecruiser: { src: 'references/klingon_battlecruiser_top_01.png', bowOffset: Math.PI,      widthMult: 2.5 },
+  super:         { src: 'references/klingon_super_top_01.png',        bowOffset: -Math.PI / 2, widthMult: 2.8 },
+  warbird:       { src: 'references/romulan_warbird_top_01.png',      bowOffset: Math.PI,      widthMult: 2.6 },
+};
+const enemySprites = {};
+for (const [type, meta] of Object.entries(ENEMY_SPRITE_META)) {
+  const img = new Image();
+  const state = { img, loaded: false, meta };
+  img.onload = () => { state.loaded = true; };
+  img.onerror = () => { state.loaded = false; };
+  img.src = meta.src;
+  enemySprites[type] = state;
+}
+
 /** Draw the space image cover-fit (fill viewport, crop excess) with a
  *  subtle "camera float" so the scene doesn't feel frozen. */
 function drawSpaceImage(ctx, w, h, t) {
@@ -212,8 +233,39 @@ function drawEnterprise(cx, cy, targetWidth, angle = 0) {
   c.restore();
 }
 
-function drawKlingon(cx, cy, scale = 1.0, angle = Math.PI) {
+/**
+ * Draw an enemy ship centred at (cx, cy).
+ * @param cx canvas x centre
+ * @param cy canvas y centre
+ * @param targetWidth desired on-screen width (pixels)
+ * @param type enemy type key (warship / battlecruiser / super / warbird)
+ * @param angle target bow direction in radians (0 = +X). Sprite is
+ *   rotated so its natural bow points in that direction.
+ */
+function drawKlingon(cx, cy, targetWidth, type = 'warship', angle = Math.PI) {
   const c = sceneCtx;
+  const sprite = enemySprites[type] || enemySprites.warship;
+  if (sprite && sprite.loaded) {
+    const img = sprite.img;
+    const s = targetWidth / img.naturalWidth;
+    const w = img.naturalWidth * s;
+    const h = img.naturalHeight * s;
+    c.save();
+    c.translate(cx, cy);
+    c.rotate(angle - sprite.meta.bowOffset);
+    // Menacing red glow behind ship — scales with size so super
+    // commanders look more imposing than warships.
+    c.shadowColor = 'rgba(255, 60, 60, 0.40)';
+    c.shadowBlur = Math.max(10, targetWidth * 0.09);
+    c.drawImage(img, -w / 2, -h / 2, w, h);
+    c.restore();
+    return;
+  }
+
+  // Fallback: programmatic vector Klingon (used while PNGs load or if
+  // they fail). Scale programmatic native-width (~70px) to targetWidth.
+  const KLINGON_FALLBACK_NATIVE_WIDTH = 70;
+  const scale = targetWidth / KLINGON_FALLBACK_NATIVE_WIDTH;
   c.save();
   c.translate(cx, cy);
   c.rotate(angle);
@@ -327,16 +379,21 @@ function renderCombat(t) {
     sceneCtx.fillText('BASE', p.x, p.y + cellSize * 0.55);
   }
 
-  // Klingons
+  // Enterprise position (used by both klingon targeting and drawing below)
+  const ep = cell(snap.ship.sx, snap.ship.sy);
+
+  // Klingons — sprite + size depend on enemy type; each ship's bow
+  // rotates to face the Enterprise so combat feels engaged.
   for (const k of contents.klingons) {
     if (k.destroyed) continue;
     const p = cell(k.sx, k.sy);
-    drawShield(p.x, p.y, cellSize * 0.45, 0.14 + 0.05 * Math.sin(t * 0.004));
-    drawKlingon(p.x, p.y, cellSize * 0.014);
+    const type = k.type || 'warship';
+    const meta = ENEMY_SPRITE_META[type] || ENEMY_SPRITE_META.warship;
+    const angle = Math.atan2(ep.y - p.y, ep.x - p.x);
+    drawShield(p.x, p.y, cellSize * 0.55, 0.14 + 0.05 * Math.sin(t * 0.004));
+    drawKlingon(p.x, p.y, cellSize * meta.widthMult, type, angle);
   }
 
-  // Enterprise
-  const ep = cell(snap.ship.sx, snap.ship.sy);
   if (snap.ship.shieldsUp) drawShield(ep.x, ep.y, cellSize * 1.1, 0.22);
   // targetWidth ≈ 2.6 cells across — big enough to see saucer detail,
   // still fits inside a single sector at normal zoom.
