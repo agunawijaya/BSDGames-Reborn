@@ -6,8 +6,8 @@
 
 ## Owner and status
 
-- **Current owner:** Agun (via Claude).
-- **Phase:** Documentation.
+- **Current owner:** Agun (via Kimi for `fancy-web` port).
+- **Phase:** Released — `fancy-web` port complete; canonical docs complete.
 - **Root sync:** upstream at
   <https://github.com/vattam/BSDGames/tree/master/canfield>.
   Do **not** paste local filesystem paths (`E:\...`, `/mnt/...`,
