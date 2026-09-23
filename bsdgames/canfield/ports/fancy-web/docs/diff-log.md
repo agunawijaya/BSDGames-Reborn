@@ -84,6 +84,16 @@
 
 **Why:** The banner already told players they could Commit from Buy, but the button was disabled, forcing an unwanted Inspect step. This fixes the inconsistency and restores the intended choice: trial cheaply, or buy in fully.
 
+## 2026-09-22 — Beginner-friendly canonical how-to-play
+
+**Changed:**
+- Rewrote canonical [`../../docs/how-to-play.md`](../../docs/how-to-play.md) with a new **“Canfield for absolute beginners”** section at the top.
+- Added plain-language explanations of foundations, base rank, stock, talon, hand, and foundation moves — with a concrete example table.
+- Added the “used-car” analogy for Buy / Inspect / Commit phases.
+- Explained why Inspect is useful as cheap insurance, and why you cannot win from Inspection alone.
+
+**Why:** Play-testers who had never played casino solitaire found the original doc too terse. The new doc teaches the game before listing the command reference.
+
 ## 2026-09-22 — Global drag-and-drop, flying-card animation, and URL seed fix
 
 **Changed:**
