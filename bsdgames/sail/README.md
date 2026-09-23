@@ -38,9 +38,15 @@ file* — one of the earliest multi-user games in Unix. See
 *Not applicable:* `walkthrough.md`, `world-map.md` — every
 scenario has different geography; no single walkthrough.
 
+## Ports
+
+| Port | What it is | Status |
+|---|---|---|
+| [`fancy-web`](./ports/fancy-web/) | *Broadside — Wooden Walls*: cinematic procedural 3D (Gerstner ocean, generated ships, smoke, storms), zero raster assets, single player vs. computer captains, all 22 historical scenarios staged; rules ported from the C | 🟢 Released (v1) |
+
 ## Running the Port
 
-*(Not implemented yet — pending platform/language ADRs.)*
+See each port's README — for `fancy-web`: `node ports/fancy-web/scripts/serve.mjs`.
 
 ## Media
 
