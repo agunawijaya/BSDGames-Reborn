@@ -216,10 +216,18 @@ button:disabled {
   z-index: 10;
 }
 
+.pile-slot.dragging {
+  border-style: solid;
+  border-color: var(--gold);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .card.dragging {
-  opacity: 0.8;
+  opacity: 0.95;
   cursor: grabbing;
   z-index: 100;
+  transform: translateY(-8px);
+  box-shadow: 0 8px 16px var(--shadow);
 }
 
 .pile-slot.drag-over {

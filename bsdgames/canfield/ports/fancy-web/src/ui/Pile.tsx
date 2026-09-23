@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Pile as PileType } from '../game/types'
 import { Card } from './Card'
 
@@ -33,6 +34,8 @@ export function Pile({
   onDragOver,
   onDrop,
 }: PileProps) {
+  const [isDragging, setIsDragging] = useState(false)
+
   const slotWidth = direction === 'horizontal'
     ? CARD_WIDTH + Math.max(0, pile.length - 1) * offset
     : CARD_WIDTH
@@ -41,10 +44,20 @@ export function Pile({
     : CARD_HEIGHT
 
   const glowClass = cheatGlow ? ` cheat-glow-${cheatGlow}` : ''
+  const draggingClass = isDragging ? ' dragging' : ''
+
+  const handleDragStart = (e: React.DragEvent) => {
+    setIsDragging(true)
+    onCardDragStart?.(e)
+  }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+  }
 
   return (
     <div
-      className={`pile-slot${glowClass}`}
+      className={`pile-slot${glowClass}${draggingClass}`}
       data-testid={testId}
       style={{ width: slotWidth, height: slotHeight, minWidth: slotWidth, minHeight: slotHeight }}
       onClick={pile.length === 0 ? onCardClick : undefined}
@@ -65,6 +78,7 @@ export function Pile({
           <Card
             key={`${card.suit}-${card.rank}-${i}`}
             card={card}
+            className={isDragging ? 'dragging' : ''}
             style={{
               left,
               top,
@@ -72,7 +86,8 @@ export function Pile({
             }}
             onClick={isTop ? onCardClick : undefined}
             draggable={isTop ? draggable : false}
-            onDragStart={isTop ? onCardDragStart : undefined}
+            onDragStart={isTop ? handleDragStart : undefined}
+            onDragEnd={isTop ? handleDragEnd : undefined}
           />
         )
       })}

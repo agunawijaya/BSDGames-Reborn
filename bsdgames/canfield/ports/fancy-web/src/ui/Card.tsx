@@ -9,13 +9,14 @@ export interface CardProps {
   onClick?: () => void
   draggable?: boolean
   onDragStart?: (e: React.DragEvent) => void
+  onDragEnd?: (e: React.DragEvent) => void
 }
 
-export function Card({ card, faceUp, style, className = '', onClick, draggable, onDragStart }: CardProps) {
+export function Card({ card, faceUp, style, className = '', onClick, draggable, onDragStart, onDragEnd }: CardProps) {
   const isFaceUp = faceUp ?? card.faceUp
   const isRed = SUIT_COLORS[card.suit] === 'red'
 
-  const dragProps = { draggable, onDragStart }
+  const dragProps = { draggable, onDragStart, onDragEnd }
 
   if (!isFaceUp) {
     return (
