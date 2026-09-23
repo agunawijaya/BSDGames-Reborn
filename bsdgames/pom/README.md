@@ -4,7 +4,7 @@
 > release dates and predicting managerial behaviour.
 
 **Category:** Fun / Info  
-**Status:** 🟠 In Progress — documentation done, awaiting language ADR  
+**Status:** 🟢 Released (2026-09-24): canonical docs complete, `fancy-web` port released  
 **Original author(s):** Keith E. Brandt (1984); updated by Paul Janzen (1998)  
 **First released:** NetBSD (BSD 4.3)
 
@@ -18,6 +18,18 @@ the system clock (or a user-supplied date) using the algorithms from
 *Practical Astronomy with Your Calculator*. It is a self-contained
 learning artifact — code + history + design record + technical
 breakdown.
+
+## Ports
+
+| Port | Style | Status | Summary |
+|---|---|:---:|---|
+| [`ports/fancy-web/`](./ports/fancy-web/) | fancy-web | 🟢 Released | *Selene — A Living Moon*: a ray-traced procedural Moon over a lake at night, driven by the original algorithm (byte-exact against the real binary). Moon calendar, timelapse, zero raster assets. |
+
+> **Layout note:** the empty game-level `src/` and `tests/` and the
+> game-level `docs/diff-log.md` predate the multi-port layout of
+> [ADR-006](../../docs/decisions/006-multi-port-architecture.md) and
+> have been left in place. Port code, tests and diff-logs live under
+> `ports/<name>/`.
 
 ## Documentation
 
@@ -38,7 +50,9 @@ breakdown.
 
 ## Running the Port
 
-*(Add build/run instructions once implementation exists.)*
+See [`ports/fancy-web/README.md`](./ports/fancy-web/README.md)
+(`npm start`, then open the printed URL; `npm run pom -- <arg>` for the
+terminal version).
 
 ```
 $ pom

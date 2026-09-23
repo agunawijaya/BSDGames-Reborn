@@ -48,6 +48,33 @@ date.
 8. Output verb tense depends on whether `tmpt` is before, equal to,
    or after `now`.
 
+## Parsing & Output Details (verified against the binary)
+
+These follow from `parsetime()` and `main()` and were confirmed by
+running the original `/usr/games/pom` (see
+[`test-scenarios.md`](./test-scenarios.md)):
+
+| Argument length | Meaning | Unspecified fields |
+|---|---|---|
+| 10 | `ccyymmddHH` | — |
+| 8 | `yymmddHH` (**not** `ccyymmdd`); `yy < 69` → 20yy, else 19yy | — |
+| 6 | `mmddHH` | year from now |
+| 4 | `ddHH` | year, month from now |
+| 2 | `HH` | year, month, day from now |
+| any other, or any non-digit | `illegal time format` | — |
+
+- Minutes and seconds are always zeroed.
+- Range checks happen **before** `mktime`: month 01–12, day 01–31, hour
+  00–23. A day that passes the check but does not exist is normalised
+  by `mktime` (`2026022900` → 1 Mar 2026).
+- The header is `strftime("%a %Y %b %e %H:%M:%S (%Z)")` followed by two
+  spaces. `%e` pads the day with a space (`Nov  9`).
+- Tense compares whole seconds (`time_t`): an explicit argument is
+  almost never exactly *now*, so it reads `was` or `will be`.
+- The percentage uses `printf("%1.0f")`, which rounds to nearest (ties
+  to even on the exact value). It is printed only for Crescent and
+  Gibbous.
+
 ## RNG Usage
 
 None.
@@ -61,3 +88,10 @@ None.
 ## Difficulty Levels & Setup Configuration
 
 Not applicable. The only configuration is the optional date argument.
+
+## Complete Object & Entity Inventory
+
+Not applicable. `pom` has no objects, items or entities. Its entire
+world is the seven orbital constants at the EPOCH (`EPSILONg`, `RHOg`,
+`ECCEN`, `lzero`, `Pzero`, `Nzero`, `EPOCH_MINUS_1970`), listed in
+[`architecture.md`](./architecture.md).

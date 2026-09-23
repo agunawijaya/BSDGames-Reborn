@@ -38,6 +38,8 @@ limited to:
 - **Chris Torek** — `fortune`, `rain`, `worms` and others
 - **Ted Hess**, **Kirk McKusick**, **Alan Chapman** — `phantasia`
 - **Conrad Huang**, **Gregory Couch** — `hunt`
+- **Keith E. Brandt**, **Paul Janzen** — `pom`, after Peter
+  Duffett-Smith’s *Practical Astronomy with Your Calculator*
 
 Full authorship for each game is documented in
 `bsdgames/<game>/docs/about.md` and

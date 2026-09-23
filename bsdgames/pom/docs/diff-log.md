@@ -1,5 +1,11 @@
 # `pom` — Original → Port Diff Log
 
+> **Legacy (pre-ADR-006) file.** Under
+> [ADR-006](../../../docs/decisions/006-multi-port-architecture.md),
+> each port keeps its own diff-log. For the released port see
+> [`ports/fancy-web/docs/diff-log.md`](../ports/fancy-web/docs/diff-log.md).
+> This page is kept as the original planning sketch.
+
 Tracks every deliberate change from the original BSDGames `pom` to the
 modern port.
 
