@@ -170,8 +170,8 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   }
 
   const phaseBanner = {
-    buy: 'BUY PHASE — Click Inspect ($13) to try foundation moves, or Commit ($39) to unlock Deal Hand and tableau moves.',
-    inspect: 'INSPECT PHASE — Foundation moves only. Click Commit ($26) to unlock Deal Hand and tableau moves.',
+    buy: 'BUY PHASE — Inspect ($13) for foundation-only trial, or Commit ($39) to unlock all moves now.',
+    inspect: 'INSPECT PHASE — Foundation moves allowed. Click Commit ($26) to unlock Deal Hand and tableau moves.',
     commit: 'COMMIT PHASE — All moves unlocked. Deal Hand → Talon is now available.',
     finished: 'SESSION FINISHED.',
   }[state.phase]

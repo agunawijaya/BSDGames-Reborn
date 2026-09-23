@@ -22,14 +22,14 @@ export function BettingPanel({ phase, onInspect, onCommit, recommendedAction }: 
         </button>
         <button
           className={recommendedAction === 'commit' ? 'cheat-recommended' : ''}
-          disabled={phase !== 'inspect'}
+          disabled={phase !== 'inspect' && phase !== 'buy'}
           onClick={onCommit}
         >
-          Commit (+${COST_OF_GAME})
+          Commit (+${phase === 'buy' ? COST_OF_INSPECTION + COST_OF_GAME : COST_OF_GAME})
         </button>
       </div>
       <p className="command-hint">
-        {phase === 'buy' && 'Pay $13 to inspect the deal (foundation moves only). Deal Hand is locked.'}
+        {phase === 'buy' && 'Inspect ($13) for foundation-only moves, or Commit ($39) to unlock all moves including Deal Hand.'}
         {phase === 'inspect' && 'Pay $26 to unlock Deal Hand and all tableau moves.'}
         {phase === 'commit' && 'All moves unlocked — Deal Hand → Talon is now available.'}
       </p>

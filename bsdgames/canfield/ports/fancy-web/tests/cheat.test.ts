@@ -17,20 +17,20 @@ describe('cheat helpers', () => {
   it('recommends commit in inspect phase when a foundation move exists', () => {
     const seed = findSeed((s) => {
       const afterDeal = deal(s)
-      const afterInspect = advancePhase(afterDeal)
+      const afterInspect = advancePhase(afterDeal, 'inspect')
       return legalMoveHints(afterInspect).some(h => h.command.type.endsWith('-to-foundation'))
     })
-    const state = advancePhase(deal(seed))
+    const state = advancePhase(deal(seed), 'inspect')
     expect(recommendedPhaseAction(state)).toBe('commit')
   })
 
   it('does not recommend commit when no foundation move is visible', () => {
     const seed = findSeed((s) => {
       const afterDeal = deal(s)
-      const afterInspect = advancePhase(afterDeal)
+      const afterInspect = advancePhase(afterDeal, 'inspect')
       return !legalMoveHints(afterInspect).some(h => h.command.type.endsWith('-to-foundation'))
     })
-    const state = advancePhase(deal(seed))
+    const state = advancePhase(deal(seed), 'inspect')
     expect(recommendedPhaseAction(state)).toBeNull()
   })
 
@@ -43,8 +43,8 @@ describe('cheat helpers', () => {
   })
 
   it('returns scored hints in commit phase', () => {
-    const seed = findSeed((s) => legalMoveHints(advancePhase(advancePhase(deal(s)))).length > 0)
-    const committed = advancePhase(advancePhase(deal(seed)))
+    const seed = findSeed((s) => legalMoveHints(advancePhase(advancePhase(deal(s), 'inspect'), 'commit')).length > 0)
+    const committed = advancePhase(advancePhase(deal(seed), 'inspect'), 'commit')
     const hints = legalMoveHints(committed)
 
     expect(hints.length).toBeGreaterThan(0)
@@ -64,7 +64,7 @@ describe('cheat helpers', () => {
   })
 
   it('includes hand-to-talon hint in commit phase when cards remain', () => {
-    const committed = advancePhase(advancePhase(deal(12345)))
+    const committed = advancePhase(advancePhase(deal(12345), 'inspect'), 'commit')
     const hints = legalMoveHints(committed)
     if (committed.hand.length > 0 || committed.talon.length > 0) {
       expect(hints.some(h => h.command.type === 'hand-to-talon')).toBe(true)

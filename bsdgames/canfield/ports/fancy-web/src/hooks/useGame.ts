@@ -53,12 +53,12 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
 
   const inspect = useCallback(() => {
     setHistory(prev => [...prev, stateRef.current])
-    setState(prev => advancePhase(prev))
+    setState(prev => advancePhase(prev, 'inspect'))
   }, [])
 
   const commit = useCallback(() => {
     setHistory(prev => [...prev, stateRef.current])
-    setState(prev => advancePhase(prev))
+    setState(prev => advancePhase(prev, 'commit'))
   }, [])
 
   const newGame = useCallback(() => {

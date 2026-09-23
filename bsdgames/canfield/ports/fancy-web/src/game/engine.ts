@@ -426,12 +426,17 @@ export function applyCommand(state: GameState, command: Command): GameState {
   return appendMoveHistory(next, command.type)
 }
 
-export function advancePhase(state: GameState): GameState {
-  if (state.phase === 'buy') {
+export function advancePhase(state: GameState, target: 'inspect' | 'commit'): GameState {
+  if (target === 'inspect' && state.phase === 'buy') {
     return appendMoveHistory(chargeInspection({ ...state, phase: 'inspect' }), 'inspect')
   }
-  if (state.phase === 'inspect') {
-    return appendMoveHistory(chargeGameCommit({ ...state, phase: 'commit' }), 'commit')
+  if (target === 'commit' && (state.phase === 'buy' || state.phase === 'inspect')) {
+    let next = state
+    if (next.phase === 'buy') {
+      next = chargeInspection({ ...next, phase: 'inspect' })
+    }
+    next = chargeGameCommit({ ...next, phase: 'commit' })
+    return appendMoveHistory(next, 'commit')
   }
   return state
 }

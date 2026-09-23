@@ -74,6 +74,16 @@
 
 **Why:** Beta players kept trying Deal Hand before Commit and dragging cards to illegal destinations. A visual coach answers "where can I move?" and "when should I commit?" without adding text clutter.
 
+## 2026-09-22 — Commit-from-buy fix
+
+**Changed:**
+- `advancePhase()` now takes an explicit target (`inspect` | `commit`) instead of always stepping sequentially.
+- **Commit button is now enabled in Buy phase.** Clicking it charges the full `$39` ($13 deal + $13 inspection + $26 game) and jumps straight to Commit, unlocking Deal Hand and all tableau moves immediately.
+- Betting hint, phase banner, and `HowToPlay` updated to say Buy offers both Inspect ($13 trial) and Commit ($39 full unlock).
+- Unit + e2e tests updated for the new `advancePhase` signature and the new commit-from-buy path.
+
+**Why:** The banner already told players they could Commit from Buy, but the button was disabled, forcing an unwanted Inspect step. This fixes the inconsistency and restores the intended choice: trial cheaply, or buy in fully.
+
 ## 2026-09-22 — Global drag-and-drop, flying-card animation, and URL seed fix
 
 **Changed:**

@@ -39,7 +39,7 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
       <ul style={{ lineHeight: 1.6, paddingLeft: '1.25rem' }}>
         <li>
           <strong>Buy ($13)</strong> — you get the initial deal. At this point you
-          can only Inspect, Commit, or Quit.
+          can Inspect, Commit, or Quit.
         </li>
         <li>
           <strong>Inspect (+$13)</strong> — unlocks <em>foundation moves only</em>.
@@ -47,13 +47,16 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
           promising path before you risk more money.
         </li>
         <li>
-          <strong>Commit (+$26)</strong> — unlocks <em>all</em> moves: tableau moves,
-          Deal Hand → Talon, and everything else. You are now fully in the game.
+          <strong>Commit (+$26, or +$39 straight from Buy)</strong> — unlocks
+          <em> all</em> moves: tableau moves, Deal Hand → Talon, and everything else.
+          You are now fully in the game.
         </li>
       </ul>
       <p style={{ lineHeight: 1.5 }}>
         If the deal looks bad after Inspect, you can still Quit and lose only
         <strong>$26</strong> (Buy + Inspect), not the full <strong>$52</strong>.
+        If you are already confident, click <strong>Commit</strong> straight from
+        Buy to skip the trial and pay $39 total.
       </p>
 
       <h4 style={{ color: 'var(--gold)', marginTop: '1rem' }}>4. Building rules</h4>

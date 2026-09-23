@@ -40,13 +40,14 @@
 
 ### T-02 Betting phase buttons
 **Steps:**
-1. Click **Buy** ($13).
-2. Click **Inspect** (+$13).
-3. Click **Commit** (+$26).
+1. Start a new game. Bankroll is `$-13` after the deal.
+2. Click **Inspect** (+$13). Bankroll becomes `$-26`.
+3. Click **Commit** (+$26). Bankroll becomes `$-52`.
+4. Start another game and click **Commit** straight from Buy.
 
 **Expected:**
-- Bankroll updates to `$-13`, then `$-26`, then `$-52`.
-- Moves allowed advance with each phase.
+- Step 1–3: bankroll updates to `$-13`, `$-26`, `$-52`; moves allowed advance with each phase.
+- Step 4: bankroll jumps to `$-52` and all moves unlock immediately.
 
 ### T-03 Drag tableau to tableau
 **Steps:**

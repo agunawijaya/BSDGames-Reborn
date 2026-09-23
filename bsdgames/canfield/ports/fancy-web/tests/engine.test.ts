@@ -30,16 +30,22 @@ describe('Canfield engine', () => {
   it('advances through betting phases', () => {
     let state = deal(1)
     expect(state.phase).toBe('buy')
-    state = advancePhase(state)
+    state = advancePhase(state, 'inspect')
     expect(state.phase).toBe('inspect')
     expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION)
-    state = advancePhase(state)
+    state = advancePhase(state, 'commit')
+    expect(state.phase).toBe('commit')
+    expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME)
+  })
+
+  it('can commit straight from buy phase', () => {
+    const state = advancePhase(deal(1), 'commit')
     expect(state.phase).toBe('commit')
     expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME)
   })
 
   it('deals three cards from hand to talon', () => {
-    let state = advancePhase(advancePhase(deal(7)))
+    let state = advancePhase(advancePhase(deal(7), 'inspect'), 'commit')
     const before = state.talon.length
     const handBefore = state.hand.length
     state = applyCommand(state, { type: 'hand-to-talon' })
@@ -48,7 +54,7 @@ describe('Canfield engine', () => {
   })
 
   it('charges for re-running the hand', () => {
-    let state = advancePhase(advancePhase(deal(99)))
+    let state = advancePhase(advancePhase(deal(99), 'inspect'), 'commit')
     // Exhaust hand
     while (state.hand.length > 0) {
       state = applyCommand(state, { type: 'hand-to-talon' })
@@ -60,7 +66,7 @@ describe('Canfield engine', () => {
   })
 
   it('builds foundations up by suit with wrap around', () => {
-    let state = advancePhase(advancePhase(deal(2021)))
+    let state = advancePhase(advancePhase(deal(2021), 'inspect'), 'commit')
     const br = baseRank(state)!
     // Find a foundation pile and manually test wrap logic via a constructed move
     // is hard; instead ensure base card is on a foundation.
@@ -69,15 +75,15 @@ describe('Canfield engine', () => {
 
   it('auto-moves base rank cards to empty foundations', () => {
     // Use a deterministic seed and inspect state; this is a smoke test.
-    const state = advancePhase(advancePhase(deal(555)))
+    const state = advancePhase(advancePhase(deal(555), 'inspect'), 'commit')
     const totalFoundations = state.foundations.reduce((s, f) => s + f.length, 0)
     expect(totalFoundations).toBeGreaterThanOrEqual(1)
   })
 
   it('allows tableau-to-tableau only in commit phase', () => {
     const buy = deal(1)
-    const inspect = advancePhase(buy)
-    const commit = advancePhase(inspect)
+    const inspect = advancePhase(buy, 'inspect')
+    const commit = advancePhase(inspect, 'commit')
 
     const cmd = { type: 'tableau-to-tableau' as const, from: 0, to: 1 }
     expect(() => applyCommand(buy, cmd)).not.toThrow()
@@ -86,7 +92,7 @@ describe('Canfield engine', () => {
   })
 
   it('credits $5 per foundation card', () => {
-    let state = advancePhase(advancePhase(deal(777)))
+    let state = advancePhase(advancePhase(deal(777), 'inspect'), 'commit')
     const before = state.bankroll
     // Try to move any available card to foundation.
     state = applyCommand(state, { type: 'stock-to-foundation' })
@@ -110,7 +116,7 @@ describe('Canfield engine', () => {
   })
 
   it('preserves total card count through moves', () => {
-    let state = advancePhase(advancePhase(deal(4321)))
+    let state = advancePhase(advancePhase(deal(4321), 'inspect'), 'commit')
     for (let i = 0; i < 10; i++) {
       state = applyCommand(state, { type: 'hand-to-talon' })
     }
