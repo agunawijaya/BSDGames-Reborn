@@ -141,7 +141,7 @@ its own screen shows:
 | **Classic Otto** | `otto.c` ported literally (its bugs too) and golden-tested against the original; a right-hand wall-follower made for perfect mazes — it circles in the Ricochet arena |
 | **Novice** *(extension)* | reacts 3–6 steps late, shoots only straight lines, rarely a grenade |
 | **Sharpshooter** *(extension)* | traces its shots through the mirrors it remembers (flips included), leads walking targets, banks grenades into walls next to you, sidesteps, hunts |
-| **Mixed** | one of each, in turn |
+| **Mixed** (default) | one of each, in turn (4 bots: Otto, Novice, Sharpshooter, Otto) |
 
 **Modes:** free-for-all, or two teams (`1` Sodium yellow, `2` Ultramarine
 blue with a hollow marker — colour-blind safe and shape-coded). Friendly

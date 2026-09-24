@@ -101,8 +101,9 @@ problem. Seeding mirrors with the regeneration rule was tried and measured:
 nearly all such mirrors sit inside wall runs and just turn shots into the
 next block (0.24% of shots bounce twice). Braiding the maze and letting
 `remap()` do its job produced free-standing mirrors and chains of up to 15
-bounces. After comparing the two, the owner made Ricochet the default;
-Classic, the original, is one click away (ADR 006).
+bounces. After comparing the two, the owner made Ricochet the default,
+with Mixed bots since Classic Otto circles there; Classic, the original,
+is one click away (ADR 006).
 
 **Otto in a braided maze.** In the Ricochet arena, Otto circled a single
 block forever: `wander()` is a right-hand wall-follower whose memory is

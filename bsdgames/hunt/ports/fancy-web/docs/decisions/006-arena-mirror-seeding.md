@@ -98,13 +98,15 @@ which arena they use.
 
 - Veteran and Ricochet have more mirrors than any original arena would —
   labelled as such.
-- In Ricochet, Classic Otto is weak (he circles) — and Classic Otto is the
-  default opponent, so a default match has Ottos that orbit a block until
-  someone crosses their path. The extension bots use a map-based explorer
-  instead (`src/bots/explore.js`).
+- In Ricochet, Classic Otto is weak (he circles until someone crosses his
+  path). The extension bots use a map-based explorer instead
+  (`src/bots/explore.js`), so the page's default bots became **Mixed**
+  (Otto, Novice, Sharpshooter in turn) together with the Ricochet default;
+  an all-Otto match is one click away.
 - The engine's own default (`createMatch`, `newGame`) stays Classic, so the
   golden traces and the Override baseline are unaffected; only the page's
-  default changed (a remembered arena from before is dropped once).
+  defaults changed (an arena or bot choice remembered from before is
+  dropped once).
 
 ### Follow-on Work
 

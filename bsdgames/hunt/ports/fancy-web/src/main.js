@@ -25,15 +25,17 @@ const W = K.WIDTH;
 
 // ------------------------------------------------------------- settings
 const DEFAULTS = {
-  name: 'you', mode: 'ffa', bots: '4', difficulty: 'otto', arena: 'ricochet', seed: 1985,
+  name: 'you', mode: 'ffa', bots: '4', difficulty: 'mixed', arena: 'ricochet', seed: 1985,
   speed: 'standard', enter: 'c', scheme: 'modern', view: 'modern', quality: 'auto', camera: 'overview',
 };
 let settings = { ...DEFAULTS };
-// v2: Ricochet became the default arena; an arena remembered from before that is dropped once
-const SETTINGS_V = 2;
+// v2: Ricochet became the default arena, v3: Mixed the default bots (Classic Otto
+// circles in Ricochet); a choice remembered from before each change is dropped once
+const SETTINGS_V = 3;
 try {
   const saved = JSON.parse(localStorage.getItem('hunt.settings') || '{}');
-  if (saved.v !== SETTINGS_V) delete saved.arena;
+  if (!(saved.v >= 2)) delete saved.arena;
+  if (!(saved.v >= 3)) delete saved.difficulty;
   Object.assign(settings, saved);
 } catch { /* defaults */ }
 for (const k of Object.keys(DEFAULTS)) if (params.has(k)) settings[k] = params.get(k);
