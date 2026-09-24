@@ -68,6 +68,19 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   const [flying, setFlying] = useState<FlyingItem[]>([])
   const hints = useMemo(() => legalMoveHints(state), [state])
 
+  // Empty tableau slots are valid drops, but highlighting all of them in cheat mode is noisy.
+  const visibleHints = useMemo(() => {
+    return hints.filter(h => {
+      if (!h.targetTestId) return true
+      const tableauMatch = h.targetTestId.match(/^tableau-(\d+)$/)
+      if (tableauMatch) {
+        const idx = parseInt(tableauMatch[1], 10)
+        return state.tableaus[idx].length > 0
+      }
+      return true
+    })
+  }, [hints, state.tableaus])
+
   useEffect(() => {
     const prev = prevStateRef.current
     prevStateRef.current = state
@@ -82,12 +95,11 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
     })
   }, [state])
 
-  const glowFor = (testId: string, pileEmpty = false): 'source' | 'target' | undefined => {
-    const isSource = hints.some(h => h.sourceTestId === testId)
-    const isTarget = hints.some(h => h.targetTestId === testId)
+  const glowFor = (testId: string): 'source' | 'target' | undefined => {
+    const isSource = visibleHints.some(h => h.sourceTestId === testId)
+    const isTarget = visibleHints.some(h => h.targetTestId === testId)
     if (isSource) return 'source'
-    // Empty tableau piles are valid drop targets, but glowing every empty slot in cheat mode is noisy.
-    if (isTarget && !pileEmpty) return 'target'
+    if (isTarget) return 'target'
     return undefined
   }
 
@@ -188,7 +200,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
           onDone={() => setFlying(current => current.filter(f => f.id !== item.id))}
         />
       ))}
-      <CheatOverlay hints={hints} tableRef={tableRef} cheatMode={cheatMode} />
+      <CheatOverlay hints={visibleHints} tableRef={tableRef} cheatMode={cheatMode} />
       <div style={{
         textAlign: 'center',
         padding: '0.5rem 1rem',
@@ -238,7 +250,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
             onCardClick={() => handleTableauClick(i)}
             emptyText={`T${i + 1}`}
             testId={`tableau-${i}`}
-            cheatGlow={glowFor(`tableau-${i}`, pile.length === 0)}
+            cheatGlow={glowFor(`tableau-${i}`)}
             draggable={hints.some(h => h.sourceTestId === `tableau-${i}`)}
             wholePileDragImage
             onCardDragStart={(e) => handleCardDragStart({ type: 'tableau', index: i }, e)}
