@@ -30,13 +30,16 @@ This folder is the modernised port of **`rain`** from the original BSDGames pack
 | [`docs/lineage.md`](./docs/lineage.md) | Genre siblings and modern descendants |
 | [`docs/references.md`](./docs/references.md) | Sources & citations |
 
+## Ports
+
+| Port | What it is | Status |
+|---|---|---|
+| [`fancy-web`](./ports/fancy-web/) | *Rain on Still Water*: the original loop, byte-faithful, driving a GPU wave-equation pond at night — splashes, rings that interfere, rain streaks, lanterns, synthesised sound; classic and split views; zero raster assets | 🟢 Released (v1) |
+
 ## Running the Port
 
-*(Add build/run instructions once implementation exists.)*
-
-```
-$ rain -d 120
-```
+See each port's README — for `fancy-web`: `node ports/fancy-web/scripts/serve.mjs`,
+then open <http://localhost:8765/?d=120> (the original was `rain -d 120`).
 
 ## Media
 
