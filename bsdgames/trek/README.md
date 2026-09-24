@@ -38,6 +38,10 @@ appetite for elaborate, state-heavy systems programming.
 `trek` is a procedurally generated galaxy (8×8 quadrants × 10×10
 sectors) so there is no fixed map or single-solution walkthrough.
 
+## Ports
+
+- [`ports/procedural-web/`](./ports/procedural-web/) — *Deep Space — Procedural*: same engine as `fancy-web`, but every visual and sound generated from code (zero raster assets); adds the Captain's Override cheat layer and a head-to-head [comparison](./ports/procedural-web/docs/comparison.md).
+
 ## Running the Port
 
 *(Not implemented yet — pending platform/language ADRs.)*
