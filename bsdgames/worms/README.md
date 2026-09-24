@@ -3,7 +3,7 @@
 > **Animated worms slither across your terminal — a curses screensaver classic.**
 
 **Category:** Screensaver / Demo
-· **Status:** 🟠 In Progress
+· **Status:** 🟢 Released (2026-09-24): `fancy-web` port released
 · **Original author(s):** Eric P. Scott
 · **First released:** 1980 (3BSD)
 
@@ -12,6 +12,18 @@
 ## About This Folder
 
 This folder is the modernised port of **`worms`** from the original BSDGames package. It is a self-contained learning artifact — code + history + design record + technical breakdown.
+
+## Ports
+
+| Port | Style | Status | Summary |
+|---|---|:---:|---|
+| [`ports/fancy-web/`](./ports/fancy-web/) | fancy-web | 🟢 Released | *Abyssal Worms*: a bioluminescent deep-sea screensaver driven by the unchanged engine (matches the original binary cell for cell), with luminous trails, a plankton WORM field, classic and split views, and procedural sound. Zero raster and audio assets. |
+
+> **Layout note:** the empty game-level `src/`, `tests/` and `data/`
+> and the game-level `docs/diff-log.md` predate the multi-port layout of
+> [ADR-006](../../docs/decisions/006-multi-port-architecture.md) and
+> are left in place. Port code, tests and diff-logs live under
+> `ports/<name>/`.
 
 ## Documentation
 
@@ -32,7 +44,7 @@ This folder is the modernised port of **`worms`** from the original BSDGames pac
 
 ## Running the Port
 
-*(Add build/run instructions once implementation exists.)*
+See [`ports/fancy-web/README.md`](./ports/fancy-web/README.md): `npm start`, then open the printed URL, optionally with `?args=-n 5 -l 32 -d 50`.
 
 ```
 $ worms -n 5 -l 32 -d 50

@@ -1,5 +1,11 @@
 # `worms` — Original → Port Diff Log
 
+> **Legacy (pre-ADR-006) file.** Each port keeps its own diff-log under
+> [ADR-006](../../../docs/decisions/006-multi-port-architecture.md). For
+> the released port see
+> [`ports/fancy-web/docs/diff-log.md`](../ports/fancy-web/docs/diff-log.md).
+> This page is kept as the original planning sketch.
+
 > Feature-by-feature comparison of the original BSD `worms` and the modern port.
 
 ---

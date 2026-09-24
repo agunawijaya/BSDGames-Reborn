@@ -35,7 +35,9 @@ limited to:
   Adventure* on which `adventure` is based
 - **Eric S. Raymond** — later maintenance of `adventure`
 - **Bruce Holloway** — `boggle`, `mille` and others
-- **Chris Torek** — `fortune`, `rain`, `worms` and others
+- **Chris Torek** — `fortune`, `rain` and others
+- **Eric P. Scott** (Caltech High Energy Physics, 1980) — `worms`
+  (`worms.c` header), a Unix version of the DEC-2136 program
 - **Ted Hess**, **Kirk McKusick**, **Alan Chapman** — `phantasia`
 - **Conrad Huang**, **Gregory Couch** — `hunt`
 - **Keith E. Brandt**, **Paul Janzen** — `pom`, after Peter

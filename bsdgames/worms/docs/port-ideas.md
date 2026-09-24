@@ -33,6 +33,61 @@
 - **Performance:** GPU instancing for hundreds of worms.
 - **Themes:** Neon, nature, matrix, candy colour palettes.
 
+## Port Styles
+
+Credible port directions under
+[ADR-006](../../../docs/decisions/006-multi-port-architecture.md):
+
+| Style | Status |
+|---|---|
+| `classic-web` | 🔴 Open |
+| `classic-terminal` | 🔴 Open |
+| `fancy-web` | 🟢 [Released](../ports/fancy-web/) — *Abyssal Worms* |
+| `mobile-gimmicks` | 🔴 Open |
+| `native-desktop` | 🔴 Open |
+| `game-engine` | 🔴 Open |
+
+### `classic-web`
+
+A browser terminal that is indistinguishable from `worms` in an xterm:
+monospace cells, the same characters, `-f` and `-t`, and `?args=` for
+the flags. The engine (glibc `random()` with seed 1) can be checked
+screen-for-screen against the original, as the `fancy-web` port does.
+Only platform translation is allowed (PWA, fullscreen).
+
+### `classic-terminal` (aka `retro-terminal`)
+
+A drop-in replacement binary in Rust, Go or Zig, with ANSI output,
+proper `SIGWINCH` resizing, and the original flags and messages. It is
+a good teaching port for ring buffers and reference counting.
+
+### `fancy-web` — released
+
+A bioluminescent deep-sea screensaver: translucent glowing worms (one
+species per flavor character) lighting the sea floor, luminous `-t`
+trails, a plankton “WORM” `-f` field, classic and split views, and
+procedural sound, all from code. See
+[`ports/fancy-web/README.md`](../ports/fancy-web/README.md).
+
+### `mobile-gimmicks`
+
+A pocket aquarium: tilt the phone and the worms’ turn choices lean
+downhill; tap to drop food that attracts heads (a clearly labelled game
+mode, per the Open Questions); haptic ticks when worms cross; a
+lock-screen widget.
+
+### `native-desktop`
+
+A real OS screensaver (`.scr` on Windows, a `.saver` bundle on macOS,
+an XScreenSaver hack on Linux), which is where `worms` spiritually
+belongs. Multi-monitor worms that crawl across screens.
+
+### `game-engine`
+
+A Godot or Unity terrarium in 3-D with soil layers, where worms tunnel
+using the same boundary logic per slice. A vehicle for teaching
+procedural animation rigs.
+
 ## What NOT to Change
 
 - Do not remove the default passive screensaver mode.

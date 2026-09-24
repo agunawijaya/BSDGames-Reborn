@@ -17,9 +17,10 @@ For repository-wide instructions, see the **root
 
 ## 2. Port Status
 
-- **Current status:** 🟠 Docs done; awaiting language ADR
-- **Owner:** Agun
-- **Baseline released?** no
+- **Current status:** 🟢 Released (2026-09-24). Canonical docs are complete and
+  [`ports/fancy-web/`](./ports/fancy-web/) is Released.
+- **Owner:** Agun (canonical docs); Agun (Claude) for `ports/fancy-web`
+- **Baseline released?** yes
 
 ## 3. Folder Contents
 
@@ -31,10 +32,11 @@ worms/
 ├── docs/             14 documentation files (see README)
 │   ├── decisions/    Per-game ADR overrides (may be empty)
 │   └── ...
-├── src/              Implementation
-├── data/             Game data
-├── media/            Screenshots / demos
-└── tests/            Automated tests
+├── media/            Screenshots of the ORIGINAL program
+├── ports/
+│   └── fancy-web/    Abyssal Worms (see its AGENTS.md)
+├── src/, tests/      Legacy pre-ADR-006 folders (empty; left in place)
+└── data/             Game data (empty)
 ```
 
 ## 4. Design Decisions Specific to `worms`

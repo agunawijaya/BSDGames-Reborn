@@ -48,6 +48,26 @@ The program validates delay, length, and number ranges and exits with clear mess
 - **Why it matters:** Validating configuration early prevents crashes deep in the animation loop.
 - **Reference:** `worms.c:211-228`.
 
+## 6. An Unseeded RNG Is Not a Random One
+
+`worms` calls `random()` but never `srandom()`. On glibc that is the same
+as `srandom(1)`, so every run in a terminal of the same size produces
+**exactly the same animation**. The "random" worms are a fixed film.
+
+```c
+// worms.c:332-334
+default:
+    w->orientation =
+        op->opts[(int)random() % op->nopts];
+```
+
+- **Why it matters:** determinism is a feature for testing (the
+  `fancy-web` port compares its screens with the original's, step for
+  step) and a bug for variety. Seed explicitly and deliberately. Also
+  note `random() % n` has a slight modulo bias; for 2 or 3 options it is
+  negligible.
+- **Reference:** `worms.c:303-340` (no `srandom` anywhere in the file).
+
 ## See Also
 
 - [`architecture.md`](./architecture.md) — full code analysis.

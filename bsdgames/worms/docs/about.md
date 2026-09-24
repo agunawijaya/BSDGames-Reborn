@@ -53,7 +53,7 @@ The source begins with an ASCII-art rendering of the word "WORMS" and credits "E
 
 ## Known Bugs (Historical)
 
-- **No explicit seed:** `random()` is used without `srandom()`, so the pattern may repeat across runs on some platforms.
+- **No explicit seed:** `random()` is used without `srandom()`. On glibc that means seed 1, so every run in a terminal of the same size shows exactly the same animation.
 - **Abort on impossible orientation:** If a worm reaches a state with zero valid options, the program calls `abort()` (`worms.c:325-328`). This should be unreachable with correct boundary tables.
 - **Memory on huge worms:** Each worm allocates two `short` arrays of `length` elements; with `-n` and `-l` very large this can exhaust memory.
 

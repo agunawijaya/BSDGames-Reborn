@@ -65,6 +65,6 @@ Watch for at least 10 seconds and confirm:
 
 | Tester | Date | Build | Result |
 |---|---|---|---|
-| | | | |
+| Claude Opus (node:test + Playwright) | 2026-09-24 | `ports/fancy-web` working tree | 1–5, 7 pass; 6 n/a in a browser. See the port’s `docs/test-scenarios.md` |
 
 Notes:

@@ -20,6 +20,17 @@
 
 - `curses` / `ncurses` terminal manipulation library.
 - POSIX `random()`, `malloc()`, and signal handling.
+- glibc `stdlib/random_r.c`: the TYPE_3 additive-feedback generator
+  behind `random()`, and `srandom_r()`’s behaviour when a program never
+  seeds (seed 1). <https://sourceware.org/git/?p=glibc.git;a=blob;f=stdlib/random_r.c>
+- `tmux capture-pane`, used to capture the original program’s screens
+  for the `fancy-web` port’s golden tests.
+
+## Port Verification
+
+- The `fancy-web` port reproduces screens captured from a binary built
+  from `worms.c` cell for cell; method and caveats in
+  [`../ports/fancy-web/docs/notes.md`](../ports/fancy-web/docs/notes.md).
 
 ## See Also
 

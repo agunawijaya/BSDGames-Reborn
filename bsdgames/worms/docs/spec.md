@@ -40,7 +40,9 @@ Animate one or more segmented worms moving randomly around a terminal screen unt
 
 - `random()` returns a uniform integer.
 - Orientation selection: `random() % op->nopts` from the current boundary table.
-- The RNG is not explicitly seeded.
+- The RNG is not explicitly seeded. On glibc an unseeded `random()` behaves as
+  if `srandom(1)` had been called, so the sequence is the same on every run
+  (first values 1804289383, 846930886, 1681692777, …).
 
 ## Termination Conditions
 
@@ -62,7 +64,13 @@ There are no difficulty levels. Runtime configuration:
 
 ## Session Replay Semantics
 
-Because the RNG is not explicitly seeded, replaying the same session is not deterministic.
+Because the RNG is never seeded, glibc starts from seed 1 every time, so
+the animation is **deterministic for a given terminal size and flags**:
+running `worms` again in a terminal of the same `COLS × LINES` replays
+the same frames. A different terminal size changes the boundary tables
+hit and therefore the whole history. (Verified 2026-09-24 against a
+binary built from `worms.c`, by matching captured screens cell for cell;
+see `ports/fancy-web/docs/notes.md`.)
 
 ## See Also
 
