@@ -129,9 +129,9 @@ blown walls grow back. So:
 
 | Arena | What it is |
 |---|---|
-| **Classic** (default) | `makemaze.c` exactly. Mirrors and doors arrive as walls regrow. |
+| **Classic** | `makemaze.c` exactly. Mirrors and doors arrive as walls regrow. |
 | **Veteran** | as if every wall had already regrown once (the original 1% odds) |
-| **Ricochet** | a braided maze: loops are opened, and `remap()`'s own rule turns every pillar left standing alone into a mirror — ≈57 free-standing mirrors, bank shots of up to 15 bounces |
+| **Ricochet** (default) | a braided maze: loops are opened, and `remap()`'s own rule turns every pillar left standing alone into a mirror — ≈57 free-standing mirrors, bank shots of up to 15 bounces |
 
 **Bots** — each one types keys into its own typeahead and knows only what
 its own screen shows:

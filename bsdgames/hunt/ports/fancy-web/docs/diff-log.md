@@ -101,7 +101,8 @@ problem. Seeding mirrors with the regeneration rule was tried and measured:
 nearly all such mirrors sit inside wall runs and just turn shots into the
 next block (0.24% of shots bounce twice). Braiding the maze and letting
 `remap()` do its job produced free-standing mirrors and chains of up to 15
-bounces. Classic stays the default; Ricochet is one click away (ADR 006).
+bounces. After comparing the two, the owner made Ricochet the default;
+Classic, the original, is one click away (ADR 006).
 
 **Otto in a braided maze.** In the Ricochet arena, Otto circled a single
 block forever: `wander()` is a right-hand wall-follower whose memory is
@@ -152,8 +153,6 @@ screen.
 ## 6. Known limitations and next steps
 
 - Network play and a spectator role (architecture §7).
-- The owner may want **Ricochet** as the default arena for the showcase
-  (one line); Classic is the default because it is the original.
 - The sound has not had a listening pass by the owner yet.
 - The canonical docs still need the fixes in `notes.md` §3 (and new
   screenshots of the real program — the game-level `media/*.txt` are not

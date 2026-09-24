@@ -1,6 +1,6 @@
 # ADR 006 — Arena Types: Classic (No Mirrors Yet), Veteran, Ricochet (Braided)
 
-- **Status:** Accepted (default = Classic; owner to confirm the showcase default)
+- **Status:** Accepted — default = **Ricochet** (owner's decision, 2026-09-24; first proposed with Classic as the default)
 - **Date:** 2026-09-24
 - **Deciders:** Claude Opus, for review by Agun Wijaya (owner)
 - **Scope:** `bsdgames/hunt/ports/fancy-web/` only
@@ -67,14 +67,18 @@ said so in the setup screen (`notes.md` §5).
 
 ## Decision
 
-Three arena types, **Classic the default** (the owner's standing rule is
-to follow the original when in doubt):
+Three arena types, **Ricochet the default.** The first version of this ADR
+made Classic the default (the owner's standing rule is to follow the
+original when in doubt); after comparing the two, the owner chose Ricochet,
+because the flipping mirror is hunt's signature and this port's identity,
+and the original arena would hide it for most of a match. Classic stays one
+click away (setup, or `?arena=classic`):
 
 | Arena | Construction | Meaning |
 |---|---|---|
-| **Classic** (default) | `makemaze.c` untouched | the original: mirrors and doors only appear as walls regrow |
+| **Classic** | `makemaze.c` untouched | the original: mirrors and doors only appear as walls regrow |
 | **Veteran** | Option C at 1% (door, then mirror, per wall) | the original odds, as if every wall had regrown once |
-| **Ricochet** | Option D, braid 45% | the showcase: free-standing mirrors, bank shots everywhere |
+| **Ricochet** (default) | Option D, braid 45% | the showcase: free-standing mirrors, bank shots everywhere |
 
 All three run on the daemon's own generator, so seeds stay reproducible.
 The setup screen explains each in one line; screenshots of ricochets say
@@ -84,8 +88,9 @@ which arena they use.
 
 ### Positive
 
-- The faithful game is the default and golden-tested; the showcase is one
-  click away and uses only the original's own drawing rules.
+- The first match shows what the port is about; the showcase uses only the
+  original's own drawing rules, and the faithful, golden-tested arena is one
+  click away.
 - The Sharpshooter's bank-shot planning and the Coach have real work to do
   in the Ricochet arena.
 
@@ -93,10 +98,15 @@ which arena they use.
 
 - Veteran and Ricochet have more mirrors than any original arena would —
   labelled as such.
-- In Ricochet, Classic Otto is weak (he circles); the extension bots use a
-  map-based explorer instead (`src/bots/explore.js`).
+- In Ricochet, Classic Otto is weak (he circles) — and Classic Otto is the
+  default opponent, so a default match has Ottos that orbit a block until
+  someone crosses their path. The extension bots use a map-based explorer
+  instead (`src/bots/explore.js`).
+- The engine's own default (`createMatch`, `newGame`) stays Classic, so the
+  golden traces and the Override baseline are unaffected; only the page's
+  default changed (a remembered arena from before is dropped once).
 
 ### Follow-on Work
 
-- The owner may prefer Ricochet as the default for the showcase; it is one
-  line (`DEFAULTS.arena` in `src/main.js`).
+- Done (2026-09-24): Ricochet is the page default (`DEFAULTS.arena` in
+  `src/main.js`).

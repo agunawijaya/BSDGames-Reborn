@@ -298,7 +298,7 @@ of it, committing to a goal until they have seen it.
 | Deviation | Why | ADR |
 |---|---|---|
 | A fixed step clock (default 10 Hz) instead of "time moves when someone types" | real-time play against bots; a server tick | [005](./decisions/005-time-and-tick.md) |
-| Optional arenas: Veteran (regeneration rule at 1%), Ricochet (braided maze, mirrors by `remap()`); Classic is the default | the original arena starts with no mirrors, and regrown mirrors sit inside wall runs | [006](./decisions/006-arena-mirror-seeding.md) |
+| Extra arenas: Veteran (regeneration rule at 1%), Ricochet (braided maze, mirrors by `remap()`); Ricochet is the default, Classic one click away | the original arena starts with no mirrors, and regrown mirrors sit inside wall runs | [006](./decisions/006-arena-mirror-seeding.md) |
 | Novice and Sharpshooter bots, with a map-based explorer | labelled extensions next to the faithful Otto | [003](./decisions/003-v1-scope.md) |
 | Respawn pause (default 2 s) for everyone | readable deaths; the original client re-enters at once | [005](./decisions/005-time-and-tick.md) |
 | Coach and Override cheat layers | trek-port parity; Override marks scores | [README](../README.md#cheat-mode) |

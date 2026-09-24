@@ -25,14 +25,20 @@ const W = K.WIDTH;
 
 // ------------------------------------------------------------- settings
 const DEFAULTS = {
-  name: 'you', mode: 'ffa', bots: '4', difficulty: 'otto', arena: 'classic', seed: 1985,
+  name: 'you', mode: 'ffa', bots: '4', difficulty: 'otto', arena: 'ricochet', seed: 1985,
   speed: 'standard', enter: 'c', scheme: 'modern', view: 'modern', quality: 'auto', camera: 'overview',
 };
 let settings = { ...DEFAULTS };
-try { Object.assign(settings, JSON.parse(localStorage.getItem('hunt.settings') || '{}')); } catch { /* defaults */ }
+// v2: Ricochet became the default arena; an arena remembered from before that is dropped once
+const SETTINGS_V = 2;
+try {
+  const saved = JSON.parse(localStorage.getItem('hunt.settings') || '{}');
+  if (saved.v !== SETTINGS_V) delete saved.arena;
+  Object.assign(settings, saved);
+} catch { /* defaults */ }
 for (const k of Object.keys(DEFAULTS)) if (params.has(k)) settings[k] = params.get(k);
 // quality=lite is a URL-only test switch (the menu offers auto/low/high), so it is never remembered
-const save = () => { try { localStorage.setItem('hunt.settings', JSON.stringify({ ...settings, quality: settings.quality === 'lite' ? 'auto' : settings.quality })); } catch { /* ignore */ } };
+const save = () => { try { localStorage.setItem('hunt.settings', JSON.stringify({ ...settings, v: SETTINGS_V, quality: settings.quality === 'lite' ? 'auto' : settings.quality })); } catch { /* ignore */ } };
 
 const NOTES = {
   mode: { ffa: 'Everyone for themselves.', teams: 'Two teams (hunt teams are digits: 1 and 2). Friendly fire hurts — and costs you a kill.' },
