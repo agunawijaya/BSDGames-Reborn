@@ -87,7 +87,24 @@ export function startApp() {
     console.warn('Selene: WebGL2 unavailable —', err.message);
     $('nogl').hidden = false;
     $('veil').classList.add('gone');
+    document.body.classList.add('no-gl');
+    // mini Moons need the shader: without WebGL2 the calendar has nothing to show
+    const cal = $('btn-calendar');
+    cal.disabled = true;
+    cal.title = 'The Moon calendar needs WebGL2';
   }
+  // A CPU-only (software) WebGL context gets the lite profile: smaller surface,
+  // frozen twinkle and ripples, lower resolution, and frames drawn only on change.
+  const lite = !!renderer?.lite;
+  if (lite) {
+    document.body.classList.add('lite');
+    $('veil-note').hidden = false;
+  }
+  $('render-info').textContent = !renderer
+    ? 'Rendering: unavailable (no WebGL2). Text mode.'
+    : `Rendering: ${renderer.software ? 'CPU (software WebGL)' : 'GPU'}${lite ? ', lite profile' : ''}` +
+      ` · surface ${renderer.texW}×${renderer.texH}` +
+      `${renderer.floatRT ? '' : ', 8-bit'} · ${renderer.rendererName || 'unknown renderer'}`;
 
   // ---- initial time from ?date=<pom arg> -----------------------------------
   if (qs.get('date')) {
@@ -219,6 +236,7 @@ export function startApp() {
   const drawer = $('calendar');
   let calendar = null;
   function setCalendar(open) {
+    if (!renderer) open = false;
     S.calendar = open;
     drawer.hidden = !open;
     document.body.classList.toggle('cal-open', open);
@@ -478,23 +496,33 @@ export function startApp() {
   let last = performance.now();
   let clock = 0;
   // adaptive resolution: shrink the drawing buffer if frames run long
-  let resScale = 1;
-  let resCeil = 1;      // never climb back to a scale that proved too slow
+  let resScale = lite ? 0.5 : 1;
+  let resCeil = resScale;      // never climb back to a scale that proved too slow
+  const resFloor = lite ? 0.3 : 0.5;
   let slow = 0;
+  // With frozen shader time (lite or reduced motion) nothing moves unless the
+  // state changes, so identical frames are skipped: zero CPU/GPU when idle.
+  const shaderMotion = S.motion && !lite;
+  let lastDrawKey = '';
+  let drewLast = false;
+  const veilText = $('veil-text');
   function frame() {
     // one clock for everything (rAF timestamps can lag performance.now())
     const ms = performance.now();
     const dt = clamp((ms - last) / 1000, 0, 0.1);
     last = ms;
-    if (S.motion) clock += dt;
+    if (shaderMotion) clock += dt;
 
     if (renderer && !renderer.baked) {
-      renderer.bakeStep(12);
+      const progress = renderer.bakeStep(lite ? 30 : 12);
+      veilText.textContent = renderer.phase === 'compile'
+        ? 'Compiling shaders…'
+        : `Accreting the Moon… ${Math.floor(progress * 100)}%`;
       if (renderer.baked) {
         $('veil').classList.add('gone');
         S.lastTicks = '';
         if (S.calendar) calendar.render();
-        window.__selene = { ready: true, bakeMs: renderer.bakeMs, tex: renderer.texW, floatRT: renderer.floatRT };
+        window.__selene = { ready: true, bakeMs: renderer.bakeMs, compileMs: renderer.compileMs, tex: renderer.texW, floatRT: renderer.floatRT };
       }
     }
     if (renderer?.baked) S.ready = clamp(S.ready + dt / (S.motion ? 0.9 : 0.01), 0, 1);
@@ -538,18 +566,27 @@ export function startApp() {
     L = layout(w, h);
     S.moonX = S.moonX === null ? L.x : S.moonX + (L.x - S.moonX) * (S.motion ? 1 - Math.exp(-dt * 6) : 1);
 
-    if (renderer?.baked && dt > 0) {
+    // measure only frames that followed a real draw, or skipped frames look fast
+    if (renderer?.baked && dt > 0 && drewLast) {
       slow = slow * 0.95 + (dt > 1 / 40 ? 1 : 0) * 0.05;
-      if (slow > 0.6 && resScale > 0.5) { resCeil = resScale * 0.97; resScale *= 0.85; slow = 0.3; }
+      if (slow > 0.6 && resScale > resFloor) { resCeil = resScale * 0.97; resScale = Math.max(resFloor, resScale * 0.85); slow = 0.3; }
       else if (slow < 0.02 && resScale < resCeil) { resScale = Math.min(resCeil, resScale * 1.05); slow = 0.1; }
     }
-    if (renderer) {
+    drewLast = false;
+    const liveNow = S.live && !S.anim;
+    const drawKey = shaderMotion || !renderer?.baked ? '' : [
+      liveNow ? Math.floor(S.t / 60) : S.t, S.yaw, S.pitch, S.moonX.toFixed(1), L.r, L.y, L.horizon,
+      w, h, S.hc, S.ready, resScale, devicePixelRatio,
+    ].join('|');
+    if (renderer && (drawKey === '' || drawKey !== lastDrawKey)) {
+      lastDrawKey = drawKey;
+      drewLast = true;
       const st = phaseState(S.t);
       renderer.render({
         width: w, height: h, dpr: Math.min(devicePixelRatio || 1, 2) * resScale, time: clock,
         moon: { x: S.moonX, y: L.y, r: L.r },
         elongation: st.elongation, illuminated: st.illuminated,
-        yaw: S.yaw, pitch: S.pitch, ready: S.ready, hc: S.hc, motion: S.motion, horizon: L.horizon,
+        yaw: S.yaw, pitch: S.pitch, ready: S.ready, hc: S.hc, motion: shaderMotion, horizon: L.horizon,
       });
     }
 
@@ -565,5 +602,5 @@ export function startApp() {
   if (qs.get('calendar') === '1') setCalendar(true);
   updateText(true);
   requestAnimationFrame(frame);
-  window.__seleneApp = { S, goTo, goNow, startLapse, stopLapse, setCalendar, setHC };
+  window.__seleneApp = { S, goTo, goNow, startLapse, stopLapse, setCalendar, setHC, renderer };
 }

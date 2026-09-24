@@ -72,9 +72,13 @@ binary, and keeps the old inputs as scenario 6.
 | P12 | Browser without float render targets | `?lp=1` | 8-bit fallback path renders the same scene with slightly softer relief |
 | P13 | Near New Moon (`2026111018`) | Load | Thin crescent, faint bluish earthshine on the dark disc, Milky Way clearly visible |
 | P14 | Full Moon (`2026102612`) | Load | Flat, relief-free disc; fewer stars; navy sky; moon glade on the lake |
+| P15 | No WebGL2 (`--disable-webgl`) | Load, press **›** | Text mode: CSS placeholder ring and message beside (not over) the readout; caption and readout update; **Calendar** button disabled; no console errors |
+| P16 | CPU-only WebGL (SwiftShader) | Load, idle, press **›** | Veil shows progress and “No GPU found…”; lite profile; Moon within a few seconds; 0 draws while idle; About shows “CPU (software WebGL), lite profile” |
+| P17 | Windows GPU, fresh browser profile | Load | Text UI within a fraction of a second; veil “Compiling shaders…” while the page keeps animating; Moon arrives after the one-time compile |
 
 ## Sign-Off
 
 | Date | Tester | Build | Scenarios Passed | Notes |
 |---|---|---|---|---|
 | 2026-09-24 | Claude Opus (automated + Playwright) | working tree | A1–A7, P1–P14 | 26/26 `npm test`; interaction script covered P2, P3, P4, P6, P7 and keyboard **N** / **Shift+→** with zero console errors |
+| 2026-09-24 | Claude Opus (Playwright, forced GPU modes) | working tree | P15–P17 | 29/29 `npm test`. P15: text mode, no errors. P16: ready 3.3 s, 0 idle draws. P17: text UI 0.2 s, 57 fps during compile, Moon at 6.9 s |

@@ -28,17 +28,25 @@ const SHOTS = [
   { file: '06-feature-tooltip.png', q: 'date=2026101921', hover: { lat: 17.0, lon: 59.1 } },
   { file: '07-high-contrast.png', q: 'date=2026101921&hc=1' },
   { file: '08-mobile.png', q: 'date=2026111318', viewport: { width: 390, height: 844 }, dpr: 2 },
+  // no-GPU modes: a CPU rasteriser (lite profile) and WebGL switched off (text mode)
+  { file: '09-no-gpu-lite.png', q: 'date=2026101921', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-gpu'] },
+  { file: '10-no-webgl-text-mode.png', q: 'date=2026101921', args: ['--disable-gpu', '--disable-software-rasterizer', '--disable-webgl'], noGL: true },
 ];
+const GPU_ARGS = ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'];
 
 const server = spawn(process.execPath, [resolve(ROOT, 'scripts/serve.mjs'), String(PORT)], { stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 600));
 await mkdir(MEDIA, { recursive: true });
 
-const browser = await chromium.launch({
-  args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'],
-});
+const browsers = new Map();   // one browser per distinct set of flags
+const browserFor = async (args) => {
+  const key = args.join(' ');
+  if (!browsers.has(key)) browsers.set(key, await chromium.launch({ args }));
+  return browsers.get(key);
+};
 try {
   for (const s of SHOTS) {
+    const browser = await browserFor(s.args ?? GPU_ARGS);
     const context = await browser.newContext({
       viewport: s.viewport ?? { width: 1440, height: 900 },
       deviceScaleFactor: s.dpr ?? 1,
@@ -48,7 +56,7 @@ try {
     const page = await context.newPage();
     page.on('pageerror', (e) => console.error('pageerror:', e.message));
     await page.goto(`${BASE}?${s.q}`);
-    await page.waitForFunction(() => window.__selene?.ready, null, { timeout: 60000 });
+    if (!s.noGL) await page.waitForFunction(() => window.__selene?.ready, null, { timeout: 60000 });
     await page.waitForTimeout(1800); // fade-in and calendar paint
     if (s.hover) {
       const pos = await page.evaluate(({ lat, lon }) => {
@@ -66,6 +74,6 @@ try {
     await context.close();
   }
 } finally {
-  await browser.close();
+  for (const b of browsers.values()) await b.close();
   server.kill();
 }

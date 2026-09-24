@@ -2,7 +2,7 @@
 // surface progressively (a few tiles per frame), draws the night scene,
 // and renders mini Moons for the calendar with the same shader.
 
-import { createContext, createProgram, setUniforms, createTarget, drawFullscreen } from './gl.js';
+import { createContext, startProgram, programReady, finishProgram, setUniforms, createTarget, drawFullscreen } from './gl.js';
 import { BAKE_SURFACE, BAKE_SLOPES } from './shaders/bake.js';
 import { SCENE } from './shaders/scene.js';
 import { featureUniforms } from './features.js';
@@ -30,7 +30,35 @@ export function surfaceRotation(yaw, pitch) {
   return new Float32Array(m);
 }
 
+/**
+ * True if a WebGL renderer string names a CPU rasteriser rather than a GPU
+ * (Chrome's SwiftShader, Mesa's llvmpipe/softpipe, Windows' WARP adapter).
+ */
+export function looksSoftware(rendererName) {
+  return /swiftshader|llvmpipe|softpipe|software|basic render|warp|lavapipe/i.test(rendererName || '');
+}
+
+/** Detect a CPU-only WebGL context: renderer name, then the browser's own verdict. */
+function detectSoftware(gl) {
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const name = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+  if (looksSoftware(name)) return { software: true, name };
+  // A browser refuses a context with failIfMajorPerformanceCaveat when it
+  // would have to fall back to software rendering.
+  let caveat = false;
+  try {
+    const probe = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat: true });
+    caveat = !probe;
+    probe?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch { /* ignore */ }
+  return { software: caveat, name };
+}
+
 export class Renderer {
+  /**
+   * quality: 'auto' | 'high' | 'lite'. 'auto' becomes 'lite' on a CPU-only
+   * (software) WebGL context: a smaller surface texture, finer bake tiles.
+   */
   constructor(canvas, { quality = 'auto', lowPrecision = false } = {}) {
     const ctx = createContext(canvas);
     if (!ctx) throw new Error('WebGL2 unavailable');
@@ -39,17 +67,28 @@ export class Renderer {
     this.floatRT = ctx.floatRT && !lowPrecision;   // lowPrecision: test the 8-bit path
     const gl = this.gl;
 
+    const sw = detectSoftware(gl);
+    this.rendererName = sw.name;
+    this.software = sw.software;
+    this.lite = quality === 'lite' || (quality === 'auto' && sw.software);
+
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const mem = navigator.deviceMemory ?? 8;
     const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-    const big = quality === 'high' || (quality === 'auto' && maxTex >= 8192 && mem >= 4 && !mobile);
-    this.texW = big ? 4096 : 2048;
+    const big = quality === 'high' || (quality === 'auto' && !this.lite && maxTex >= 8192 && mem >= 4 && !mobile);
+    this.texW = this.lite ? 1024 : big ? 4096 : 2048;
     this.texH = this.texW / 2;
     this.encode = this.floatRT ? 0 : 1;
 
-    this.bakeProg = createProgram(gl, BAKE_SURFACE, 'bake-surface');
-    this.slopeProg = createProgram(gl, BAKE_SLOPES, 'bake-slopes');
-    this.sceneProg = createProgram(gl, SCENE, 'scene');
+    // Start all three programs at once; they compile in parallel and are
+    // collected by bakeStep() without blocking the page (KHR_parallel_shader_compile).
+    this.compileStarted = performance.now();
+    this.pending = [
+      startProgram(gl, BAKE_SURFACE, 'bake-surface'),
+      startProgram(gl, BAKE_SLOPES, 'bake-slopes'),
+      startProgram(gl, SCENE, 'scene'),
+    ];
+    this.phase = 'compile';
 
     const fmt1 = this.floatRT ? 'rgba16f' : 'rgba8';
     const fmt2 = this.floatRT ? 'rg16f' : 'rg8';
@@ -57,7 +96,8 @@ export class Renderer {
     this.t2 = createTarget(gl, this.texW, this.texH, fmt2, { mipmaps: true, wrapS: 'repeat' });
 
     this.tile = 0;
-    this.tileRows = this.texW >= 4096 ? 64 : 128;
+    // small tiles on a CPU rasteriser so each frame stays short and progress shows
+    this.tileRows = this.lite ? 16 : this.texW >= 4096 ? 64 : 128;
     this.tilesPerPass = this.texH / this.tileRows;
     this.baked = false;
     this.bakeStarted = performance.now();
@@ -67,6 +107,14 @@ export class Renderer {
   /** Advance the progressive bake; returns progress 0..1. */
   bakeStep(budgetMs = 10) {
     if (this.baked) return 1;
+    if (this.pending) {
+      if (!this.pending.every((p) => programReady(this.gl, p))) return 0;
+      [this.bakeProg, this.slopeProg, this.sceneProg] = this.pending.map((p) => finishProgram(this.gl, p));
+      this.pending = null;
+      this.compileMs = performance.now() - this.compileStarted;
+      this.phase = 'bake';
+      this.bakeStarted = performance.now();
+    }
     const gl = this.gl;
     const total = this.tilesPerPass * 2;
     const t0 = performance.now();
@@ -84,7 +132,7 @@ export class Renderer {
         gl.useProgram(p.prog);
         setUniforms(gl, p, {
           uSize: [this.texW, this.texH],
-          uMaxFreq: this.texW >= 4096 ? 110 : 60,
+          uMaxFreq: this.texW >= 4096 ? 110 : this.texW >= 2048 ? 60 : 30,
           uEncode: this.encode,
         });
         gl.uniform1i(p.loc.uMariaCount, fu.mariaCount);
@@ -116,6 +164,7 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, this.t2.tex);
       gl.generateMipmap(gl.TEXTURE_2D);
       this.baked = true;
+      this.phase = 'done';
       this.bakeMs = performance.now() - this.bakeStarted;
     }
     return this.tile / total;
@@ -138,6 +187,7 @@ export class Renderer {
    */
   render(s) {
     const gl = this.gl;
+    if (!this.sceneProg) return;   // still compiling
     const W = Math.round(s.width * s.dpr);
     const H = Math.round(s.height * s.dpr);
     if (this.canvas.width !== W || this.canvas.height !== H) {
@@ -178,6 +228,7 @@ export class Renderer {
    */
   renderMini(size, elongation, illuminated, { hc = false } = {}) {
     const gl = this.gl;
+    if (!this.sceneProg) return null;   // still compiling
     if (!this.miniTarget || this.miniTarget.w !== size) {
       this.miniTarget = createTarget(gl, size, size, 'rgba8');
       this.miniBuf = new Uint8Array(size * size * 4);

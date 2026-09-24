@@ -18,15 +18,10 @@ export function createContext(canvas, opts = {}) {
   return { gl, floatRT };
 }
 
-function compile(gl, type, src, label) {
+function shader(gl, type, src) {
   const sh = gl.createShader(type);
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(sh);
-    const numbered = src.split('\n').map((l, i) => `${String(i + 1).padStart(4)}: ${l}`).join('\n');
-    throw new Error(`${label} shader compile failed:\n${log}\n${numbered}`);
-  }
   return sh;
 }
 
@@ -37,13 +32,38 @@ void main() {
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-/** Link a full-screen fragment program and cache its uniform locations. */
-export function createProgram(gl, fragSrc, label) {
+/**
+ * Start compiling and linking a full-screen program WITHOUT waiting for it.
+ * Querying compile or link status blocks until the driver finishes. On
+ * Windows/D3D11 a first compile of the big shaders takes seconds, so
+ * programs are started together and polled with KHR_parallel_shader_compile.
+ */
+export function startProgram(gl, fragSrc, label) {
   const prog = gl.createProgram();
-  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, FULLSCREEN_VS, `${label} vertex`));
-  gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, fragSrc, `${label} fragment`));
+  const vs = shader(gl, gl.VERTEX_SHADER, FULLSCREEN_VS);
+  const fs = shader(gl, gl.FRAGMENT_SHADER, fragSrc);
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
   gl.linkProgram(prog);
+  return { prog, vs, fs, fragSrc, label };
+}
+
+/** True once a started program can be queried without blocking. */
+export function programReady(gl, pending) {
+  const ext = gl.getExtension('KHR_parallel_shader_compile');
+  return !ext || gl.getProgramParameter(pending.prog, ext.COMPLETION_STATUS_KHR);
+}
+
+/** Check a started program for errors and cache its uniform locations. */
+export function finishProgram(gl, pending) {
+  const { prog, vs, fs, fragSrc, label } = pending;
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    for (const [sh, src, kind] of [[vs, FULLSCREEN_VS, 'vertex'], [fs, fragSrc, 'fragment']]) {
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        const numbered = src.split('\n').map((l, i) => `${String(i + 1).padStart(4)}: ${l}`).join('\n');
+        throw new Error(`${label} ${kind} shader compile failed:\n${gl.getShaderInfoLog(sh)}\n${numbered}`);
+      }
+    }
     throw new Error(`${label} link failed: ${gl.getProgramInfoLog(prog)}`);
   }
   const loc = {};
@@ -54,6 +74,11 @@ export function createProgram(gl, fragSrc, label) {
     loc[name] = gl.getUniformLocation(prog, info.name);
   }
   return { prog, loc };
+}
+
+/** Compile, link and finish in one blocking call. */
+export function createProgram(gl, fragSrc, label) {
+  return finishProgram(gl, startProgram(gl, fragSrc, label));
 }
 
 /** Set uniforms by name; unknown names (optimised out) are ignored. */

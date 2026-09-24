@@ -118,6 +118,25 @@ flowchart TD
   query `featureAt()` from the same table the bake used.
 - Adaptive resolution lowers the drawing-buffer scale on slow GPUs, with
   a ceiling so it doesn’t oscillate.
+- Shaders compile **asynchronously and in parallel**
+  (`KHR_parallel_shader_compile`). `Renderer.bakeStep()` first waits for
+  the programs, then bakes, so the page stays interactive on slow
+  drivers.
+- **Render on demand**: when shader time is frozen (lite profile or
+  reduced motion), a frame is drawn only if its inputs changed (time,
+  drag, layout, contrast, resolution). An idle page costs nothing.
+
+## Degradation ladder
+
+```mermaid
+flowchart TD
+    A["getContext webgl2"] -->|null| T["Text mode<br/>engine + caption + scrubber"]
+    A -->|ok| B{"Software renderer?<br/>name or perf-caveat probe"}
+    B -->|yes| L["Lite profile<br/>1024 surface · half res · draw on change"]
+    B -->|no| F["Full profile<br/>4096 surface · twinkle · ripples"]
+    F --> R["Adaptive resolution<br/>down to 50%"]
+    L --> R2["Adaptive resolution<br/>down to 30%"]
+```
 
 ## Performance (RTX 4060 Laptop, ANGLE/D3D11)
 
@@ -128,6 +147,10 @@ flowchart TD
 | 2560×1440 @1× | ≈ 8.5 ms |
 | Mini Moon (68 px) | ≈ 1 ms each |
 | Surface bake (4096²/2) | < 0.5 s, spread over frames |
+| First shader compile, Windows D3D11 | ~5.4 s per big program, run in parallel; cached afterwards |
+
+Without a GPU (SwiftShader, lite profile): Moon ready in ~3 s, zero draws
+while idle. See [`notes.md`](./notes.md#machines-without-a-gpu).
 
 ## See also
 

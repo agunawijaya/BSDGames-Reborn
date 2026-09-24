@@ -51,8 +51,44 @@ binary’s output. Never hand-edit it.
 - Accuracy is pom’s: Duffett-Smith’s simplified theory puts phase
   instants within a few hours of modern ephemerides (for example,
   pom’s Full Moon is 26 Oct 2026 ≈ 11:14 WIB).
-- Requires WebGL2. Without it, a message shows and the text UI still
-  works.
+- Works best with a GPU, degrades without one. Details are in the next
+  section.
+
+## Machines without a GPU
+
+Measured on 2026-09-24 with Playwright/Chromium on the development
+laptop, forcing each mode with Chromium flags.
+
+| Mode | How it is detected | Behaviour | Measured |
+|---|---|---|---|
+| GPU | default | Full profile | 6 ms/frame at 1440×900 |
+| CPU WebGL (SwiftShader, llvmpipe, softpipe, lavapipe, Microsoft Basic Render Driver) | `looksSoftware()` on the unmasked renderer name, then a `failIfMajorPerformanceCaveat` probe | **Lite profile**: 1024×512 surface, 16-row bake tiles, half-resolution drawing buffer (adaptive down to 30%), shader time frozen (no twinkle or ripples), **frames drawn only when state changes** | Before: 28 s to first Moon, 5 fps continuous. After: ~3 s to first Moon, 0 draws while idle, ~1 s per interaction |
+| No WebGL2 | `getContext('webgl2')` returns null | **Text mode**: readout, caption, scrubber and inputs work; CSS placeholder ring; calendar button disabled | Instant |
+
+Flags used to reproduce: `--use-angle=swiftshader --enable-unsafe-swiftshader --disable-gpu`
+(CPU) and `--disable-gpu --disable-software-rasterizer --disable-webgl`
+(no WebGL). `npm run shots` captures both (`media/09`, `media/10`).
+`?q=lite` forces the lite profile on any machine.
+
+### First visit on Windows: shader compilation
+
+Chrome and Edge on Windows translate WebGL through ANGLE to Direct3D 11,
+whose HLSL compiler is slow on large, loop-heavy shaders. The first
+compile of the bake and scene programs took **~5.4 s each** on the dev
+laptop. OpenGL took 0.5–0.8 s and Vulkan 0.1 s. Browsers cache compiled
+shaders on disk, so later visits are fast (<0.5 s).
+
+The programs are started together and polled with
+`KHR_parallel_shader_compile`, so they compile concurrently and the page
+never freezes: the text UI appears in ~0.2 s, the veil says “Compiling
+shaders…”, and the Moon arrives after ~6–7 s (previously ~11 s with
+the page frozen).
+
+Separately, the Google Fonts stylesheet used to be render-blocking: a
+fresh browser waited on the font download before running any script,
+and an offline one would have waited for the request to time out. It
+now loads with `media="print"` + `onload`, and the system fallbacks
+render immediately.
 
 ## Performance notes
 

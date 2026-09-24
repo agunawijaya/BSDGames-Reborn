@@ -69,6 +69,11 @@ ports/fancy-web/
   visual change done.
 - The surface is seeded. Any change to the bake shaders changes every
   screenshot, so regenerate `media/` in the same change.
+- **Never assume a GPU.** Check the three modes in
+  `docs/notes.md#machines-without-a-gpu` (GPU, `?q=lite` or SwiftShader,
+  WebGL disabled). Anything that reads the renderer must tolerate
+  `renderer === null` (text mode) and an unfinished compile
+  (`renderer.sceneProg` is null until `bakeStep()` collects it).
 
 ## See also
 

@@ -126,13 +126,14 @@ Useful URL parameters: `?date=<pom argument>` (for example
 ## Tests
 
 ```bash
-npm test     # node --test "tests/*.test.js"   (26 tests, no dependencies)
+npm test     # node --test "tests/*.test.js"   (29 tests, no dependencies)
 ```
 
 - `engine.test.js`: golden byte-for-byte comparison against the real
   binary, the canonical scenarios, parser edge cases, printf rounding,
   and tense.
 - `events.test.js`: principal-phase search and month grids.
+- `renderer.test.js`: software-renderer detection and the Sun direction.
 - `zero-raster.test.js`: enforces ADR-002 over `src/` and `index.html`.
 
 See [`docs/test-scenarios.md`](./docs/test-scenarios.md) for the
@@ -151,12 +152,29 @@ against the real binary.
   **slope** pass (normals), and one full-screen **scene** shader, which
   also draws the calendar’s mini Moons.
 - Fonts: Cormorant Garamond, Inter and JetBrains Mono (Google Fonts,
-  vector glyphs), with system fallbacks.
-- **Targets:** any browser with WebGL2 and `EXT_color_buffer_float`
-  (it falls back to 8-bit targets without it). Desktop and mobile.
-  Adaptive resolution kicks in on slow GPUs.
+  vector glyphs), loaded without blocking and with system fallbacks, so
+  the page also works offline.
+- **Targets:** any browser with WebGL2, desktop and mobile. See the next
+  section for what happens without a GPU.
 
 How it works, with diagrams: [`docs/architecture.md`](./docs/architecture.md).
+
+## Requirements & running without a GPU
+
+*Selene* works best with a GPU, but it never needs one to answer the
+question. The page picks one of three modes on its own. The **About**
+dialog shows which mode is active and the name of the renderer.
+
+| Machine | What you get | Measured (1440×900) |
+|---|---|---|
+| **GPU** (any WebGL2 browser) | Full scene: 4096×2048 surface, twinkle, rippling lake. Resolution adapts on slow GPUs. | RTX 4060: 6 ms/frame. First visit on Windows (D3D11): ~6–7 s of “Compiling shaders…” while the page stays responsive; later visits use the browser’s shader cache (<0.5 s). |
+| **No GPU, WebGL2 in software** (SwiftShader, llvmpipe, Microsoft Basic Render Driver; VMs, remote desktops, blocklisted drivers) | **Lite profile**, detected automatically. A 1024×512 surface, half resolution, frozen twinkle and ripples, and frames drawn only when something changes, so it costs nothing at rest. The same Moon and the same answers. | SwiftShader: ready in ~3 s, 0 draws while idle, about a second per interaction. |
+| **No WebGL2 at all** | **Text mode.** The phase name, statistics, next event, scrubber, date and `pom` inputs and the BSD caption all work; the Moon is a dashed placeholder and the calendar is disabled (its mini Moons need the shader). | Instant. |
+
+<p align="center"><img src="./media/09-no-gpu-lite.png" alt="Lite profile on a CPU-only renderer" width="45%"> <img src="./media/10-no-webgl-text-mode.png" alt="Text mode without WebGL2" width="45%"><br><em>Left: the lite profile on SwiftShader (no GPU). Right: text mode with WebGL2 disabled.</em></p>
+
+To force a profile for testing, use `?q=lite`, `?q=high` or `?lp=1`
+(8-bit render targets).
 
 ## Status
 

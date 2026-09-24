@@ -17,7 +17,7 @@ export function paintMoon(renderer, canvas, t, cssSize, { hc = false } = {}) {
   if (canvas.width !== size) { canvas.width = size; canvas.height = size; }
   const s = phaseState(t);
   const img = renderer.renderMini(size, s.elongation, s.illuminated, { hc });
-  canvas.getContext('2d').putImageData(img, 0, 0);
+  if (img) canvas.getContext('2d').putImageData(img, 0, 0);
 }
 
 export class Calendar {

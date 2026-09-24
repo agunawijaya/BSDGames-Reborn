@@ -41,6 +41,7 @@
 | 20 | Out-of-range dates | 🟨 | The original’s `mktime == -1` check exists, but JS dates span ±275,000 years, so every 10-digit input succeeds, as with 64-bit glibc (the golden set includes years 0001 and 9999). |
 | 21 | `setregid` privilege drop | 🟥 | Meaningless in a browser. Nothing is setgid. |
 | 22 | Output direction (stdout vs stderr) | 🟨 | Kept in `runPom()` (`stdout`, `stderr`, `code`). The UI shows errors in amber in the caption slot. |
+| 23 | Runs anywhere pom ran | 🟦 | The original needed only a C compiler. *Selene* degrades in three steps: GPU (full scene), CPU-only WebGL (automatic lite profile) and no WebGL (text mode, where pom still answers). |
 
 No deliberate deviation from the canonical [`spec.md`](../../../docs/spec.md)
 mechanics exists, so no spec-deviation ADR is needed. The two ADRs cover
@@ -147,7 +148,35 @@ height steps.
 - **8-digit dates.** See the narrative above: in pom, an 8-digit
   argument is always `yymmddHH`.
 
-### 5. What was deliberately *not* done
+### 5. “What if there is no GPU?”
+
+This was asked after release, and it was the right question, because
+the port had only been tested on one fast GPU. Forcing the other cases
+in Chromium showed three problems:
+
+- **No WebGL2:** the text UI worked, but the fallback message was
+  centred on top of the phase name, and **Calendar** opened an empty
+  drawer. → The message now sits where the Moon would hang, beside a
+  CSS ring, and the calendar button is disabled with an explanation.
+- **CPU-only WebGL (SwiftShader):** everything rendered correctly, but
+  took **28 s** behind a veil that said nothing, then ran at **5 fps**.
+  → A software renderer is detected (renderer name, then a
+  `failIfMajorPerformanceCaveat` probe) and gets a lite profile: a
+  1024×512 surface, half resolution, frozen twinkle and ripples, and
+  **render-on-demand**, where identical frames are skipped. The Moon now
+  appears in ~3 s, costs nothing at rest, and the veil shows a
+  percentage and says why.
+- **A surprise on the GPU:** a fresh Windows browser took ~11 s with the
+  page frozen. The bake was 30 ms; the culprit was D3D11’s shader
+  compiler, ~5.4 s per large program, plus a render-blocking font
+  stylesheet. → Programs now compile in parallel via
+  `KHR_parallel_shader_compile` (~6–7 s total, the page stays live), and
+  the fonts load non-blocking.
+
+The lesson: “works on my GPU” is not a test. The three modes are now
+scenarios P15–P17 and screenshots `media/09`/`10`.
+
+### 6. What was deliberately *not* done
 
 - No ephemeris of Moon altitude or azimuth. pom has no observer location,
   so the Moon hangs where the composition wants it. Inventing a position

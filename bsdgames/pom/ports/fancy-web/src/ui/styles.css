@@ -66,6 +66,9 @@ svg .fill { fill: currentColor; stroke: none; }
   animation: breathe 2.4s ease-in-out infinite;
 }
 #veil.gone { opacity: 0; }
+#veil { grid-auto-flow: row; align-content: center; gap: 10px; }
+#veil small { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); text-align: center; }
+#veil small[hidden] { display: none; }
 @keyframes breathe { 50% { opacity: 0.45; } }
 
 /* ------------------------------------------------------------------ brand */
@@ -121,6 +124,7 @@ svg .fill { fill: currentColor; stroke: none; }
 }
 .icon-btn:hover, .pill:hover, .step:hover { background: rgba(30, 38, 58, 0.62); border-color: var(--line-2); color: var(--ink); }
 .icon-btn:active, .pill:active, .step:active { transform: translateY(1px); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .icon-btn[aria-pressed='true'], .pill[aria-pressed='true'] {
   background: rgba(232, 214, 166, 0.14);
   border-color: rgba(232, 214, 166, 0.5);
@@ -528,14 +532,27 @@ kbd { padding: 1px 6px; border: 1px solid var(--line-2); border-radius: 5px; fon
 .nogl {
   position: fixed;
   inset: 0;
+  z-index: 0;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  place-content: center end;
+  justify-items: center;
+  gap: 22px;
+  padding: 0 10vw 18vh 0;
   text-align: center;
   font-family: var(--serif);
-  font-size: 22px;
+  font-size: 19px;
+  line-height: 1.45;
   color: var(--ink-2);
-  background: radial-gradient(circle at 60% 35%, #1b2233 0, #05070d 60%);
+  background: radial-gradient(circle at 68% 36%, #1b2233 0, #05070d 58%);
+}
+.nogl p { margin: 0; max-width: 340px; }
+/* a plain CSS ring where the Moon would hang: still no images */
+.nogl-moon {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-2);
+  background: radial-gradient(circle at 35% 35%, rgba(233, 237, 245, 0.08), transparent 70%);
 }
 .nogl[hidden] { display: none; }
 
@@ -593,4 +610,6 @@ body.still *, body.still *::before, body.still *::after { animation-duration: 0.
   .drawer { top: 64px; right: 10px; left: 10px; bottom: 10px; width: auto; }
   .cal-day canvas { width: 30px; height: 30px; }
   .keys { grid-template-columns: 1fr; }
+  .nogl { place-content: start center; padding: 18vh 24px 0; }
+  .nogl-moon { width: 120px; height: 120px; }
 }
