@@ -94,15 +94,16 @@
 
 **Why:** Play-testers who had never played casino solitaire found the original doc too terse. The new doc teaches the game before listing the command reference.
 
-## 2026-09-22 — Whole-pile drag visual feedback
+## 2026-09-22 — Whole-pile drag visual feedback and any-card grab
 
 **Changed:**
 - `Pile` now tracks an `isDragging` state while its top card is being dragged.
 - All cards in a dragged pile receive the `.dragging` class, lifting them slightly (`translateY(-8px)`) and adding a larger shadow.
 - The `.pile-slot` itself gets a gold border during drag so the source pile is clearly highlighted.
 - `Card` now accepts an `onDragEnd` prop so the visual state resets reliably.
+- **Any face-up card in a pile can now start a drag** — not only the top card. The underlying move is still the whole pile, matching Canfield rules, but the grab handle feels like Solitaire Windows.
 
-**Why:** Play-testers expected Klondike-style sub-pile dragging. Canfield moves whole piles, so the fix is visual feedback that communicates “the entire pile is moving,” not just the top card.
+**Why:** Play-testers expected Klondike-style grab-from-anywhere dragging. Canfield still moves whole piles, but the UX now lets you grab any exposed card as the handle while visually showing that the entire pile moves.
 
 ## 2026-09-22 — Global drag-and-drop, flying-card animation, and URL seed fix
 

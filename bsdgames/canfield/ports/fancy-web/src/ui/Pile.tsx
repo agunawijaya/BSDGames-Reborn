@@ -74,6 +74,7 @@ export function Pile({
         const left = direction === 'horizontal' ? i * offset : 0
         const top = direction === 'vertical' ? i * offset : 0
         const isTop = i === pile.length - 1
+        const canDrag = card.faceUp && draggable
         return (
           <Card
             key={`${card.suit}-${card.rank}-${i}`}
@@ -85,9 +86,9 @@ export function Pile({
               zIndex: i,
             }}
             onClick={isTop ? onCardClick : undefined}
-            draggable={isTop ? draggable : false}
-            onDragStart={isTop ? handleDragStart : undefined}
-            onDragEnd={isTop ? handleDragEnd : undefined}
+            draggable={canDrag}
+            onDragStart={canDrag ? handleDragStart : undefined}
+            onDragEnd={canDrag ? handleDragEnd : undefined}
           />
         )
       })}
