@@ -12,7 +12,7 @@
 - **Genre:** Single-player card game / solitaire.
 - **Players:** 1 (no AI opponent — solitaire).
 - **Complexity:** S (~1–3 days work).
-- **Status:** Documentation phase.
+- **Status:** Released — canonical docs complete; the `fancy-web` port is released (see [`ports/fancy-web/`](./ports/fancy-web/)).
 
 ## What lives here
 

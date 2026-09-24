@@ -8,6 +8,7 @@ export interface PileProps {
   offset?: number
   direction?: 'vertical' | 'horizontal'
   onCardClick?: () => void
+  onCardDoubleClick?: () => void
   emptyText?: string
   testId?: string
   cheatGlow?: 'source' | 'target'
@@ -27,6 +28,7 @@ export function Pile({
   offset = 18,
   direction = 'vertical',
   onCardClick,
+  onCardDoubleClick,
   emptyText,
   testId,
   cheatGlow,
@@ -118,6 +120,7 @@ export function Pile({
               zIndex: i,
             }}
             onClick={isTop ? onCardClick : undefined}
+            onDoubleClick={isTop ? onCardDoubleClick : undefined}
             draggable={canDrag}
             onDragStart={canDrag ? handleDragStart : undefined}
             onDragEnd={canDrag ? handleDragEnd : undefined}

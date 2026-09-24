@@ -14,6 +14,7 @@ export interface UseGameReturn {
   inspect: () => void
   commit: () => void
   newGame: () => void
+  resetBankroll: () => void
   quit: () => void
 }
 
@@ -33,7 +34,9 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
     }
     const next = applyCommand(current, command)
     if (next !== current) {
-      setHistory(prev => [...prev, current])
+      // A phase change is a purchase (e.g. the auto-inspect on the first move);
+      // purchases cannot be taken back.
+      setHistory(prev => (next.phase !== current.phase ? [] : [...prev, current]))
     }
     setState(next)
     stateRef.current = next
@@ -64,13 +67,17 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
   }, [])
 
   const inspect = useCallback(() => {
-    setHistory(prev => [...prev, stateRef.current])
-    setState(prev => advancePhase(prev, 'inspect'))
+    const next = advancePhase(stateRef.current, 'inspect')
+    setHistory([])
+    setState(next)
+    stateRef.current = next
   }, [])
 
   const commit = useCallback(() => {
-    setHistory(prev => [...prev, stateRef.current])
-    setState(prev => advancePhase(prev, 'commit'))
+    const next = advancePhase(stateRef.current, 'commit')
+    setHistory([])
+    setState(next)
+    stateRef.current = next
   }, [])
 
   const newGame = useCallback(() => {
@@ -81,6 +88,14 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
     setHistory([])
     setState(carried)
     stateRef.current = carried
+  }, [])
+
+  // Start over with a fresh bankroll: a new deal whose only balance is the $13 hand.
+  const resetBankroll = useCallback(() => {
+    const next = deal(stateRef.current.seed + 1)
+    setHistory([])
+    setState(next)
+    stateRef.current = next
   }, [])
 
   const quit = useCallback(() => {
@@ -97,6 +112,7 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
     inspect,
     commit,
     newGame,
+    resetBankroll,
     quit,
   }
 }

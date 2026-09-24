@@ -15,6 +15,8 @@ describe('cfscores storage', () => {
       bankroll: -47,
       seed: 12345,
       countedCards: Array(52).fill(false),
+      seenCards: Array(52).fill(false),
+      countingOn: false,
       totalInfoCost: 5,
       handRuns: 1,
       timesThru: 0,

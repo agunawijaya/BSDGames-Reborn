@@ -1,20 +1,20 @@
 # `canfield` — `fancy-web` port
 
-> A browser reimplementation of BSDGames `canfield` — the 19th-century casino solitaire — rendered as a **Victorian Saratoga Springs card table**. Core mechanics and betting economics are preserved, with modernized click-to-move play, a visual cheat coach, chip animations, an account book, and optional casino ambience.
+> A browser reimplementation of BSDGames `canfield` — the 19th-century casino solitaire — rendered as a **Victorian Saratoga Springs card table**. Rules and betting economics follow `canfield.c` (rules, charges, credits and card counting were checked against the C source); on top come click / double-click / drag play, a visual cheat coach, a victory animation, an account book, and optional casino ambience.
 
 ## Status
 
-- **Status:** 🟢 Released 2026-09-22 (Universal Port Contract baseline satisfied; cheat mode added).
+- **Status:** 🟢 Released 2026-09-22; rules/economics hardened and finalized 2026-09-24.
 - **Author:** Agun Wijaya
 - **License:** MIT (root default)
 - **Live URL:** *(pending deploy)*
 
 **Verified**
-- ✅ 44/44 Vitest unit tests pass.
-- ✅ 6/6 Playwright e2e tests pass (click-to-select + cheat mode scenarios).
+- ✅ 57/57 Vitest unit tests pass (rules, economics, counting, storage, cheat helpers).
+- ✅ 15/15 Playwright e2e tests pass (click / double-click / drag, toggles, reset, win animation, phone viewport).
 - ✅ TypeScript strict clean.
 - ✅ Production build clean.
-- ✅ 5 port-specific screenshots captured.
+- ✅ 6 port-specific screenshots captured (`npm run build`, then `node scripts/capture-screenshots.mjs`).
 
 ## Screenshots
 
@@ -26,13 +26,13 @@
 |:---:|:---:|
 | ![Mid-game](./media/03-midgame.png) | ![Help panel](./media/04-help.png) |
 
-| Cheat mode |
-|:---:|
-| ![Cheat mode](./media/05-cheat-mode.png) |
+| Cheat mode | Victory |
+|:---:|:---:|
+| ![Cheat mode](./media/05-cheat-mode.png) | ![Victory animation](./media/06-victory.png) |
 
 ## Pitch
 
-BSDGames `canfield` was already unique among solitaire games: you played against the casino, paying for the deck, for time spent thinking, for hints, and for card-counting information. This fancy-web port keeps that tension and wraps it in a tactile casino table — SVG cards you can click to select and move, animated chips that bounce when you earn $5 per foundation card, and an account book that replaces the original `cfscores` companion.
+BSDGames `canfield` was already unique among solitaire games: you played against the casino, paying for the deck, for time spent thinking, for hints, and for card-counting information. This fancy-web port keeps that tension and wraps it in a tactile casino table — cards you can double-click, drag or select-and-place, a bouncing-cards victory, and an account book that replaces the original `cfscores` companion.
 
 For the game's history and rules see canonical [`../../docs/about.md`](../../docs/about.md).
 
@@ -67,7 +67,7 @@ npm run typecheck   # tsc --noEmit
 1. Start the preview server: `npm run preview -- --port 4173`
 2. In another terminal: `npm run test:e2e`
 
-The e2e suite covers click-to-select interactions with a real Chromium browser.
+The e2e suite drives a real Chromium browser: click / double-click / drag moves, toggles, reset, the victory animation and a phone-width viewport.
 
 ## Play
 
@@ -77,25 +77,30 @@ The e2e suite covers click-to-select interactions with a real Chromium browser.
 
 | Input | Action |
 |---|---|
-| Click card / pile | Select source |
-| Click destination pile | Move selected card/pile |
+| Click card / pile, then click destination | Select a source, then move it |
+| Double-click a playable top card | Send it to a foundation |
+| Drag and drop | Move a card or a whole tableau pile |
 | Click "Deal Hand" button | Draw next 3 cards to talon (`ht`) — only after Commit |
 | Type `s1`, `tf`, `ht`, etc. + Enter | Execute original command grammar |
-| Toggle "Cheat" | Show legal moves as glowing arrows; highlight Inspect/Commit when recommended |
-| `u` / Ctrl+Z | Undo last move (penalty $5) |
-| `n` | New game |
+| **Cheat: ON/OFF** | Show legal moves as arrows and glows; highlight Inspect/Commit when recommended |
+| **Count: ON/OFF** (`c`) | Card counting: `$1` per newly visible hand/talon card, `$34` max |
+| **Undo ($5)**, `u` / Ctrl+Z | Take back the last move (purchases cannot be undone) |
+| **New Game** / `n` | New deal, bankroll carries over |
+| **Reset Bankroll** | New player: bankroll and Account Book cleared |
 | `?` | Toggle help |
+
+The first legal move made in the Buy phase pays the `$13` Inspect automatically, exactly as in the original. Shortcut keys are ignored while the command bar has focus.
 
 Rules: see canonical [`../../docs/how-to-play.md`](../../docs/how-to-play.md).
 
 ## What makes this port different
 
 - vs `../classic-web/` *(pending)*: this port renders a full graphical casino table with click-to-move cards, chip animations, and sound. `classic-web` will reproduce the original curses ASCII-card layout faithfully.
-- vs generic web solitaire: the **betting layer** is central, not cosmetic. Every move is charged or credited exactly as the original `canfield(6)` meter.
+- vs generic web solitaire: the **betting layer** is central, not cosmetic. The money is charged and credited as in the original `canfield(6)` meter.
 
 ## Spec compliance
 
-This port implements the core mechanics in canonical [`../../docs/spec.md`](../../docs/spec.md) — 52-card deck, base-card foundation rule, tableau build by alternating color, foundation wrap-around, three-card talon deal, loss condition, and the betting economic outcome. The *timing* of some charges is modernized (explicit phase buttons, lazy foundation credit at Commit, `$5` undo penalty). Deliberate deviations are documented as port-level ADRs under [`docs/decisions/`](docs/decisions/).
+This port implements canonical [`../../docs/spec.md`](../../docs/spec.md): 52-card deck, base-card foundation rule with base-rank auto-move, tableau build by alternating color, the empty-space rules (stock first, talon after the stock is gone, tableau piles never), foundation wrap-around, talon auto-refill and same-order hand recycling, the fourth-fruitless-pass loss, the full betting economy (`$13 / $13 / $26 / $5 / $1 / $1 per min`, credit `$5` per foundation card from Commit on, a full win = `+$208`) and `Cflag` card counting. Deliberate deviations (explicit phase buttons, Undo, persistent bankroll, `localStorage` `cfscores`, interaction niceties) are documented as port-level ADRs under [`docs/decisions/`](docs/decisions/).
 
 ## Attribution
 
@@ -112,5 +117,5 @@ This port implements the core mechanics in canonical [`../../docs/spec.md`](../.
   - [`002-cheat-mode.md`](docs/decisions/002-cheat-mode.md) — Visual cheat coach rationale.
   - [`003-card-rendering-css.md`](docs/decisions/003-card-rendering-css.md) — CSS DOM cards supersede SVG-only constraint.
   - [`004-betting-phase-and-credit-model.md`](docs/decisions/004-betting-phase-and-credit-model.md) — Explicit Buy/Inspect/Commit phases and lazy foundation credit.
-  - [`005-quality-of-life-deviations.md`](docs/decisions/005-quality-of-life-deviations.md) — Undo, persistent bankroll, counting grid, `localStorage` `cfscores`.
+  - [`005-quality-of-life-deviations.md`](docs/decisions/005-quality-of-life-deviations.md) — Undo, persistent bankroll, exact card counting, `localStorage` `cfscores`, Reset Bankroll, interaction additions.
 - **Port-level test scenarios** — [`docs/test-scenarios.md`](docs/test-scenarios.md).

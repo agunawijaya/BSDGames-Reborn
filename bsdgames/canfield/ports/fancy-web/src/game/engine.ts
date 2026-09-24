@@ -31,6 +31,8 @@ export function createEmptyState(seed: number): GameState {
     bankroll: 0,
     seed,
     countedCards: Array(52).fill(false),
+    seenCards: Array(52).fill(false),
+    countingOn: false,
     totalInfoCost: 0,
     handRuns: 0,
     timesThru: 0,
@@ -73,16 +75,19 @@ export function deal(seed = Date.now()): GameState {
     state.hand.push({ ...shuffled[idx++], faceUp: false })
   }
 
-  // The first 18 dealt cards are considered already paid for the counting feature.
+  // canfield.c initgame(): the first 18 dealt cards (4 tableau, 13 stock, base
+  // card) start out visible and already paid for; only the 34 hand cards can
+  // ever cost $1 each (hence the $34 maximum).
   const counted = Array(52).fill(false)
   for (let i = 0; i < 18; i++) {
     counted[cardIndex(shuffled[i])] = true
   }
   state.countedCards = counted
+  state.seenCards = [...counted]
 
   const afterDeal = chargeInitialDeal(state)
   const withAuto = autoMoveBaseRankCards(revealTopCards(afterDeal))
-  return appendMoveHistory(withAuto, `deal seed=${seed}`)
+  return appendMoveHistory(markSeen(withAuto), `deal seed=${seed}`)
 }
 
 function revealTopCards(state: GameState): GameState {
@@ -363,35 +368,51 @@ function autoRefillTalon(state: GameState): GameState {
   return state
 }
 
-function applyToggleCounting(state: GameState): GameState {
-  // Counting reveals all face-up cards the player hasn't paid for yet.
-  const allPiles = [
-    ...state.foundations,
-    ...state.tableaus,
-    state.stock,
-    state.talon,
-  ]
-  const newlySeen: Card[] = []
-  for (const pile of allPiles) {
+// A card is "seen" once it has been face-up (canfield.c `visible`). It stays
+// seen when covered or when the talon is turned back into the hand.
+function markSeen(state: GameState): GameState {
+  let seen: boolean[] | null = null
+  const piles = [...state.foundations, ...state.tableaus, state.stock, state.talon, state.hand]
+  for (const pile of piles) {
     for (const card of pile) {
       if (card.faceUp) {
         const i = cardIndex(card)
-        if (!state.countedCards[i]) {
-          newlySeen.push(card)
+        if (!state.seenCards[i]) {
+          seen = seen ?? [...state.seenCards]
+          seen[i] = true
         }
       }
     }
   }
+  return seen ? { ...state, seenCards: seen } : state
+}
 
-  const newCounted = [...state.countedCards]
-  for (const card of newlySeen) {
-    newCounted[cardIndex(card)] = true
+// canfield.c showstat()/usedtalon()/movetotalon(): while counting is on, every
+// hand or talon card that has become visible and is not yet paid costs $1
+// (capped at $34 per game). Cards that became visible while counting was off
+// are billed the moment it is switched on; nothing is ever billed twice.
+function settleCounting(state: GameState): GameState {
+  if (!state.countingOn) return state
+  let paid: boolean[] | null = null
+  let newlyPaid = 0
+  for (const card of [...state.talon, ...state.hand]) {
+    const i = cardIndex(card)
+    if (state.seenCards[i] && !state.countedCards[i] && !(paid && paid[i])) {
+      paid = paid ?? [...state.countedCards]
+      paid[i] = true
+      newlyPaid++
+    }
   }
+  if (!paid) return state
+  return chargeInformation({ ...state, countedCards: paid }, newlyPaid)
+}
 
-  return chargeInformation(
-    { ...state, countedCards: newCounted },
-    newlySeen.length
-  )
+function applyToggleCounting(state: GameState): GameState {
+  return settleCounting({ ...state, countingOn: !state.countingOn })
+}
+
+function foundationCount(state: GameState): number {
+  return state.foundations.reduce((sum, pile) => sum + pile.length, 0)
 }
 
 function checkWin(state: GameState): GameState {
@@ -412,7 +433,14 @@ export function applyCommand(state: GameState, command: Command): GameState {
 
   const now = Date.now()
   const charged = chargeThinkingTime(state, now)
-  let next = charged
+  // As in canfield.c (movecard, ~1478-1499): the first board move made in the Buy
+  // phase automatically pays the $13 inspection and then executes. If the move
+  // turns out to be a no-op the whole command is rejected and nothing is charged.
+  const isBoardMove = command.type !== 'toggle-counting' && command.type !== 'hand-to-talon'
+  const start = state.phase === 'buy' && isBoardMove
+    ? chargeInspection({ ...charged, phase: 'inspect' })
+    : charged
+  let next = start
 
   switch (command.type) {
     case 'stock-to-tableau': {
@@ -461,15 +489,23 @@ export function applyCommand(state: GameState, command: Command): GameState {
 
   // If the move did not actually change the board, refund the thinking-time charge.
   const isMetaMove = ['toggle-counting'].includes(command.type)
-  if (next === charged && !isMetaMove) return state
+  if (next === start && !isMetaMove) return state
 
-  const boardMoved = next !== charged
+  const boardMoved = next !== start
   if (boardMoved) {
     next = { ...next, timesThru: 0 }
   }
 
   next = autoRefillTalon(next)
   next = autoMoveBaseRankCards(next)
+  next = settleCounting(markSeen(next))
+  // Once the game is bought (Commit) every card that reaches a foundation earns
+  // $5, including cards auto-placed by the base-rank rule. Cards already up when
+  // the player commits are credited in advancePhase().
+  if (start.phase === 'commit') {
+    const gained = foundationCount(next) - foundationCount(start)
+    if (gained > 0) next = { ...next, bankroll: next.bankroll + gained * VALUE_PER_CARD_UP }
+  }
   next = checkWin(next)
   return appendMoveHistory(next, command.type)
 }
@@ -495,16 +531,11 @@ export function advancePhase(state: GameState, target: 'inspect' | 'commit'): Ga
 export function legalCommands(state: GameState): Command[] {
   const commands: Command[] = []
 
-  // Buy phase: no board moves are allowed until the player inspects or commits.
-  if (state.phase === 'buy') {
-    commands.push({ type: 'betting-info' })
-    commands.push({ type: 'toggle-counting' })
-    commands.push({ type: 'quit' })
-    commands.push({ type: 'new-game' })
-    return commands
-  }
+  // Board moves are allowed in every phase. In Buy the first one auto-pays
+  // the inspection (see applyCommand); only Hand -> Talon needs Commit.
+  if (state.phase === 'finished') return commands
 
-  // Foundation moves are allowed in Inspect and Commit.
+  // Foundation moves.
   if (state.stock.length > 0) {
     commands.push({ type: 'stock-to-foundation' })
   }
@@ -517,7 +548,7 @@ export function legalCommands(state: GameState): Command[] {
     }
   }
 
-  // Tableau-building moves are allowed in Inspect and Commit.
+  // Tableau-building moves.
   if (state.stock.length > 0) {
     for (let to = 0; to < TABLEAU_COUNT; to++) {
       commands.push({ type: 'stock-to-tableau', to })
@@ -596,7 +627,7 @@ function scoreForHint(command: Command, state: GameState): number {
 }
 
 export function legalMoveHints(state: GameState): MoveHint[] {
-  if (state.phase === 'buy' || state.phase === 'finished') return []
+  if (state.phase === 'finished') return []
 
   const hints: MoveHint[] = []
 
@@ -614,7 +645,7 @@ export function legalMoveHints(state: GameState): MoveHint[] {
         score: scoreForHint({ type: 'stock-to-foundation' }, state),
       })
     }
-    if (state.phase === 'commit') {
+    {
       for (let to = 0; to < TABLEAU_COUNT; to++) {
         if (applyStockToTableau(state, to) !== state) {
           hints.push({
@@ -644,7 +675,7 @@ export function legalMoveHints(state: GameState): MoveHint[] {
         score: scoreForHint({ type: 'talon-to-foundation' }, state),
       })
     }
-    if (state.phase === 'commit') {
+    {
       for (let to = 0; to < TABLEAU_COUNT; to++) {
         if (applyTalonToTableau(state, to) !== state) {
           hints.push({
@@ -676,7 +707,7 @@ export function legalMoveHints(state: GameState): MoveHint[] {
         score: scoreForHint({ type: 'tableau-to-foundation', from }, state),
       })
     }
-    if (state.phase === 'commit') {
+    {
       for (let to = 0; to < TABLEAU_COUNT; to++) {
         if (from === to) continue
         if (applyTableauToTableau(state, from, to) !== state) {

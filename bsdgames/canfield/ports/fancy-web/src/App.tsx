@@ -10,6 +10,7 @@ import { AccountBook } from './ui/AccountBook'
 import { CountingOverlay } from './ui/CountingOverlay'
 import { HelpPanel } from './ui/HelpPanel'
 import { HowToPlay } from './ui/HowToPlay'
+import { WinAnimation } from './ui/WinAnimation'
 import { BettingBox } from './ui/BettingBox'
 import { baseRank, recommendedPhaseAction } from './game/engine'
 
@@ -18,10 +19,10 @@ function App() {
   const [saved] = useState(() => storage.loadGame())
   const [urlSeed] = useState(() => new URLSearchParams(window.location.search).get('seed'))
   const initialSeed = urlSeed ? Number(urlSeed) : (saved?.seed ?? Date.now())
-  const { state, dispatch, dispatchText, canUndo, undo, inspect, commit, newGame: rawNewGame } = useGame(urlSeed ? undefined : saved, initialSeed)
+  const { state, dispatch, dispatchText, canUndo, undo, inspect, commit, newGame: rawNewGame, resetBankroll: rawReset } = useGame(urlSeed ? undefined : saved, initialSeed)
   const { enabled: soundEnabled, setEnabled, playFlip, playClink, playInvalid, playWin } = useSound()
   useStorage(state) // auto-save / resume side effect
-  const { recordSession, getScores, clearSavedGame } = storage
+  const { recordSession, getScores, clearSavedGame, clearScores } = storage
   const [selected, setSelected] = useState<{ type: 'stock' | 'talon' | 'tableau'; index?: number } | null>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [helpTab, setHelpTab] = useState<'how-to-play' | 'commands'>('how-to-play')
@@ -38,6 +39,14 @@ function App() {
     }
     rawNewGame()
   }, [state, recordSession, clearSavedGame, getScores, rawNewGame])
+
+  const resetBankroll = useCallback(() => {
+    if (!window.confirm('Reset everything for a new player? This zeroes the bankroll and erases the Account Book.')) return
+    clearSavedGame()
+    clearScores()
+    setScores(getScores())
+    rawReset()
+  }, [clearSavedGame, clearScores, getScores, rawReset])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -78,6 +87,7 @@ function App() {
     } else {
       playFlip()
     }
+    return next
   }
 
   return (
@@ -103,14 +113,31 @@ function App() {
             <h3>Controls</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               <button onClick={newGame}>New Game</button>
+              <button onClick={resetBankroll} title="New player: zero the bankroll and erase the Account Book">Reset Bankroll</button>
               <button onClick={undo} disabled={!canUndo}>Undo ($5)</button>
-              <button onClick={() => dispatch({ type: 'toggle-counting' })}>Count (c)</button>
-              <button onClick={() => setShowHelp(prev => !prev)}>Help (?)</button>
-              <button onClick={() => setCheatMode(prev => !prev)}>
-                Cheat {cheatMode ? 'On' : 'Off'}
+              <button
+                className={`toggle${state.countingOn ? ' on' : ''}`}
+                aria-pressed={state.countingOn}
+                title="Card counting: $1 per hand/talon card you have seen, max $34 (key: c)"
+                onClick={() => dispatch({ type: 'toggle-counting' })}
+              >
+                Count: {state.countingOn ? 'ON' : 'OFF'}
               </button>
-              <button onClick={() => setEnabled(prev => !prev)}>
-                Sound {soundEnabled ? 'On' : 'Off'}
+              <button onClick={() => setShowHelp(prev => !prev)}>Help (?)</button>
+              <button
+                className={`toggle${cheatMode ? ' on' : ''}`}
+                aria-pressed={cheatMode}
+                title="Show legal moves with arrows and glows"
+                onClick={() => setCheatMode(prev => !prev)}
+              >
+                Cheat: {cheatMode ? 'ON' : 'OFF'}
+              </button>
+              <button
+                className={`toggle${soundEnabled ? ' on' : ''}`}
+                aria-pressed={soundEnabled}
+                onClick={() => setEnabled(prev => !prev)}
+              >
+                Sound: {soundEnabled ? 'ON' : 'OFF'}
               </button>
             </div>
           </div>
@@ -134,17 +161,18 @@ function App() {
           }} />
 
           {showBetting && <BettingBox state={state} />}
-          <CountingOverlay state={state} />
+          {state.countingOn && <CountingOverlay state={state} />}
           <AccountBook scores={scores} />
         </aside>
       </div>
 
+      {state.status === 'won' && <WinAnimation foundations={state.foundations} />}
       {(state.status === 'won' || state.status === 'lost' || state.status === 'quit') && (
-        <div className="modal-backdrop">
+        <div className={`modal-backdrop${state.status === 'won' ? ' win' : ''}`}>
           <div className="modal">
             <h2>
               {state.status === 'won'
-                ? 'Session Complete'
+                ? 'You won!'
                 : state.status === 'lost'
                 ? 'I believe you have lost'
                 : 'You quit'}

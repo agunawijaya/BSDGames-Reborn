@@ -118,8 +118,32 @@ button:disabled {
 }
 
 @media (max-width: 900px) {
+  /* Phones and narrow windows: the whole page scrolls; the board keeps its natural
+     height and the sidebar follows it instead of squeezing it. */
+  html, body, #root {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
   .main {
     flex-direction: column;
+    overflow: visible;
+  }
+  .table-area {
+    flex: none;
+    overflow: visible;
+    padding: 0.75rem;
+    gap: 1.25rem;
+  }
+  .header {
+    padding: 0.5rem 0.75rem;
+  }
+  .title {
+    font-size: 1.05rem;
   }
   .table-area {
     min-height: 60vh;
@@ -425,4 +449,121 @@ button:disabled {
 
 .help-table tr:last-child td {
   border-bottom: none;
+}
+
+.phase-tag {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-light, #e8cf7a);
+  opacity: 0.85;
+}
+
+.phase-notice {
+  position: fixed;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  max-width: min(680px, calc(100vw - 32px));
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  background: rgba(20, 30, 20, 0.95);
+  color: var(--cream);
+  font-size: 0.85rem;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  animation: notice-in 0.25s ease-out;
+}
+
+@keyframes notice-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Victory animation */
+.win-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 900;
+}
+
+.win-layer .win-card,
+.win-layer .win-trail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transition: none;
+  cursor: default;
+  will-change: transform;
+}
+
+.win-layer .win-trail {
+  box-shadow: none;
+}
+
+.modal-backdrop.win {
+  background: transparent;
+  pointer-events: none;
+  align-items: flex-start;
+  padding-top: 10vh;
+}
+
+.modal-backdrop.win .modal {
+  pointer-events: auto;
+}
+
+/* Toggle buttons (Cheat / Sound) */
+button.toggle {
+  background: linear-gradient(180deg, #5a5a4a 0%, #3f3f33 100%);
+  color: var(--cream);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+button.toggle.on {
+  background: linear-gradient(180deg, #4dff2a 0%, #1fae0a 100%);
+  color: #06210a;
+  border-color: #39ff14;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+}
+
+/* Card counting panel */
+.count-row-label {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  margin: 0.4rem 0 0.15rem;
+}
+
+.count-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.count-chip {
+  min-width: 2rem;
+  padding: 1px 3px;
+  text-align: center;
+  font-size: 0.7rem;
+  border-radius: 3px;
+  background: var(--cream);
+}
+
+.count-chip.red { color: #b3261e; }
+.count-chip.black { color: #1a1a1a; }
+.count-chip.unknown { background: rgba(0, 0, 0, 0.35); color: rgba(255, 255, 255, 0.5); }
+
+/* Narrow screens: keep four piles per row (must come after the base row rules). */
+@media (max-width: 900px) {
+  .tableau-row,
+  .foundation-row {
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+  }
 }

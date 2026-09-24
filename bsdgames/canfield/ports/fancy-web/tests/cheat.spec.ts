@@ -12,7 +12,7 @@ test.describe('cheat mode', () => {
     await page.click('button:has-text("Commit")')
     await page.waitForTimeout(200)
 
-    await page.click('button:has-text("Cheat Off")')
+    await page.click('button:has-text("Cheat: OFF")')
     await page.waitForTimeout(800)
 
     const arrows = page.locator('.cheat-arrow')
@@ -25,11 +25,11 @@ test.describe('cheat mode', () => {
     const inspectButton = page.locator('button:has-text("Inspect")')
     await expect(inspectButton).not.toHaveClass(/cheat-recommended/)
 
-    await page.click('button:has-text("Cheat Off")')
+    await page.click('button:has-text("Cheat: OFF")')
     await page.waitForTimeout(300)
     await expect(inspectButton).toHaveClass(/cheat-recommended/)
 
-    await page.click('button:has-text("Cheat On")')
+    await page.click('button:has-text("Cheat: ON")')
     await page.waitForTimeout(300)
     await expect(inspectButton).not.toHaveClass(/cheat-recommended/)
   })

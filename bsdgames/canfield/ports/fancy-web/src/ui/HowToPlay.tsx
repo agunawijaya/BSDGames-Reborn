@@ -42,7 +42,7 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
           can Inspect, Commit, or Quit.
         </li>
         <li>
-          <strong>Inspect (+$13)</strong> — unlocks <em>foundation moves only</em>.
+          <strong>Inspect (+$13)</strong> — unlocks <em>every move except Deal Hand</em>. Your first move in Buy pays this automatically.
           This lets you test whether the base card and the visible cards give you a
           promising path before you risk more money.
         </li>
@@ -76,7 +76,8 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
         <li>
           An <strong>empty tableau</strong> can only be filled from the stock
           while the stock still has cards. After the stock is exhausted, empty
-          spaces may be filled from the talon.
+          spaces may be filled from the talon. A pile of tableau cards can
+          <em> never</em> be moved into an empty space.
         </li>
       </ul>
 
@@ -96,10 +97,10 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
       <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
         <tbody>
           <tr><td style={{ padding: '0.25rem' }}>Initial deal</td><td style={{ padding: '0.25rem' }}>-$13</td></tr>
-          <tr><td style={{ padding: '0.25rem' }}>Inspect (foundation moves only)</td><td style={{ padding: '0.25rem' }}>-$13</td></tr>
+          <tr><td style={{ padding: '0.25rem' }}>Inspect (all moves except Deal Hand)</td><td style={{ padding: '0.25rem' }}>-$13</td></tr>
           <tr><td style={{ padding: '0.25rem' }}>Commit (all moves unlocked)</td><td style={{ padding: '0.25rem' }}>-$26</td></tr>
           <tr><td style={{ padding: '0.25rem' }}>Each re-run through the hand</td><td style={{ padding: '0.25rem' }}>-$5</td></tr>
-          <tr><td style={{ padding: '0.25rem' }}>Card counting per unknown card</td><td style={{ padding: '0.25rem' }}>-$1</td></tr>
+          <tr><td style={{ padding: '0.25rem' }}>Card counting (Count ON): each hand/talon card you have seen, max $34</td><td style={{ padding: '0.25rem' }}>-$1</td></tr>
           <tr><td style={{ padding: '0.25rem' }}>Thinking time (max $3/move)</td><td style={{ padding: '0.25rem' }}>-$1/min</td></tr>
           <tr style={{ borderTop: '1px solid var(--gold)' }}><td style={{ padding: '0.25rem' }}><strong>Card to foundation</strong></td><td style={{ padding: '0.25rem' }}><strong>+$5</strong></td></tr>
         </tbody>
@@ -118,10 +119,11 @@ export function HowToPlay({ baseRank }: HowToPlayProps) {
       <h4 style={{ color: 'var(--gold)', marginTop: '1rem' }}>7. How to start a session</h4>
       <ol style={{ lineHeight: 1.6, paddingLeft: '1.25rem' }}>
         <li>Look at the base rank and the visible cards.</li>
-        <li>Click <strong>Inspect</strong> to try foundation-only moves cheaply.</li>
+        <li>Click <strong>Inspect</strong> (or just make a move — it pays Inspect for you) to try the deal cheaply.</li>
         <li>If you see a promising path, click <strong>Commit</strong>.</li>
         <li>Build foundations aggressively — they are the only way to earn money.</li>
-        <li>Use <strong>card counting</strong> only when one or two cards stand between you and a big payout.</li>
+        <li>Use <strong>card counting</strong> (turn <strong>Count</strong> ON) only when one or two cards stand between you and a big payout. It lists the talon and hand card by card; each card you have seen costs $1 once.</li>
+        <li>Double-click a card that can go up to send it to a foundation. Dragging works too.</li>
       </ol>
     </div>
   )

@@ -1,6 +1,6 @@
 # ADR-001: Tech Stack — TypeScript + React + SVG + Vite
 
-- **Status:** Accepted
+- **Status:** Accepted — card rendering superseded by [ADR-003](./003-card-rendering-css.md) (cards are CSS DOM elements; SVG is used for overlays)
 - **Date:** 2026-09-21
 - **Deciders:** Agun Wijaya (port author)
 - **Scope:** Port-level — applies only to `bsdgames/canfield/ports/fancy-web/`.

@@ -20,7 +20,19 @@
 | T-12 Win / loss / quit detection | ✅ | manual + `tests/rules.test.ts` (loss) |
 | T-13 Auto-save / resume | ✅ | `tests/storage.test.ts` |
 | T-14 Account Book shows session totals | ✅ | manual |
-| T-15 Responsive layout | ✅ | manual + CSS media query |
+| T-15 Responsive layout | ✅ | `tests/features.spec.ts` (390×844) + manual desktop |
+| T-16 Double-click to foundation | ✅ | `tests/features.spec.ts` |
+| T-17 First move in Buy pays Inspect | ✅ | `tests/rules.test.ts` + `tests/features.spec.ts` |
+| T-18 Foundation credit after Commit; win = +$208 | ✅ | `tests/rules.test.ts` + `tests/features.spec.ts` |
+| T-19 Card counting toggle (`Cflag`) | ✅ | `tests/rules.test.ts` + `tests/features.spec.ts` |
+| T-20 Cheat / Sound toggles | ✅ | `tests/features.spec.ts` + `tests/cheat.spec.ts` |
+| T-21 Refusals are explained | ✅ | `tests/features.spec.ts` |
+| T-22 Command bar is safe to type in | ✅ | `tests/features.spec.ts` |
+| T-23 Reset Bankroll | ✅ | `tests/features.spec.ts` |
+| T-24 Victory animation | ✅ | `tests/features.spec.ts` + `media/06-victory.png` |
+| T-25 Phase notices | ✅ | manual, `media/01-initial-deal.png` |
+
+Signed off 2026-09-24 by the port owner's review session: 57 Vitest tests and 15 Playwright tests green on the release commit of this port (`git log -- .`).
 
 ---
 
@@ -56,7 +68,7 @@
 
 **Expected:**
 - Cards snap to destination if legal.
-- Illegal drops bounce back with a visual shake.
+- Illegal drops leave the board unchanged and show a one-line reason (see T-21).
 
 ### T-04 Click Deal Hand → Talon (`ht`)
 **Steps:**
@@ -101,15 +113,13 @@
 **Expected:**
 - Top card of talon can now fill the empty tableau.
 
-### T-09 Card counting overlay charges
+### T-09 Card counting is billed per card (see T-19)
 **Steps:**
-1. Start a new game.
-2. Toggle card counting.
-3. Reveal several unknown cards.
+1. Turn counting ON, deal cards from the hand.
 
 **Expected:**
-- The first 18 dealt cards are already paid; only newly face-up cards beyond those cost `$1`.
-- Total card-counting cost is capped at `$34`.
+- Each hand/talon card that becomes visible while ON costs `$1`, once.
+- Total counting cost never exceeds `$34`.
 
 ### T-10 Command bar accepts original grammar
 **Steps:**
@@ -162,3 +172,63 @@
 **Expected:**
 - Table remains usable; cards and buttons reflow.
 - No overlapping or clipped controls.
+
+### T-16 Double-click to foundation
+**Steps:**
+1. Open `/?seed=11`. Tableau 1 holds a card that can go to a foundation.
+2. Double-click it. Then double-click a card that cannot go up.
+
+**Expected:**
+- The first card flies to the foundation (drag-and-drop and click-then-click still work too).
+- The second shows "That card cannot go to a foundation yet." and nothing moves.
+
+### T-17 First move in Buy pays Inspect
+**Steps:**
+1. New game (bankroll `-$13`). Make any legal move, e.g. T-16.
+
+**Expected:**
+- Bankroll `-$26` (`$13` deal + `$13` Inspect), phase Inspect, notice explains it.
+- An illegal move in Buy charges nothing. `ht` stays locked until Commit.
+
+### T-18 Foundation credit after Commit
+**Steps:**
+1. Commit, then move cards to foundations. Win a game.
+
+**Expected:**
+- Cards already up (including the base card) are credited `$5` each at Commit; every later card `+$5`.
+- A full win after Commit ends at `+$208` (`52 × $5 - $52`).
+
+### T-19 Card counting toggle
+**Steps:**
+1. Observe the panel (absent), press **Count** (ON), deal cards, press **Count** (OFF), ON again.
+
+**Expected:**
+- Off at the start of every game; no panel while OFF.
+- ON: Talon/Hand/Stock counts, talon and hand card by card (`?` for unseen), `$1` per newly visible hand/talon card, cap `$34`.
+- Cards paid for are never billed again; cards that became visible while OFF are billed when ON.
+
+### T-20 Cheat and Sound toggles
+**Expected:** "Cheat: ON" is green with arrows and glows; "Cheat: OFF" is grey with none. Sound the same.
+
+### T-21 Refusals are explained
+**Steps:**
+1. Try to drop the talon card on an empty tableau while the stock has cards; try to move a pile into an empty space.
+
+**Expected:** "Empty space: the talon may fill it only after the stock is used up." / "A pile can't be moved into an empty space." (click and drag).
+
+### T-22 Command bar is safe to type in
+**Expected:** Typing `ht`, `n`, `u` in the command bar never opens Help, starts a new game or undoes.
+
+### T-23 Reset Bankroll
+**Expected:** After confirmation: bankroll `-$13` in a fresh deal, Account Book empty (treated as a new player). *New Game* keeps the running bankroll.
+
+### T-24 Victory animation
+**Expected:** On a win, cards leave the foundations, bounce off the bottom edge and leave a trail; "You won!" and the final bankroll stay readable; disabled under `prefers-reduced-motion`.
+
+### T-25 Phase notices
+**Expected:** Entering Buy (9 s), Inspect (7 s) and Commit (5 s) shows a dismissible notice; a small "Phase: X" tag stays on the board.
+
+## Known limitations
+
+- The original's end-of-game `showcards()` reveal of all remaining cards is not ported.
+- No live URL yet.

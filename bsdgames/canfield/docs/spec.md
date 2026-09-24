@@ -95,6 +95,28 @@ Invalid moves display an error and do not consume time / money.
 
 Total possible spend on inspection + game = $13 + $13 + $26 = $52.
 
+### Credit timing
+
+Winnings are credited **only once the game has been bought** (the first
+`ht`, i.e. Commit). At that moment the player is credited `$5 x
+cardsoff` for every card already on a foundation, **including the base
+card** (`canfield.c` `movecard()`, `cardsoff` starts at 1); afterwards
+every card that reaches a foundation earns `$5`. Cards moved before the
+purchase earn nothing if the player quits during inspection. A game won
+in full after buying therefore nets `52 x $5 - $52 = +$208` before
+thinking-time, run and counting charges.
+
+### Card counting (`c`)
+
+`c` is a **toggle** (off at the start of each game). The 18 cards dealt
+face-up (4 tableau, 13 stock, base) start visible and paid. While it is
+on, every hand or talon card that becomes visible and has not been paid
+costs `$1` (at most `$34` per game, the 34 hand cards). Cards that became
+visible while it was off are billed when it is switched on; a paid card
+is never billed twice. The display lists the talon and the hand card by
+card (identity if the card has been seen, `?` otherwise) with the Hand /
+Talon / Stock counts.
+
 **Break-even:** need 10+ cards on foundation (including the base card and any cards already up when the game is bought) to cover the `$52` maximum fixed cost, minus meter charges for runs, counting, and thinking time.
 
 ## Score persistence

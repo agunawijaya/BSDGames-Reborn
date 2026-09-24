@@ -26,17 +26,17 @@ The original `canfield(6)` uses an implicit betting flow: the first board move t
 
 ### Option B — Explicit phases with lazy foundation credit (chosen)
 
-**Description:** Three explicit phases: **Buy** (no board moves), **Inspect** (all moves except `ht`), **Commit** (all moves). Foundation cards are credited only when the game is bought (Commit), at `$5 × cards already up`. Per-move foundation credits happen only after Commit.
+**Description:** Three explicit phases: **Buy**, **Inspect** (all moves except `ht`), **Commit** (all moves). *(Amended 2026-09-24: Buy is not a lockout. The first legal board move made in Buy automatically pays the `$13` inspection and executes, exactly like `canfield.c` `movecard()` ~1478-1499. Illegal moves charge nothing. Purchases are not undoable.)* Foundation cards are credited only when the game is bought (Commit), at `$5 × cards already up`. Per-move foundation credits happen only after Commit.
 
 **Pros:**
 
 - Matches the explicit button UI.
 - Matches the original's net result: Commit costs `$39` total and credits the base card plus any cards already moved up.
-- Prevents earning money in Buy without paying anything.
+- Prevents earning money in Buy without paying anything (credit only happens at Commit, and any board move in Buy pays Inspect first).
 
 **Cons:**
 
-- The `$13` inspection charge is no longer triggered by the first board move; it is triggered by the Inspect button. The net cost is identical, but the timing differs.
+- The `$13` inspection can be paid either by the Inspect button or implicitly by the first board move (as in the original). The net cost is identical. *(Original draft of this ADR locked all board moves in Buy; that made a base-rank card unmovable for a player who had not yet clicked Inspect, and was reverted.)*
 - A player can Inspect, make foundation moves, and then quit without ever paying the `$26` game fee — same as the original, because foundation credits are only granted at Commit.
 
 ## Decision

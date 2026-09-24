@@ -8,7 +8,7 @@ import { FlyingCard } from './FlyingCard'
 
 export interface TableProps {
   state: GameState
-  dispatch: (command: Command) => void
+  dispatch: (command: Command) => GameState
   selected: { type: 'stock' | 'talon' | 'tableau'; index?: number } | null
   onSelect: (source: { type: 'stock' | 'talon' | 'tableau'; index?: number } | null) => void
   cheatMode: boolean
@@ -64,6 +64,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   const tableRef = useRef<HTMLDivElement>(null)
   const draggedSourceRef = useRef<{ type: MoveHint['source']['type']; index?: number } | null>(null)
   const suppressNextClickRef = useRef(false)
+  const lastHoverTargetRef = useRef<{ type: MoveHint['target']['type']; index?: number } | null>(null)
   const prevStateRef = useRef<GameState>(state)
   const [flying, setFlying] = useState<FlyingItem[]>([])
   const [error, setError] = useState('')
@@ -74,12 +75,33 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
     window.setTimeout(() => setError(''), 1500)
   }
 
-  const tryDispatch = (command: Command, errorMsg = "Can't move there") => {
+  // Explain *why* a move is refused, especially the empty-space rules that
+  // surprise people (canfield.c tabok(), ~876-893).
+  const explainIllegal = (command: Command): string => {
+    const emptyTarget = (to: number) => state.tableaus[to].length === 0
+    if (command.type === 'talon-to-tableau' && emptyTarget(command.to) && state.stock.length > 0) {
+      return 'Empty space: the talon may fill it only after the stock is used up.'
+    }
+    if (command.type === 'tableau-to-tableau' && emptyTarget(command.to)) {
+      return "A pile can't be moved into an empty space."
+    }
+    if (command.type === 'hand-to-talon' && state.phase !== 'commit') {
+      return 'Commit the game to unlock Deal Hand.'
+    }
+    return "Can't move there"
+  }
+
+  const tryDispatch = (command: Command, errorMsg?: string) => {
+    const message = errorMsg ?? explainIllegal(command)
     if (!isCommandLegal(state, command)) {
-      showError(errorMsg)
+      showError(message)
       return false
     }
-    dispatch(command)
+    const next = dispatch(command)
+    if (next === state) {
+      showError(message)
+      return false
+    }
     return true
   }
 
@@ -111,6 +133,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   }, [state])
 
   const glowFor = (testId: string): 'source' | 'target' | undefined => {
+    if (!cheatMode) return undefined
     const isSource = visibleHints.some(h => h.sourceTestId === testId)
     const isTarget = visibleHints.some(h => h.targetTestId === testId)
     if (isSource) return 'source'
@@ -128,6 +151,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
     e: React.DragEvent
   ) => {
     draggedSourceRef.current = source
+    lastHoverTargetRef.current = null
     e.dataTransfer.setData('application/json', JSON.stringify(source))
     e.dataTransfer.effectAllowed = 'move'
   }
@@ -138,6 +162,7 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   ) => {
     const source = draggedSourceRef.current
     if (!source) return
+    lastHoverTargetRef.current = target
     const match = hints.find(h => locationEquals(h.source, source) && locationEquals(h.target, target))
     if (match) {
       e.preventDefault()
@@ -160,6 +185,16 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       if (tryDispatch(match.command)) {
         onSelect(null)
       }
+    } else if (target.type === 'tableau' && target.index !== undefined) {
+      // Dropped on a target that has no legal move: say why.
+      suppressNextClickRef.current = true
+      setTimeout(() => { suppressNextClickRef.current = false }, 100)
+      const to = target.index
+      if (source.type === 'talon') showError(explainIllegal({ type: 'talon-to-tableau', to }))
+      else if (source.type === 'tableau' && source.index !== undefined) showError(explainIllegal({ type: 'tableau-to-tableau', from: source.index, to }))
+      else showError("Can't move there")
+    } else {
+      showError("Can't move there")
     }
   }
 
@@ -170,6 +205,17 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       return
     }
     onSelect({ type, index })
+  }
+
+  // Double-click a playable top card to send it to a foundation.
+  const handleDoubleClick = (type: 'stock' | 'talon' | 'tableau', index?: number) => {
+    onSelect(null)
+    suppressNextClickRef.current = false
+    const command: Command =
+      type === 'stock' ? { type: 'stock-to-foundation' }
+      : type === 'talon' ? { type: 'talon-to-foundation' }
+      : { type: 'tableau-to-foundation', from: index ?? 0 }
+    tryDispatch(command, 'That card cannot go to a foundation yet.')
   }
 
   const handleFoundationClick = () => {
@@ -189,6 +235,11 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       handleSourceClick('tableau', to)
       return
     }
+    if (selected.type === 'tableau' && selected.index === to) {
+      // Second click of a double-click (or a plain re-click): just deselect.
+      onSelect(null)
+      return
+    }
     let ok = false
     if (selected.type === 'stock') {
       ok = tryDispatch({ type: 'stock-to-tableau', to })
@@ -200,12 +251,56 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
     if (ok) onSelect(null)
   }
 
-  const phaseBanner = {
-    buy: 'BUY PHASE — Inspect ($13) for foundation-only trial, or Commit ($39) to unlock all moves now.',
-    inspect: 'INSPECT PHASE — Foundation moves allowed. Click Commit ($26) to unlock Deal Hand and tableau moves.',
-    commit: 'COMMIT PHASE — All moves unlocked. Deal Hand → Talon is now available.',
-    finished: 'SESSION FINISHED.',
-  }[state.phase]
+  // The browser sends no `drop` event to a target that refuses the drag, so
+  // explain the refusal when the drag ends without a successful drop.
+  useEffect(() => {
+    const onDragEnd = () => {
+      const source = draggedSourceRef.current
+      const target = lastHoverTargetRef.current
+      draggedSourceRef.current = null
+      lastHoverTargetRef.current = null
+      if (!source || !target) return
+      if (target.type === 'tableau' && target.index !== undefined) {
+        const to = target.index
+        if (source.type === 'talon') showError(explainIllegal({ type: 'talon-to-tableau', to }))
+        else if (source.type === 'stock') showError(explainIllegal({ type: 'stock-to-tableau', to }))
+        else if (source.type === 'tableau' && source.index !== undefined) showError(explainIllegal({ type: 'tableau-to-tableau', from: source.index, to }))
+      } else {
+        showError("Can't move there")
+      }
+    }
+    window.addEventListener('dragend', onDragEnd)
+    return () => window.removeEventListener('dragend', onDragEnd)
+  })
+
+  // Phase changes are announced with a transient notice, not a permanent banner.
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    const notices: Record<string, { text: string; ms: number }> = {
+      buy: {
+        text: 'BUY PHASE — Your first move automatically pays Inspect ($13). Or click Commit ($39) to unlock Deal Hand right away.',
+        ms: 9000,
+      },
+      inspect: {
+        text: 'INSPECT PHASE — Inspect ($13) paid. All moves are allowed except Deal Hand. Click Commit ($26) to unlock it; cards already on foundations are then credited $5 each.',
+        ms: 7000,
+      },
+      commit: {
+        text: 'COMMIT PHASE — All moves unlocked. Deal Hand → Talon is now available.',
+        ms: 5000,
+      },
+    }
+    const entry = notices[state.phase]
+    if (!entry) {
+      setNotice(null)
+      return
+    }
+    setNotice(entry.text)
+    const timer = window.setTimeout(() => setNotice(null), entry.ms)
+    return () => window.clearTimeout(timer)
+  }, [state.phase, state.seed])
+
+  const phaseLabel = { buy: 'Buy', inspect: 'Inspect', commit: 'Commit', finished: 'Finished' }[state.phase]
 
   return (
     <div className="table-area" ref={tableRef} style={{ position: 'relative' }}>
@@ -219,18 +314,12 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
         />
       ))}
       <CheatOverlay hints={visibleHints} tableRef={tableRef} cheatMode={cheatMode} />
-      <div style={{
-        textAlign: 'center',
-        padding: '0.5rem 1rem',
-        marginBottom: '0.5rem',
-        borderRadius: '6px',
-        background: state.phase === 'buy' ? 'rgba(194, 59, 34, 0.2)' : state.phase === 'inspect' ? 'rgba(201, 162, 39, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-        border: `1px solid ${state.phase === 'buy' ? 'var(--red)' : 'var(--gold)'}`,
-        color: 'var(--cream)',
-        fontSize: '0.9rem',
-      }}>
-        {phaseBanner}
-      </div>
+      <div className="phase-tag" data-testid="phase-tag">Phase: {phaseLabel}</div>
+      {notice && (
+        <div className="phase-notice" role="status" aria-live="polite" onClick={() => setNotice(null)} title="Click to dismiss">
+          {notice}
+        </div>
+      )}
 
       <div className="foundation-row">
         {state.foundations.map((pile, i) => {
@@ -266,10 +355,11 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
             direction="vertical"
             offset={22}
             onCardClick={() => handleTableauClick(i)}
+            onCardDoubleClick={() => handleDoubleClick('tableau', i)}
             emptyText={`T${i + 1}`}
             testId={`tableau-${i}`}
             cheatGlow={glowFor(`tableau-${i}`)}
-            draggable={hints.some(h => h.sourceTestId === `tableau-${i}`)}
+            draggable={state.tableaus[i].length > 0}
             wholePileDragImage
             onCardDragStart={(e) => handleCardDragStart({ type: 'tableau', index: i }, e)}
             onDragOver={(e) => handlePileDragOver({ type: 'tableau', index: i }, e)}
@@ -285,10 +375,11 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
           direction="horizontal"
           offset={2}
           onCardClick={() => handleSourceClick('stock')}
+          onCardDoubleClick={() => handleDoubleClick('stock')}
           emptyText="Stock"
           testId="stock-pile"
           cheatGlow={glowFor('stock-pile')}
-          draggable={hints.some(h => h.sourceTestId === 'stock-pile')}
+          draggable={state.stock.length > 0}
           onCardDragStart={(e) => handleCardDragStart({ type: 'stock' }, e)}
           onDragOver={(e) => handlePileDragOver({ type: 'stock' }, e)}
           onDrop={(e) => handlePileDrop({ type: 'stock' }, e)}
@@ -299,10 +390,11 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
           direction="horizontal"
           offset={2}
           onCardClick={() => handleSourceClick('talon')}
+          onCardDoubleClick={() => handleDoubleClick('talon')}
           emptyText="Talon"
           testId="talon-pile"
           cheatGlow={glowFor('talon-pile')}
-          draggable={hints.some(h => h.sourceTestId === 'talon-pile')}
+          draggable={state.talon.length > 0}
           onCardDragStart={(e) => handleCardDragStart({ type: 'talon' }, e)}
           onDragOver={(e) => handlePileDragOver({ type: 'talon' }, e)}
           onDrop={(e) => handlePileDrop({ type: 'talon' }, e)}

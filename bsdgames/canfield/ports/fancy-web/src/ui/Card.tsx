@@ -7,12 +7,13 @@ export interface CardProps {
   style?: React.CSSProperties
   className?: string
   onClick?: () => void
+  onDoubleClick?: () => void
   draggable?: boolean
   onDragStart?: (e: React.DragEvent) => void
   onDragEnd?: (e: React.DragEvent) => void
 }
 
-export function Card({ card, faceUp, style, className = '', onClick, draggable, onDragStart, onDragEnd }: CardProps) {
+export function Card({ card, faceUp, style, className = '', onClick, onDoubleClick, draggable, onDragStart, onDragEnd }: CardProps) {
   const isFaceUp = faceUp ?? card.faceUp
   const isRed = SUIT_COLORS[card.suit] === 'red'
 
@@ -24,6 +25,7 @@ export function Card({ card, faceUp, style, className = '', onClick, draggable, 
         className={`card back ${className}`}
         style={style}
         onClick={onClick}
+      onDoubleClick={onDoubleClick}
         role="button"
         aria-label="Face-down card"
         {...dragProps}
@@ -36,6 +38,7 @@ export function Card({ card, faceUp, style, className = '', onClick, draggable, 
       className={`card ${className}`}
       style={style}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       role="button"
       aria-label={`${RANK_LABELS[card.rank]} of ${card.suit}`}
       {...dragProps}

@@ -26,11 +26,14 @@ test.describe('click-to-select gameplay', () => {
     await page.locator('[data-testid="tableau-0"]').click()
     await page.waitForTimeout(300)
 
-    // Selection should clear (move attempted; may be legal or illegal depending on deal).
-    await expect(page.locator('.table-area')).not.toContainText('Selected: stock')
+    // A legal move clears the selection; an illegal one keeps it (so the player can
+    // pick another target) and explains itself.
+    const area = page.locator('.table-area')
+    const cleared = await area.innerText().then(t => !t.includes('Selected: stock'))
+    if (!cleared) await expect(area).toContainText("Can't move there")
   })
 
-  test('click talon then foundation selects talon and clears selection', async ({ page }) => {
+  test('click talon then foundation either moves the card or explains the refusal', async ({ page }) => {
     await page.click('button:has-text("Inspect")')
     await page.waitForTimeout(200)
     await page.click('button:has-text("Commit")')
@@ -44,7 +47,10 @@ test.describe('click-to-select gameplay', () => {
     await page.locator('[data-testid="foundation-0"]').click()
     await page.waitForTimeout(300)
 
-    await expect(page.locator('.table-area')).not.toContainText('Selected: talon')
+    // Legal move: selection clears. Illegal move: selection stays and the refusal is explained.
+    const area = page.locator('.table-area')
+    const cleared = await area.innerText().then(t => !t.includes('Selected: talon'))
+    if (!cleared) await expect(area).toContainText("Can't move there")
   })
 
   test('Deal Hand button works in commit phase', async ({ page }) => {

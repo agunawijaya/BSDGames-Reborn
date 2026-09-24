@@ -29,8 +29,8 @@ export function BettingPanel({ phase, onInspect, onCommit, recommendedAction }: 
         </button>
       </div>
       <p className="command-hint">
-        {phase === 'buy' && 'Inspect ($13) for foundation-only moves, or Commit ($39) to unlock all moves including Deal Hand.'}
-        {phase === 'inspect' && 'Pay $26 to unlock Deal Hand and all tableau moves.'}
+        {phase === 'buy' && 'Your first move pays Inspect ($13) automatically. Commit ($39) unlocks Deal Hand right away.'}
+        {phase === 'inspect' && 'Pay $26 to unlock Deal Hand. Cards on foundations are credited $5 each at that moment.'}
         {phase === 'commit' && 'All moves unlocked — Deal Hand → Talon is now available.'}
       </p>
     </div>

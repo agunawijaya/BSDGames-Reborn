@@ -18,8 +18,13 @@ export function useStorage(state?: GameState) {
     if (!raw) return undefined
     try {
       const parsed = JSON.parse(raw) as GameState
-      // Resume without billing the idle gap.
-      return { ...parsed, lastMoveTime: Date.now() }
+      // Resume without billing the idle gap. Backfill fields added after older saves.
+      return {
+        ...parsed,
+        countingOn: parsed.countingOn ?? false,
+        seenCards: parsed.seenCards ?? [...(parsed.countedCards ?? Array(52).fill(false))],
+        lastMoveTime: Date.now(),
+      }
     } catch {
       return undefined
     }
@@ -75,5 +80,9 @@ export function useStorage(state?: GameState) {
     localStorage.removeItem(GAME_KEY)
   }, [])
 
-  return { loadGame, recordSession, getScores, clearSavedGame }
+  const clearScores = useCallback(() => {
+    localStorage.removeItem(SCORES_KEY)
+  }, [])
+
+  return { loadGame, recordSession, getScores, clearSavedGame, clearScores }
 }

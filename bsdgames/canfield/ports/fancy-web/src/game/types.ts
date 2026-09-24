@@ -59,7 +59,9 @@ export interface GameState {
   phase: GamePhase
   bankroll: number
   seed: number
-  countedCards: boolean[] // parallel to deck index; true if player has paid to see it
+  countedCards: boolean[] // parallel to deck index; `paid` in canfield.c: this card's $1 has been charged
+  seenCards: boolean[] // parallel to deck index; `visible` in canfield.c: the card has been face-up at some point
+  countingOn: boolean // card-counting display toggled on (`Cflag` in canfield.c)
   totalInfoCost: number
   handRuns: number // how many times the hand has been recycled
   timesThru: number // consecutive fruitless hand cycles (loss at 4)

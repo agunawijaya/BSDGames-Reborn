@@ -34,9 +34,8 @@ describe('cheat helpers', () => {
     expect(recommendedPhaseAction(state)).toBeNull()
   })
 
-  it('returns no hints in buy or finished phase', () => {
+  it('returns no hints once the session is finished', () => {
     const buy = deal(12345)
-    expect(legalMoveHints(buy)).toHaveLength(0)
 
     const finished = { ...buy, phase: 'finished' as const, status: 'won' as const }
     expect(legalMoveHints(finished)).toHaveLength(0)

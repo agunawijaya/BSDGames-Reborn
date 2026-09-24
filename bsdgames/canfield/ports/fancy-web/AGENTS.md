@@ -26,6 +26,6 @@ For repository-wide agent instructions and the Universal Port Contract, see the 
 
 ## Constraints Specific to This Port
 
-- **SVG-native cards.** No Canvas, no WebGL.
+- **DOM/CSS cards, SVG overlays.** No Canvas, no WebGL. (Cards are CSS-styled DOM elements per [ADR-003](docs/decisions/003-card-rendering-css.md), which supersedes the SVG-card wording of ADR-001.)
 - **Spec compliance is a hard requirement.** Faithful to [`../../docs/spec.md`](../../docs/spec.md); any deliberate deviation is a port-level ADR under [`docs/decisions/`](docs/decisions/).
 - **Betting economics are sacred.** `$13 / $13 / $26 / $5 / $1 / $1/min` must behave exactly as documented.

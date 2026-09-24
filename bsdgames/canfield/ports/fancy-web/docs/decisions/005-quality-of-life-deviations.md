@@ -31,7 +31,7 @@ A browser port of a 1980 curses game necessarily changes some auxiliary mechanic
 
 **Cons:** Not in the original.
 
-**Decision:** Option C. Undo restores the previous board state and charges a flat `$5` from that prior state's bankroll.
+**Decision:** Option C. Undo restores the previous board state and charges a flat `$5` from that prior state's bankroll. Purchases (Inspect, Commit, and the automatic Inspect on the first move) cannot be undone, so Undo is never a refund.
 
 ### 2. Persistent bankroll across sessions
 
@@ -51,19 +51,19 @@ A browser port of a 1980 curses game necessarily changes some auxiliary mechanic
 
 ### 3. Card-counting information display
 
-#### Option A — Exact original counting (mark first 18 dealt as paid; charge for newly-visible talon/hand cards while toggle is on)
+#### Option A — Exact original counting (chosen)
 
-**Pros:** Faithful to `canfield.c`.
+`Cflag` toggles the feature (off at the start of every game). The first 18 dealt cards start visible and paid. While it is on, every hand or talon card that becomes visible and has not been paid costs `$1` (`$34` maximum); cards that became visible while it was off are billed when it is switched on; nothing is billed twice. The panel shows the Talon/Hand/Stock counts and the talon and hand card by card, `?` for cards never seen.
 
-**Cons:** The original display is a textual hand/talon/stock count and a grid of card positions. A browser overlay can be richer.
+**Pros:** Faithful to `canfield.c` (`showstat()`, `usedtalon()`, `movetotalon()`); no information leak.
 
-#### Option B — 52-cell seen-grid plus hand/stock/talon counts, charge only for face-up cards not yet counted (chosen)
+**Cons:** Plainer than a full 52-card grid.
 
-**Pros:** Richer visual feedback; the first 18 dealt cards are still free, so the early-game cost matches the original.
+#### Option B — 52-cell seen-grid (built first, rejected)
 
-**Cons:** Does not track "cards that became visible while the toggle was on" with the same granularity; some later-game charges may differ slightly.
+**Cons:** It marked the 18 pre-paid cards as known, which revealed the identity of the 12 face-down stock cards for free, and it billed cards the player was already looking at. Removed.
 
-**Decision:** Option B. The pedagogical value of a full seen-grid outweighs the minor divergence in exact timing of information charges.
+**Decision:** Option A. `Count: ON/OFF` is a real toggle.
 
 ### 4. `cfscores` persistence
 
@@ -81,11 +81,31 @@ A browser port of a 1980 curses game necessarily changes some auxiliary mechanic
 
 **Decision:** Option B. The app validates storage and falls back to a fresh record on corruption.
 
+### 5. Reset Bankroll
+
+#### Option A — No reset; clear `localStorage` by hand
+
+**Cons:** A shared laptop has no in-app way to start a new player.
+
+#### Option B — A *Reset Bankroll* button (chosen)
+
+After confirmation it zeroes the bankroll, erases the Account Book and any saved game, and deals a fresh hand (`-$13`). It means "new player". *New Game* keeps the running bankroll and the history.
+
+### 6. Interaction and presentation additions
+
+- **Double-click** a playable top card to send it to a foundation, alongside drag-and-drop and click-to-select (rejected: click-to-select only, which needs two clicks for the most common move).
+- **Refusals are explained** (empty-space rules, locked Deal Hand, a card that cannot go up) instead of silently ignored (rejected: silence, which players read as a broken game).
+- **Phase notices** replace a permanent phase banner; a small `Phase: X` tag remains (rejected: permanent banner, noise once read).
+- **Victory animation** (bouncing cards, DOM + `requestAnimationFrame`, no Canvas; disabled under `prefers-reduced-motion`).
+- **Cheat / Sound / Count are labelled toggles** (`ON` green, `OFF` grey, `aria-pressed`).
+
 ## Decision Summary
 
 - Undo: flat `$5` penalty, restores prior board state.
 - Bankroll: persistent across New Game; abandoned games recorded.
-- Counting: 52-cell seen-grid; first 18 dealt cards free.
+- Counting: exact `Cflag` behaviour (toggle, `$1` per newly visible hand/talon card, `$34` cap, no leak); panel only while ON.
+- Reset Bankroll = new player (bankroll and Account Book cleared); New Game keeps them.
+- Double-click to foundation, explained refusals, transient phase notices, victory animation, labelled toggles.
 - `cfscores`: `localStorage` with corruption fallback.
 
 ## References

@@ -155,3 +155,54 @@
 - App now reads `?seed=N` from the URL so tests, screenshots, and shared challenges are reproducible.
 
 **Why:** Players expect drag-and-drop as a primary interaction, not a cheat-only feature. The flying-card animation makes auto-moves readable. The URL seed fix removes hidden flakiness in tests that relied on `?seed=`.
+
+## 2026-09-24 — Buy phase no longer blocks board moves
+
+**Changed:**
+- The first legal board move in Buy auto-pays Inspect (`$13`) and executes, matching `canfield.c` `movecard()`. Illegal moves are rejected with no charge.
+- Move hints, cheat glow and drag-and-drop now work in Buy.
+- Phase changes (auto-inspect, Inspect, Commit) clear the undo history: purchases cannot be taken back.
+- Banner, betting hint and How-to-Play text updated; ADR-004 amended.
+
+**Why:** A player who had not yet clicked Inspect could not move a card to a foundation (reported by the owner). The lockout was never in the original and was an over-correction of review item B3; the exploit it guarded against (free credit in Buy) is already impossible because credit is only granted at Commit.
+
+## 2026-09-24 — Phase banner replaced by transient notices
+
+**Changed:**
+- The permanent phase banner is gone. Entering Buy (new deal), Inspect (including the automatic one triggered by the first move) and Commit each show a dismissible notice (9 s / 7 s / 5 s). A small "Phase: X" tag remains on the board.
+- Reset Bankroll now also erases the Account Book (treated as a new player). Illegal drags/clicks on empty spaces explain the rule.
+
+**Why:** Owner feedback: a permanent message at the top was noise once read, but the Buy explanation needed to stay long enough to be read, and the automatic Buy → Inspect switch came as a surprise.
+
+## 2026-09-24 — Credit bug, victory animation, double-click, toggle clarity
+
+**Fixed:**
+- **Foundation credit after Commit was never applied** (regression from the lazy-credit refactor: `creditFoundationCard` was dead code). A full win ended at about -$55. Every card reaching a foundation after Commit now earns $5, including base-rank auto-placements; a full game with Commit ends at +$208. Regression tests added.
+- Cheat glows on piles were drawn even with Cheat off; they are now gated by the toggle.
+
+**Added:**
+- Bouncing-cards victory animation (DOM + `requestAnimationFrame`, trail capped at 420 nodes, disabled under `prefers-reduced-motion`). The "You won!" dialog sits over it.
+- Double-click a playable top card (stock, talon, tableau) to send it to a foundation; drag-and-drop and click-to-select still work. A refused double-click says so.
+- Cheat and Sound are proper toggles: "Cheat: ON" is green with `aria-pressed`, "Cheat: OFF" is grey.
+
+## 2026-09-24 — Card counting rebuilt to match `canfield.c`
+
+**Changed:**
+- Counting is a real toggle (`Count: ON/OFF`, key `c`), off at the start of every game, like `Cflag`.
+- The panel exists only while counting is on. It shows the Talon/Hand/Stock counts and the talon and hand card by card: the identity of every card that has been face-up at some point, `?` for the rest.
+- Billing follows `showstat()` / `usedtalon()` / `movetotalon()`: $1 for each hand or talon card that becomes visible while counting is on and has not been paid yet, $34 maximum per game. Cards that became visible while it was off are billed when it is switched on. Nothing is billed twice. The 18 cards dealt face-up start pre-paid.
+- New state: `seenCards` (`visible`) and `countingOn` (`Cflag`); `countedCards` keeps the meaning of `paid`. Older saves are back-filled on load.
+
+**Removed:** the always-visible 52-cell grid, which also revealed the identity of the 12 face-down stock cards for free.
+
+**Not ported:** the original's end-of-game `showcards()` reveal of every remaining card.
+
+## 2026-09-24 — Finalization
+
+**Changed:**
+- Phone layout (`max-width: 900px`): the page scrolls, the board keeps its natural height with four piles per row, and the sidebar follows below (it previously squeezed the board to a few dozen pixels).
+- `scripts/capture-screenshots.mjs` is deterministic (`?seed=11`) and now captures six shots including cheat mode and the victory animation; `media/` refreshed.
+- Stale e2e selectors updated ("Cheat: ON/OFF"; an illegal move keeps the selection and explains itself) and `tests/features.spec.ts` added: 57 Vitest + 15 Playwright tests green.
+- Docs brought in line with the code: README, ADR-001 (card rendering superseded by ADR-003), ADR-005 (exact counting, Reset Bankroll, interaction additions), port `AGENTS.md` (DOM/CSS cards), port test-scenarios (T-16…T-25, sign-off, known limitations), canonical `spec.md` (credit timing, card counting), in-app help, `docs/progress.md`.
+
+**Known limitations:** no live URL yet; the original's end-of-game `showcards()` reveal is not ported.
