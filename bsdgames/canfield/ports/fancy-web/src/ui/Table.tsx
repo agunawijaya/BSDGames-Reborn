@@ -82,11 +82,12 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
     })
   }, [state])
 
-  const glowFor = (testId: string): 'source' | 'target' | undefined => {
+  const glowFor = (testId: string, pileEmpty = false): 'source' | 'target' | undefined => {
     const isSource = hints.some(h => h.sourceTestId === testId)
     const isTarget = hints.some(h => h.targetTestId === testId)
     if (isSource) return 'source'
-    if (isTarget) return 'target'
+    // Empty tableau piles are valid drop targets, but glowing every empty slot in cheat mode is noisy.
+    if (isTarget && !pileEmpty) return 'target'
     return undefined
   }
 
@@ -237,8 +238,9 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
             onCardClick={() => handleTableauClick(i)}
             emptyText={`T${i + 1}`}
             testId={`tableau-${i}`}
-            cheatGlow={glowFor(`tableau-${i}`)}
+            cheatGlow={glowFor(`tableau-${i}`, pile.length === 0)}
             draggable={hints.some(h => h.sourceTestId === `tableau-${i}`)}
+            wholePileDragImage
             onCardDragStart={(e) => handleCardDragStart({ type: 'tableau', index: i }, e)}
             onDragOver={(e) => handlePileDragOver({ type: 'tableau', index: i }, e)}
             onDrop={(e) => handlePileDrop({ type: 'tableau', index: i }, e)}

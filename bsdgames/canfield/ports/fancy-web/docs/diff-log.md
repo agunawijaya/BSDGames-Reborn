@@ -103,8 +103,10 @@
 - `Card` now accepts an `onDragEnd` prop so the visual state resets reliably.
 - **Any face-up card in a pile can now start a drag** — not only the top card. The underlying move is still the whole pile, matching Canfield rules, but the grab handle feels like Solitaire Windows.
 - **Custom drag image:** when dragging starts, `Pile` clones its entire DOM and passes it to `dataTransfer.setDragImage()` so the browser drag ghost shows the full stack, not just the clicked card.
+- **Custom drag image restricted to tableau piles.** Stock and talon only show the single dragged card as their ghost, since they are single-card sources.
+- **Cheat mode no longer highlights empty tableau piles as targets.** Empty slots are still valid drops, but the green target glow is suppressed to reduce visual noise.
 
-**Why:** Play-testers expected Klondike-style grab-from-anywhere dragging. Canfield still moves whole piles, but the UX now lets you grab any exposed card as the handle while visually showing that the entire pile moves.
+**Why:** Play-testers expected Klondike-style grab-from-anywhere dragging. Canfield still moves whole piles, but the UX now lets you grab any exposed card as the handle while visually showing that the entire pile moves. The follow-up tweaks remove misleading visual clutter for stock/talon and empty tableau targets.
 
 ## 2026-09-22 — Global drag-and-drop, flying-card animation, and URL seed fix
 
