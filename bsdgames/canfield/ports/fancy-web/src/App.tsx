@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useGame } from './hooks/useGame'
 import { useSound } from './hooks/useSound'
 import { useStorage } from './hooks/useStorage'
@@ -10,14 +10,15 @@ import { AccountBook } from './ui/AccountBook'
 import { CountingOverlay } from './ui/CountingOverlay'
 import { HelpPanel } from './ui/HelpPanel'
 import { HowToPlay } from './ui/HowToPlay'
+import { BettingBox } from './ui/BettingBox'
 import { baseRank, recommendedPhaseAction } from './game/engine'
 
 function App() {
   const storage = useStorage()
-  const saved = storage.loadGame()
-  const urlSeed = new URLSearchParams(window.location.search).get('seed')
-  const initialSeed = urlSeed ? Number(urlSeed) : Date.now()
-  const { state, dispatch, dispatchText, canUndo, undo, inspect, commit, newGame } = useGame(saved, initialSeed)
+  const [saved] = useState(() => storage.loadGame())
+  const [urlSeed] = useState(() => new URLSearchParams(window.location.search).get('seed'))
+  const initialSeed = urlSeed ? Number(urlSeed) : (saved?.seed ?? Date.now())
+  const { state, dispatch, dispatchText, canUndo, undo, inspect, commit, newGame: rawNewGame } = useGame(urlSeed ? undefined : saved, initialSeed)
   const { enabled: soundEnabled, setEnabled, playFlip, playClink, playInvalid, playWin } = useSound()
   useStorage(state) // auto-save / resume side effect
   const { recordSession, getScores, clearSavedGame } = storage
@@ -25,11 +26,25 @@ function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [helpTab, setHelpTab] = useState<'how-to-play' | 'commands'>('how-to-play')
   const [cheatMode, setCheatMode] = useState(false)
+  const [showBetting, setShowBetting] = useState(false)
   const [scores, setScores] = useState(getScores())
   const recommendedAction = useMemo(() => recommendedPhaseAction(state), [state])
 
+  const newGame = useCallback(() => {
+    if (state.status === 'playing') {
+      recordSession({ ...state, status: 'quit' })
+      clearSavedGame()
+      setScores(getScores())
+    }
+    rawNewGame()
+  }, [state, recordSession, clearSavedGame, getScores, rawNewGame])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const target = e.target
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+        return
+      }
       if (e.key === '?' || e.key === 'h' || e.key === 'H') {
         setShowHelp(prev => !prev)
       }
@@ -46,8 +61,8 @@ function App() {
   }, [undo, newGame])
 
   useEffect(() => {
-    if (state.status === 'won') {
-      playWin()
+    if (state.status === 'won' || state.status === 'lost' || state.status === 'quit') {
+      if (state.status === 'won') playWin()
       recordSession(state)
       clearSavedGame()
       setScores(getScores())
@@ -56,8 +71,8 @@ function App() {
 
   const wrappedDispatch = (command: Parameters<typeof dispatch>[0]) => {
     const beforeFoundation = state.foundations.reduce((sum, p) => sum + p.length, 0)
-    dispatch(command)
-    const afterFoundation = state.foundations.reduce((sum, p) => sum + p.length, 0)
+    const next = dispatch(command)
+    const afterFoundation = next.foundations.reduce((sum, p) => sum + p.length, 0)
     if (afterFoundation > beforeFoundation) {
       playClink()
     } else {
@@ -101,25 +116,39 @@ function App() {
           </div>
 
           <CommandBar onCommand={(text) => {
+            const trimmed = text.trim()
+            if (trimmed === 'q' && !window.confirm('Really wish to quit?')) {
+              return {}
+            }
+            if (trimmed === 'b') {
+              setShowBetting(prev => !prev)
+            }
             const result = dispatchText(text)
-            if (!result.error) {
+            if (!result.error && result.state) {
               const isFoundation = text === 'sf' || text === 'tf' || /^[1-4]f$/.test(text)
               isFoundation ? playClink() : playFlip()
-            } else {
+            } else if (trimmed !== 'b') {
               playInvalid()
             }
             return result
           }} />
 
+          {showBetting && <BettingBox state={state} />}
           <CountingOverlay state={state} />
           <AccountBook scores={scores} />
         </aside>
       </div>
 
-      {state.status === 'won' && (
+      {(state.status === 'won' || state.status === 'lost' || state.status === 'quit') && (
         <div className="modal-backdrop">
           <div className="modal">
-            <h2>Session Complete</h2>
+            <h2>
+              {state.status === 'won'
+                ? 'Session Complete'
+                : state.status === 'lost'
+                ? 'I believe you have lost'
+                : 'You quit'}
+            </h2>
             <p>Final bankroll: <strong>{state.bankroll >= 0 ? '+' : '-'}${Math.abs(state.bankroll)}</strong></p>
             <p>Cards on foundation: {state.foundations.reduce((sum, p) => sum + p.length, 0)} / 52</p>
             <button onClick={newGame}>Play Again</button>

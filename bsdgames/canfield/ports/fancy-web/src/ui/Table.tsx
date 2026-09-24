@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameState, Command, Card } from '../game/types'
-import { baseRank, foundationNextRank, foundationSuit, legalMoveHints, MoveHint } from '../game/engine'
+import { baseRank, foundationNextRank, foundationSuit, legalMoveHints, MoveHint, isCommandLegal } from '../game/engine'
 import { RANK_LABELS, SUIT_SYMBOLS } from '../game/types'
 import { Pile } from './Pile'
 import { CheatOverlay } from './CheatOverlay'
@@ -66,7 +66,22 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
   const suppressNextClickRef = useRef(false)
   const prevStateRef = useRef<GameState>(state)
   const [flying, setFlying] = useState<FlyingItem[]>([])
+  const [error, setError] = useState('')
   const hints = useMemo(() => legalMoveHints(state), [state])
+
+  const showError = (msg: string) => {
+    setError(msg)
+    window.setTimeout(() => setError(''), 1500)
+  }
+
+  const tryDispatch = (command: Command, errorMsg = "Can't move there") => {
+    if (!isCommandLegal(state, command)) {
+      showError(errorMsg)
+      return false
+    }
+    dispatch(command)
+    return true
+  }
 
   // Empty tableau slots are valid drops, but highlighting all of them in cheat mode is noisy.
   const visibleHints = useMemo(() => {
@@ -142,8 +157,9 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       e.preventDefault()
       suppressNextClickRef.current = true
       setTimeout(() => { suppressNextClickRef.current = false }, 100)
-      dispatch(match.command)
-      onSelect(null)
+      if (tryDispatch(match.command)) {
+        onSelect(null)
+      }
     }
   }
 
@@ -158,12 +174,13 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
 
   const handleFoundationClick = () => {
     if (!selected) return
-    if (selected.type === 'stock') dispatch({ type: 'stock-to-foundation' })
-    if (selected.type === 'talon') dispatch({ type: 'talon-to-foundation' })
+    let ok = false
+    if (selected.type === 'stock') ok = tryDispatch({ type: 'stock-to-foundation' })
+    if (selected.type === 'talon') ok = tryDispatch({ type: 'talon-to-foundation' })
     if (selected.type === 'tableau' && selected.index !== undefined) {
-      dispatch({ type: 'tableau-to-foundation', from: selected.index })
+      ok = tryDispatch({ type: 'tableau-to-foundation', from: selected.index })
     }
-    onSelect(null)
+    if (ok) onSelect(null)
   }
 
   const handleTableauClick = (to: number) => {
@@ -172,14 +189,15 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       handleSourceClick('tableau', to)
       return
     }
+    let ok = false
     if (selected.type === 'stock') {
-      dispatch({ type: 'stock-to-tableau', to })
+      ok = tryDispatch({ type: 'stock-to-tableau', to })
     } else if (selected.type === 'talon') {
-      dispatch({ type: 'talon-to-tableau', to })
+      ok = tryDispatch({ type: 'talon-to-tableau', to })
     } else if (selected.type === 'tableau' && selected.index !== undefined) {
-      dispatch({ type: 'tableau-to-tableau', from: selected.index, to })
+      ok = tryDispatch({ type: 'tableau-to-tableau', from: selected.index, to })
     }
-    onSelect(null)
+    if (ok) onSelect(null)
   }
 
   const phaseBanner = {
@@ -304,6 +322,17 @@ export function Table({ state, dispatch, selected, onSelect, cheatMode }: TableP
       {selected && (
         <div style={{ textAlign: 'center', marginTop: '0.5rem', color: 'var(--gold-light)' }}>
           Selected: {selected.type}{selected.index !== undefined ? ` ${selected.index + 1}` : ''} — click destination
+        </div>
+      )}
+      {error && (
+        <div style={{
+          textAlign: 'center',
+          marginTop: '0.5rem',
+          color: '#ff9999',
+          fontWeight: 'bold',
+          animation: 'shake 0.3s ease-in-out',
+        }}>
+          {error}
         </div>
       )}
     </div>

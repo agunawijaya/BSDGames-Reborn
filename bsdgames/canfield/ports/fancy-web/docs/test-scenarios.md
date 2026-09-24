@@ -6,21 +6,21 @@
 
 | Scenario | Pass | Notes |
 |---|---|---|
-| T-01 Initial deal renders | ☐ | |
-| T-02 Betting phase buttons | ☐ | |
-| T-03 Drag tableau to tableau | ☐ | |
-| T-04 Click stock to talon (`ht`) | ☐ | |
-| T-05 Auto-move base rank | ☐ | |
-| T-06 Foundation wrap-around | ☐ | |
-| T-07 Empty tableau from stock | ☐ | |
-| T-08 Empty tableau from talon after stock empty | ☐ | |
-| T-09 Card counting overlay charges | ☐ | |
-| T-10 Command bar accepts `s1`, `tf`, etc. | ☐ | |
-| T-11 Undo applies $5 penalty | ☐ | |
-| T-12 Win detection + fanfare | ☐ | |
-| T-13 Auto-save / resume | ☐ | |
-| T-14 Account Book shows session totals | ☐ | |
-| T-15 Responsive layout | ☐ | |
+| T-01 Initial deal renders | ✅ | `tests/engine.test.ts` |
+| T-02 Betting phase buttons | ✅ | `tests/engine.test.ts` |
+| T-03 Drag tableau to tableau | ✅ | `tests/gameplay.spec.ts` |
+| T-04 Click Deal Hand → Talon (`ht`) | ✅ | `tests/gameplay.spec.ts` |
+| T-05 Auto-move base rank | ✅ | `tests/rules.test.ts` |
+| T-06 Foundation wrap-around | ✅ | `tests/engine.test.ts` |
+| T-07 Empty tableau from stock | ✅ | `tests/rules.test.ts` |
+| T-08 Empty tableau from talon after stock empty | ✅ | `tests/rules.test.ts` |
+| T-09 Card counting overlay charges | ✅ | `tests/rules.test.ts` |
+| T-10 Command bar accepts `s1`, `tf`, etc. | ✅ | `tests/moves.test.ts` + manual |
+| T-11 Undo applies $5 penalty | ✅ | `tests/rules.test.ts` |
+| T-12 Win / loss / quit detection | ✅ | manual + `tests/rules.test.ts` (loss) |
+| T-13 Auto-save / resume | ✅ | `tests/storage.test.ts` |
+| T-14 Account Book shows session totals | ✅ | manual |
+| T-15 Responsive layout | ✅ | manual + CSS media query |
 
 ---
 
@@ -42,12 +42,12 @@
 **Steps:**
 1. Start a new game. Bankroll is `$-13` after the deal.
 2. Click **Inspect** (+$13). Bankroll becomes `$-26`.
-3. Click **Commit** (+$26). Bankroll becomes `$-52`.
+3. Click **Commit** (+$26) and receive `$5` credit for the base card. Bankroll becomes `$-47`.
 4. Start another game and click **Commit** straight from Buy.
 
 **Expected:**
-- Step 1–3: bankroll updates to `$-13`, `$-26`, `$-52`; moves allowed advance with each phase.
-- Step 4: bankroll jumps to `$-52` and all moves unlock immediately.
+- Step 1–3: bankroll updates to `$-13`, `$-26`, `$-47`; moves allowed advance with each phase.
+- Step 4: bankroll jumps to `$-47` and all moves unlock immediately.
 
 ### T-03 Drag tableau to tableau
 **Steps:**
@@ -58,22 +58,23 @@
 - Cards snap to destination if legal.
 - Illegal drops bounce back with a visual shake.
 
-### T-04 Click stock to talon (`ht`)
+### T-04 Click Deal Hand → Talon (`ht`)
 **Steps:**
-1. Click the stock pile.
+1. Commit the game.
+2. Click **Deal Hand → Talon**.
 
 **Expected:**
 - 3 cards move from hand to talon (or fewer if hand is nearly empty).
-- Each click beyond the first pass costs `$5`.
+- Each recycle after the hand empties costs `$5`.
 
 ### T-05 Auto-move base rank
 **Steps:**
-1. Start a game.
-2. Reveal another card of the base rank.
+1. Start a game and Commit.
+2. Reveal another card of the base rank (e.g. by moving cards onto foundations or dealing the hand).
 
 **Expected:**
-- The card automatically flies to the correct foundation pile.
-- Bankroll increases by `$5`.
+- The card automatically flies to the correct empty foundation pile.
+- After Commit, bankroll increases by `$5` for each foundation card moved up.
 
 ### T-06 Foundation wrap-around
 **Steps:**
@@ -102,11 +103,12 @@
 
 ### T-09 Card counting overlay charges
 **Steps:**
-1. Toggle card counting.
-2. Reveal several unknown cards.
+1. Start a new game.
+2. Toggle card counting.
+3. Reveal several unknown cards.
 
 **Expected:**
-- Each newly revealed unknown card costs `$1`.
+- The first 18 dealt cards are already paid; only newly face-up cards beyond those cost `$1`.
 - Total card-counting cost is capped at `$34`.
 
 ### T-10 Command bar accepts original grammar
@@ -126,12 +128,12 @@
 - Last move is reversed.
 - Bankroll decreases by `$5`.
 
-### T-12 Win detection + fanfare
+### T-12 Win / loss / quit detection
 **Steps:**
-1. Move all 52 cards to foundations.
+1. Move all 52 cards to foundations, or cycle the hand four times without a successful move, or type `q` and confirm.
 
 **Expected:**
-- Win modal appears with final net worth.
+- Win / loss / quit modal appears with final net worth.
 - Win fanfare plays if sound is on.
 - Session is recorded in Account Book.
 

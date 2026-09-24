@@ -17,7 +17,9 @@ export function useStorage(state?: GameState) {
     const raw = localStorage.getItem(GAME_KEY)
     if (!raw) return undefined
     try {
-      return JSON.parse(raw) as GameState
+      const parsed = JSON.parse(raw) as GameState
+      // Resume without billing the idle gap.
+      return { ...parsed, lastMoveTime: Date.now() }
     } catch {
       return undefined
     }
@@ -25,13 +27,21 @@ export function useStorage(state?: GameState) {
 
   const recordSession = useCallback((state: GameState) => {
     const entry = buildCfscoresEntry(state)
-    const existing: CfscoresRecord = JSON.parse(localStorage.getItem(SCORES_KEY) ?? JSON.stringify({
-      version: 1,
-      user: 'anonymous',
-      created: new Date().toISOString(),
-      games: [],
-      totalNet: 0,
-    }))
+    let existing: CfscoresRecord
+    try {
+      existing = JSON.parse(localStorage.getItem(SCORES_KEY) ?? 'null') as CfscoresRecord
+      if (!existing || existing.version !== 1) {
+        throw new Error('invalid scores record')
+      }
+    } catch {
+      existing = {
+        version: 1,
+        user: 'anonymous',
+        created: new Date().toISOString(),
+        games: [],
+        totalNet: 0,
+      }
+    }
     const games = [...existing.games, entry]
     const totalNet = games.reduce((sum, g) => sum + g.net, 0)
     localStorage.setItem(SCORES_KEY, JSON.stringify({ ...existing, games, totalNet }))

@@ -1,14 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { GameState, Command } from '../game/types'
-import { UNDO_PENALTY } from '../game/types'
-import { deal, applyCommand, advancePhase } from '../game/engine'
+import { UNDO_PENALTY, COST_OF_HAND } from '../game/types'
+import { deal, applyCommand, advancePhase, isCommandLegal } from '../game/engine'
 import { parseCommand } from '../game/moves'
 
 export interface UseGameReturn {
   state: GameState
   history: GameState[]
-  dispatch: (command: Command) => void
-  dispatchText: (text: string) => { error?: string }
+  dispatch: (command: Command) => GameState
+  dispatchText: (text: string) => { error?: string; state?: GameState }
   canUndo: boolean
   undo: () => void
   inspect: () => void
@@ -27,8 +27,17 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
   }, [state])
 
   const dispatch = useCallback((command: Command) => {
-    setHistory(prev => [...prev, stateRef.current])
-    setState(prev => applyCommand(prev, command))
+    const current = stateRef.current
+    if (!isCommandLegal(current, command)) {
+      return current
+    }
+    const next = applyCommand(current, command)
+    if (next !== current) {
+      setHistory(prev => [...prev, current])
+    }
+    setState(next)
+    stateRef.current = next
+    return next
   }, [])
 
   const dispatchText = useCallback((text: string) => {
@@ -36,8 +45,8 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
     if (parsed.error) {
       return { error: parsed.error }
     }
-    dispatch(parsed.command)
-    return {}
+    const next = dispatch(parsed.command)
+    return { state: next }
   }, [dispatch])
 
   const canUndo = history.length > 0
@@ -46,7 +55,10 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
     setHistory(prev => {
       if (prev.length === 0) return prev
       const previous = prev[prev.length - 1]
-      setState(s => ({ ...previous, bankroll: s.bankroll - UNDO_PENALTY }))
+      // Take-back costs a flat $5 from the state being restored.
+      const next = { ...previous, bankroll: previous.bankroll - UNDO_PENALTY }
+      setState(next)
+      stateRef.current = next
       return prev.slice(0, -1)
     })
   }, [])
@@ -62,8 +74,13 @@ export function useGame(savedState?: GameState, initialSeed?: number): UseGameRe
   }, [])
 
   const newGame = useCallback(() => {
+    const current = stateRef.current
+    const next = deal(current.seed + 1)
+    // Carry the running bankroll into the next session and charge a new hand.
+    const carried = { ...next, bankroll: current.bankroll - COST_OF_HAND }
     setHistory([])
-    setState(deal())
+    setState(carried)
+    stateRef.current = carried
   }, [])
 
   const quit = useCallback(() => {

@@ -35,13 +35,14 @@ describe('Canfield engine', () => {
     expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION)
     state = advancePhase(state, 'commit')
     expect(state.phase).toBe('commit')
-    expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME)
+    // Base card is credited lazily at commit: -13 -13 -26 + 5 = -47
+    expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME + VALUE_PER_CARD_UP)
   })
 
   it('can commit straight from buy phase', () => {
     const state = advancePhase(deal(1), 'commit')
     expect(state.phase).toBe('commit')
-    expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME)
+    expect(state.bankroll).toBe(-COST_OF_HAND - COST_OF_INSPECTION - COST_OF_GAME + VALUE_PER_CARD_UP)
   })
 
   it('deals three cards from hand to talon', () => {
@@ -144,6 +145,7 @@ describe('Canfield engine', () => {
       countedCards: Array(52).fill(false),
       totalInfoCost: 0,
       handRuns: 0,
+      timesThru: 0,
       lastMoveTime: Date.now(),
       moveHistory: [],
       status: 'playing',
@@ -168,6 +170,7 @@ describe('Canfield engine', () => {
       countedCards: Array(52).fill(false),
       totalInfoCost: 0,
       handRuns: 0,
+      timesThru: 0,
       lastMoveTime: Date.now(),
       moveHistory: [],
       status: 'playing',

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 
 export interface CommandBarProps {
-  onCommand: (text: string) => { error?: string }
+  onCommand: (text: string) => { error?: string; state?: import('../game/types').GameState }
 }
 
 export function CommandBar({ onCommand }: CommandBarProps) {

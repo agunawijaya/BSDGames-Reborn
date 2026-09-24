@@ -17,6 +17,7 @@ describe('cfscores storage', () => {
       countedCards: Array(52).fill(false),
       totalInfoCost: 5,
       handRuns: 1,
+      timesThru: 0,
       lastMoveTime: 0,
       moveHistory: [],
       status: 'playing',

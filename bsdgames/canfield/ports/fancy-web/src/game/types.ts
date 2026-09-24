@@ -62,9 +62,10 @@ export interface GameState {
   countedCards: boolean[] // parallel to deck index; true if player has paid to see it
   totalInfoCost: number
   handRuns: number // how many times the hand has been recycled
+  timesThru: number // consecutive fruitless hand cycles (loss at 4)
   lastMoveTime: number // ms timestamp when the last move finished
   moveHistory: MoveRecord[]
-  status: 'playing' | 'won'
+  status: 'playing' | 'won' | 'lost' | 'quit'
 }
 
 export type Command =

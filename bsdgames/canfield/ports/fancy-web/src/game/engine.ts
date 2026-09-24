@@ -6,6 +6,7 @@ import {
   INITIAL_TALON_COUNT,
   TALON_DEAL_COUNT,
   SUIT_COLORS,
+  VALUE_PER_CARD_UP,
 } from './types'
 import { createDeck, shuffle, cardIndex } from './deck'
 import {
@@ -14,7 +15,6 @@ import {
   chargeGameCommit,
   chargeHandRun,
   chargeThinkingTime,
-  creditFoundationCard,
   chargeInformation,
   appendMoveHistory,
 } from './scoring'
@@ -33,6 +33,7 @@ export function createEmptyState(seed: number): GameState {
     countedCards: Array(52).fill(false),
     totalInfoCost: 0,
     handRuns: 0,
+    timesThru: 0,
     lastMoveTime: Date.now(),
     moveHistory: [],
     status: 'playing',
@@ -72,11 +73,16 @@ export function deal(seed = Date.now()): GameState {
     state.hand.push({ ...shuffled[idx++], faceUp: false })
   }
 
+  // The first 18 dealt cards are considered already paid for the counting feature.
+  const counted = Array(52).fill(false)
+  for (let i = 0; i < 18; i++) {
+    counted[cardIndex(shuffled[i])] = true
+  }
+  state.countedCards = counted
+
   const afterDeal = chargeInitialDeal(state)
-  return appendMoveHistory(
-    revealTopCards(afterDeal),
-    `deal seed=${seed}`
-  )
+  const withAuto = autoMoveBaseRankCards(revealTopCards(afterDeal))
+  return appendMoveHistory(withAuto, `deal seed=${seed}`)
 }
 
 function revealTopCards(state: GameState): GameState {
@@ -138,8 +144,19 @@ export function foundationIndexForCard(state: GameState, card: Card): number | n
   return null
 }
 
-function canPlaceOnTableau(card: Card, targetPile: Pile): boolean {
-  if (targetPile.length === 0) return true
+function canPlaceOnTableau(
+  state: GameState,
+  card: Card,
+  targetPile: Pile,
+  source: 'stock' | 'talon' | 'tableau'
+): boolean {
+  if (targetPile.length === 0) {
+    // Tableau piles may never move into an empty tableau.
+    if (source === 'tableau') return false
+    // Talon may fill an empty tableau only after the stock is exhausted.
+    if (source === 'talon' && state.stock.length > 0) return false
+    return true
+  }
   const top = targetPile[targetPile.length - 1]
   return card.rank === prevRank(top.rank) && isRed(card) !== isRed(top)
 }
@@ -151,6 +168,13 @@ function moveWholePile(source: Pile, target: Pile): { source: Pile; target: Pile
   }
 }
 
+function emptyFoundationIndex(state: GameState): number | null {
+  for (let i = 0; i < FOUNDATION_COUNT; i++) {
+    if (state.foundations[i].length === 0) return i
+  }
+  return null
+}
+
 function autoMoveBaseRankCards(state: GameState): GameState {
   const br = baseRank(state)
   if (br === null) return state
@@ -159,12 +183,14 @@ function autoMoveBaseRankCards(state: GameState): GameState {
   let current = state
   while (changed) {
     changed = false
+    const targetIdx = emptyFoundationIndex(current)
+    if (targetIdx === null) break
+
     // Check stock top
     if (current.stock.length > 0) {
       const card = current.stock[current.stock.length - 1]
-      const idx = foundationIndexForCard(current, card)
-      if (idx !== null) {
-        current = applyStockToFoundation(current, idx)
+      if (card.rank === br) {
+        current = applyStockToFoundation(current, targetIdx)
         changed = true
         continue
       }
@@ -172,9 +198,8 @@ function autoMoveBaseRankCards(state: GameState): GameState {
     // Check talon top
     if (current.talon.length > 0) {
       const card = current.talon[current.talon.length - 1]
-      const idx = foundationIndexForCard(current, card)
-      if (idx !== null) {
-        current = applyTalonToFoundation(current, idx)
+      if (card.rank === br) {
+        current = applyTalonToFoundation(current, targetIdx)
         changed = true
         continue
       }
@@ -183,9 +208,8 @@ function autoMoveBaseRankCards(state: GameState): GameState {
     for (let t = 0; t < TABLEAU_COUNT; t++) {
       if (current.tableaus[t].length > 0) {
         const card = current.tableaus[t][current.tableaus[t].length - 1]
-        const idx = foundationIndexForCard(current, card)
-        if (idx !== null) {
-          current = applyTableauToFoundation(current, t, idx)
+        if (card.rank === br) {
+          current = applyTableauToFoundation(current, t, targetIdx)
           changed = true
           break
         }
@@ -198,7 +222,7 @@ function autoMoveBaseRankCards(state: GameState): GameState {
 export function applyStockToTableau(state: GameState, to: number): GameState {
   if (state.stock.length === 0) return state
   const card = state.stock[state.stock.length - 1]
-  if (!canPlaceOnTableau(card, state.tableaus[to])) return state
+  if (!canPlaceOnTableau(state, card, state.tableaus[to], 'stock')) return state
 
   const newStock = state.stock.slice(0, -1)
   const newTableaus = state.tableaus.map((pile, i) =>
@@ -221,17 +245,17 @@ export function applyStockToFoundation(state: GameState, foundationIndex?: numbe
   const newFoundations = state.foundations.map((pile, i) =>
     i === idx ? [...pile, card] : pile
   )
-  return creditFoundationCard(revealTopCards({
+  return revealTopCards({
     ...state,
     stock: newStock,
     foundations: newFoundations,
-  }))
+  })
 }
 
 export function applyTalonToTableau(state: GameState, to: number): GameState {
   if (state.talon.length === 0) return state
   const card = state.talon[state.talon.length - 1]
-  if (!canPlaceOnTableau(card, state.tableaus[to])) return state
+  if (!canPlaceOnTableau(state, card, state.tableaus[to], 'talon')) return state
 
   const newTalon = state.talon.slice(0, -1)
   const newTableaus = state.tableaus.map((pile, i) =>
@@ -254,11 +278,11 @@ export function applyTalonToFoundation(state: GameState, foundationIndex?: numbe
   const newFoundations = state.foundations.map((pile, i) =>
     i === idx ? [...pile, card] : pile
   )
-  return creditFoundationCard(revealTopCards({
+  return revealTopCards({
     ...state,
     talon: newTalon,
     foundations: newFoundations,
-  }))
+  })
 }
 
 export function applyTableauToTableau(state: GameState, from: number, to: number): GameState {
@@ -267,7 +291,7 @@ export function applyTableauToTableau(state: GameState, from: number, to: number
   const target = state.tableaus[to]
   if (source.length === 0) return state
   const movingTop = source[0]
-  if (!canPlaceOnTableau(movingTop, target)) return state
+  if (!canPlaceOnTableau(state, movingTop, target, 'tableau')) return state
 
   const { source: newSource, target: newTarget } = moveWholePile(source, target)
   const newTableaus = state.tableaus.map((pile, i) => {
@@ -292,25 +316,31 @@ export function applyTableauToFoundation(state: GameState, from: number, foundat
   const newTableaus = state.tableaus.map((pile, i) =>
     i === from ? newSource : pile
   )
-  return creditFoundationCard({
+  return {
     ...state,
     tableaus: newTableaus,
     foundations: newFoundations,
-  })
+  }
 }
 
 export function applyHandToTalon(state: GameState): GameState {
   let current = { ...state }
 
   // If hand is empty, recycle talon back to hand; each re-run costs $5.
+  // Keep the original C order: talon top becomes hand top, so the next
+  // pass replays the same triples in the same playable order.
   if (current.hand.length === 0) {
     if (current.talon.length === 0) return current
     current = {
       ...current,
-      hand: current.talon.map(c => ({ ...c, faceUp: false })).reverse(),
+      hand: current.talon.map(c => ({ ...c, faceUp: false })),
       talon: [],
     }
     current = chargeHandRun(current)
+    current = { ...current, timesThru: current.timesThru + 1 }
+    if (current.timesThru >= 4) {
+      return { ...current, status: 'lost', phase: 'finished' }
+    }
   }
 
   const dealCount = Math.min(TALON_DEAL_COUNT, current.hand.length)
@@ -323,6 +353,14 @@ export function applyHandToTalon(state: GameState): GameState {
     hand: remainingHand,
     talon: newTalon,
   })
+}
+
+function autoRefillTalon(state: GameState): GameState {
+  if (state.status !== 'playing') return state
+  if (state.talon.length === 0 && state.hand.length > 0) {
+    return applyHandToTalon(state)
+  }
+  return state
 }
 
 function applyToggleCounting(state: GameState): GameState {
@@ -369,12 +407,15 @@ export function applyCommand(state: GameState, command: Command): GameState {
     return state
   }
 
+  // Illegal commands consume no time and no money.
+  if (!isCommandLegal(state, command)) return state
+
   const now = Date.now()
-  let next = chargeThinkingTime(state, now)
+  const charged = chargeThinkingTime(state, now)
+  let next = charged
 
   switch (command.type) {
     case 'stock-to-tableau': {
-      if (next.phase === 'buy') return state
       next = applyStockToTableau(next, command.to)
       break
     }
@@ -383,7 +424,6 @@ export function applyCommand(state: GameState, command: Command): GameState {
       break
     }
     case 'talon-to-tableau': {
-      if (next.phase === 'buy') return state
       next = applyTalonToTableau(next, command.to)
       break
     }
@@ -392,7 +432,6 @@ export function applyCommand(state: GameState, command: Command): GameState {
       break
     }
     case 'tableau-to-tableau': {
-      if (next.phase !== 'commit') return state
       next = applyTableauToTableau(next, command.from, command.to)
       break
     }
@@ -401,7 +440,6 @@ export function applyCommand(state: GameState, command: Command): GameState {
       break
     }
     case 'hand-to-talon': {
-      if (next.phase !== 'commit') return state
       next = applyHandToTalon(next)
       break
     }
@@ -410,9 +448,9 @@ export function applyCommand(state: GameState, command: Command): GameState {
       break
     }
     case 'betting-info':
-      return next
+      return appendMoveHistory(next, 'betting-info')
     case 'quit':
-      return { ...next, status: 'won', phase: 'finished' }
+      return { ...next, status: 'quit', phase: 'finished' }
     case 'new-game':
       return deal(next.seed + 1)
     case 'undo':
@@ -421,6 +459,16 @@ export function applyCommand(state: GameState, command: Command): GameState {
       return state
   }
 
+  // If the move did not actually change the board, refund the thinking-time charge.
+  const isMetaMove = ['toggle-counting'].includes(command.type)
+  if (next === charged && !isMetaMove) return state
+
+  const boardMoved = next !== charged
+  if (boardMoved) {
+    next = { ...next, timesThru: 0 }
+  }
+
+  next = autoRefillTalon(next)
   next = autoMoveBaseRankCards(next)
   next = checkWin(next)
   return appendMoveHistory(next, command.type)
@@ -436,6 +484,9 @@ export function advancePhase(state: GameState, target: 'inspect' | 'commit'): Ga
       next = chargeInspection({ ...next, phase: 'inspect' })
     }
     next = chargeGameCommit({ ...next, phase: 'commit' })
+    // Credit $5 for every card already on foundations (including the base card).
+    const foundationCards = next.foundations.reduce((sum, pile) => sum + pile.length, 0)
+    next = { ...next, bankroll: next.bankroll + foundationCards * VALUE_PER_CARD_UP }
     return appendMoveHistory(next, 'commit')
   }
   return state
@@ -444,14 +495,16 @@ export function advancePhase(state: GameState, target: 'inspect' | 'commit'): Ga
 export function legalCommands(state: GameState): Command[] {
   const commands: Command[] = []
 
+  // Buy phase: no board moves are allowed until the player inspects or commits.
   if (state.phase === 'buy') {
     commands.push({ type: 'betting-info' })
     commands.push({ type: 'toggle-counting' })
     commands.push({ type: 'quit' })
+    commands.push({ type: 'new-game' })
     return commands
   }
 
-  // Foundation moves are always allowed (buy already advanced)
+  // Foundation moves are allowed in Inspect and Commit.
   if (state.stock.length > 0) {
     commands.push({ type: 'stock-to-foundation' })
   }
@@ -464,26 +517,27 @@ export function legalCommands(state: GameState): Command[] {
     }
   }
 
+  // Tableau-building moves are allowed in Inspect and Commit.
+  if (state.stock.length > 0) {
+    for (let to = 0; to < TABLEAU_COUNT; to++) {
+      commands.push({ type: 'stock-to-tableau', to })
+    }
+  }
+  if (state.talon.length > 0) {
+    for (let to = 0; to < TABLEAU_COUNT; to++) {
+      commands.push({ type: 'talon-to-tableau', to })
+    }
+  }
+  for (let from = 0; from < TABLEAU_COUNT; from++) {
+    for (let to = 0; to < TABLEAU_COUNT; to++) {
+      if (from !== to) {
+        commands.push({ type: 'tableau-to-tableau', from, to })
+      }
+    }
+  }
+
+  // Hand to talon is only allowed once the game is fully committed.
   if (state.phase === 'commit') {
-    // Tableau moves
-    if (state.stock.length > 0) {
-      for (let to = 0; to < TABLEAU_COUNT; to++) {
-        commands.push({ type: 'stock-to-tableau', to })
-      }
-    }
-    if (state.talon.length > 0) {
-      for (let to = 0; to < TABLEAU_COUNT; to++) {
-        commands.push({ type: 'talon-to-tableau', to })
-      }
-    }
-    for (let from = 0; from < TABLEAU_COUNT; from++) {
-      for (let to = 0; to < TABLEAU_COUNT; to++) {
-        if (from !== to) {
-          commands.push({ type: 'tableau-to-tableau', from, to })
-        }
-      }
-    }
-    // Hand to talon
     commands.push({ type: 'hand-to-talon' })
   }
 

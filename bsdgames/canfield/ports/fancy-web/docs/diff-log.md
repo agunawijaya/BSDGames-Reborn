@@ -108,6 +108,42 @@
 
 **Why:** Play-testers expected Klondike-style grab-from-anywhere dragging. Canfield still moves whole piles, but the UX now lets you grab any exposed card as the handle while visually showing that the entire pile moves. The follow-up tweaks remove misleading visual clutter for stock/talon and empty tableau targets.
 
+## 2026-09-24 — Rule and economics hardening after QC review
+
+**Changed:**
+- Empty-tableau fill rules now match `canfield.c`: stock may fill an empty tableau while the stock exists; talon may fill it only after the stock is exhausted; a tableau pile may **never** move into an empty tableau.
+- Auto-move is restricted to **base-rank cards only** (opening new foundations), not every legal foundation card.
+- Auto-move now runs at the end of the initial deal.
+- Hand recycle order fixed: the same triples replay in the same order on each pass (removed an erroneous `.reverse()`).
+- Talon auto-refills from the hand when it empties, matching the original's pre-prompt behavior.
+- Loss condition implemented: the fourth fruitless pass through the hand ends the game.
+- Betting credit model switched to **lazy credit at Commit**: foundation cards are credited only when the game is bought, at `$5 × cards up` (including the base card). No board moves are allowed in Buy phase.
+- Inspect phase now allows **all** moves except `ht` (hand-to-talon), matching the original's betting instructions.
+- Thinking time is no longer charged for illegal or no-op moves.
+- `betting-info` resets the thinking-time clock so repeated `b` presses do not double-charge.
+- Undo restores the prior board state and charges a flat `$5` from that restored state.
+- Bankroll is now persistent across `New Game`; abandoning a game records a quit session.
+- Resuming a saved game resets the thinking-time clock so idle gaps are not billed.
+- `localStorage` corruption no longer crashes the app.
+- Command bar focus now blocks global `h`/`n`/`u` shortcuts.
+- `q` now confirms before quitting and records a `quit` session.
+- Illegal moves now show a visible error message and a brief shake.
+- `b` now opens a live betting-info breakdown panel.
+- Mobile layout improved: board keeps usable height, sidebar is constrained.
+- Bankroll chip tooltips now explain red/white/blue chip values.
+
+**Added:**
+- New regression suite `tests/rules.test.ts` covering empty-tableau rules, base-rank auto-move, phase/credit behavior, recycle order, talon refill, loss condition, and thinking-time/undo accounting.
+- Port-level ADRs:
+  - `003-card-rendering-css.md` — why cards are CSS DOM rather than SVG shapes.
+  - `004-betting-phase-and-credit-model.md` — explicit Buy/Inspect/Commit phases and lazy foundation credit.
+  - `005-quality-of-life-deviations.md` — undo, persistent bankroll, counting grid, and `localStorage` `cfscores`.
+
+**Removed / corrected claims:**
+- README no longer claims "29/29 tests" (now 44), "SVG cards" (cards are CSS DOM), or "every move charged exactly as the original" (the exact timing of phase/credit is modernized; the economic outcome is preserved).
+
+**Why:** A QC review against the original `canfield.c` showed several rule and economics divergences. This pass fixes the blockers and documents the deliberate deviations that remain.
+
 ## 2026-09-22 — Global drag-and-drop, flying-card animation, and URL seed fix
 
 **Changed:**

@@ -18,7 +18,9 @@
 4. The **base card** = the very next card. Place it on the first
    foundation slot. This is the "base rank" all foundations
    start on.
-5. Deal 3 cards to the **talon** (only top visible).
+5. The **talon** starts empty; immediately deal 3 cards to it
+   (only top visible). The end state is identical, but the
+   mechanism matters for the auto-refill rule.
 6. Remaining 31 cards go to the **hand** (face down).
 
 ## Piles
@@ -47,11 +49,14 @@
   cards.
 - After the stock is exhausted, tableau spaces may be filled from
   the talon; the player may keep spaces empty until convenient.
+- A **tableau pile may never move into an empty tableau** (whole
+  piles move only onto non-empty tableau targets).
 
 ### Auto-move
-- The **base card** (and any subsequent card of the same rank
-  when it becomes available) auto-moves to foundation. Player
-  never has to type "sf" for these.
+- Any **card of the base rank** that becomes available on the
+  top of the stock, talon, or a tableau auto-moves to an empty
+  foundation pile. The player never has to type a foundation
+  command for these opening cards.
 
 ## Commands
 
@@ -68,6 +73,8 @@ At the `Move:` prompt, the player types a 1–2 character command:
 | `ht` | Hand → talon: deal 3 cards from hand to top of talon. |
 | `c` | Toggle card counting display. |
 | `b` | Show betting-info box. |
+| `x` | Hide information / betting box. |
+| `i` | Show playing instructions. |
 | `q` | Quit; asks confirmation. |
 
 Invalid moves display an error and do not consume time / money.
@@ -77,7 +84,7 @@ Invalid moves display an error and do not consume time / money.
 | Charge | Amount |
 |---|---:|
 | Initial deal | $13 |
-| Inspection unlock | +$13 |
+| Inspection charge | +$13 (triggered on the first board move while the instruction box is showing, or via an explicit Inspect prompt) |
 | Full-game unlock | +$26 |
 | Re-run hand after first | $5 each |
 | Card counting: per unknown card revealed | $1 |
@@ -88,7 +95,7 @@ Invalid moves display an error and do not consume time / money.
 
 Total possible spend on inspection + game = $13 + $13 + $26 = $52.
 
-**Break-even:** need 10+ cards on foundation, minus meter charges.
+**Break-even:** need 10+ cards on foundation (including the base card and any cards already up when the game is bought) to cover the `$52` maximum fixed cost, minus meter charges for runs, counting, and thinking time.
 
 ## Score persistence
 
@@ -111,8 +118,12 @@ Total possible spend on inspection + game = $13 + $13 + $26 = $52.
 
 ## Losing
 
-- No mechanical loss condition. Player is losing money when the
-  meter costs exceed foundation credits.
+- The game ends automatically on the **fourth fruitless pass**
+  through the hand (i.e. four consecutive `ht` cycles with no
+  successful board move in between). The original prints
+  "I believe you have lost" and exits.
+- Otherwise, the player is losing money when meter costs exceed
+  foundation credits.
 
 ## Constants (from `canfield.c`)
 

@@ -1,6 +1,6 @@
 # `canfield` — `fancy-web` port
 
-> A browser reimplementation of BSDGames `canfield` — the 19th-century casino solitaire — rendered as a **Victorian Saratoga Springs card table**. Faithful mechanics, betting economics intact, but with click-to-move play, a visual cheat coach, chip animations, an account book, and optional casino ambience.
+> A browser reimplementation of BSDGames `canfield` — the 19th-century casino solitaire — rendered as a **Victorian Saratoga Springs card table**. Core mechanics and betting economics are preserved, with modernized click-to-move play, a visual cheat coach, chip animations, an account book, and optional casino ambience.
 
 ## Status
 
@@ -10,7 +10,7 @@
 - **Live URL:** *(pending deploy)*
 
 **Verified**
-- ✅ 29/29 Vitest unit tests pass.
+- ✅ 44/44 Vitest unit tests pass.
 - ✅ 6/6 Playwright e2e tests pass (click-to-select + cheat mode scenarios).
 - ✅ TypeScript strict clean.
 - ✅ Production build clean.
@@ -40,7 +40,7 @@ For the game's history and rules see canonical [`../../docs/about.md`](../../doc
 
 - **Language:** TypeScript 5.6
 - **UI framework:** React 18 (functional components + hooks)
-- **Rendering:** SVG cards and UI chrome. No Canvas, no WebGL.
+- **Rendering:** CSS-styled DOM cards and SVG cheat-overlay arrows. No Canvas, no WebGL.
 - **Build:** Vite 5
 - **Tests:** Vitest 2 + Testing Library
 - **Target platform:** Any modern browser (desktop + mobile).
@@ -95,7 +95,7 @@ Rules: see canonical [`../../docs/how-to-play.md`](../../docs/how-to-play.md).
 
 ## Spec compliance
 
-This port implements the mechanics in canonical [`../../docs/spec.md`](../../docs/spec.md) — 52-card deck, base-card foundation rule, tableau build by alternating color, foundation wrap-around, three-card talon deal, and the full betting economics. Deliberate deviations are documented as port-level ADRs under [`docs/decisions/`](docs/decisions/).
+This port implements the core mechanics in canonical [`../../docs/spec.md`](../../docs/spec.md) — 52-card deck, base-card foundation rule, tableau build by alternating color, foundation wrap-around, three-card talon deal, loss condition, and the betting economic outcome. The *timing* of some charges is modernized (explicit phase buttons, lazy foundation credit at Commit, `$5` undo penalty). Deliberate deviations are documented as port-level ADRs under [`docs/decisions/`](docs/decisions/).
 
 ## Attribution
 
@@ -108,6 +108,9 @@ This port implements the mechanics in canonical [`../../docs/spec.md`](../../doc
 - **Canonical (game-level)** — [`../../docs/`](../../docs/): `spec.md`, `architecture.md`, `about.md`, `how-to-play.md`, `lessons.md`, `references.md`, `port-ideas.md`, `manpage.md`, `lineage.md`, `test-scenarios.md`, `notes.md`.
 - **This port's diff log** — [`docs/diff-log.md`](docs/diff-log.md): what was kept / added / changed / removed vs canonical `spec.md`.
 - **This port's ADRs** — [`docs/decisions/`](docs/decisions/):
-  - [`001-tech-stack.md`](docs/decisions/001-tech-stack.md) — React + SVG + Vite rationale.
+  - [`001-tech-stack.md`](docs/decisions/001-tech-stack.md) — React + Vite rationale.
   - [`002-cheat-mode.md`](docs/decisions/002-cheat-mode.md) — Visual cheat coach rationale.
+  - [`003-card-rendering-css.md`](docs/decisions/003-card-rendering-css.md) — CSS DOM cards supersede SVG-only constraint.
+  - [`004-betting-phase-and-credit-model.md`](docs/decisions/004-betting-phase-and-credit-model.md) — Explicit Buy/Inspect/Commit phases and lazy foundation credit.
+  - [`005-quality-of-life-deviations.md`](docs/decisions/005-quality-of-life-deviations.md) — Undo, persistent bankroll, counting grid, `localStorage` `cfscores`.
 - **Port-level test scenarios** — [`docs/test-scenarios.md`](docs/test-scenarios.md).
