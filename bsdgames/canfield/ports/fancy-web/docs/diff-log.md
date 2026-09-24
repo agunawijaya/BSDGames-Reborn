@@ -102,6 +102,7 @@
 - The `.pile-slot` itself gets a gold border during drag so the source pile is clearly highlighted.
 - `Card` now accepts an `onDragEnd` prop so the visual state resets reliably.
 - **Any face-up card in a pile can now start a drag** — not only the top card. The underlying move is still the whole pile, matching Canfield rules, but the grab handle feels like Solitaire Windows.
+- **Custom drag image:** when dragging starts, `Pile` clones its entire DOM and passes it to `dataTransfer.setDragImage()` so the browser drag ghost shows the full stack, not just the clicked card.
 
 **Why:** Play-testers expected Klondike-style grab-from-anywhere dragging. Canfield still moves whole piles, but the UX now lets you grab any exposed card as the handle while visually showing that the entire pile moves.
 

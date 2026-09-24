@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Pile as PileType } from '../game/types'
 import { Card } from './Card'
 
@@ -35,6 +35,7 @@ export function Pile({
   onDrop,
 }: PileProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const pileRef = useRef<HTMLDivElement>(null)
 
   const slotWidth = direction === 'horizontal'
     ? CARD_WIDTH + Math.max(0, pile.length - 1) * offset
@@ -48,6 +49,32 @@ export function Pile({
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true)
+
+    const pileEl = pileRef.current
+    if (pileEl && e.dataTransfer) {
+      const rect = pileEl.getBoundingClientRect()
+      const clone = pileEl.cloneNode(true) as HTMLElement
+      // Strip interactive / decorative children that should not appear in the drag ghost.
+      clone.querySelector('.pile-label')?.remove()
+      clone.removeAttribute('data-testid')
+      clone.removeAttribute('aria-label')
+
+      clone.style.position = 'fixed'
+      clone.style.left = '-9999px'
+      clone.style.top = '-9999px'
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      clone.style.zIndex = '-1'
+      clone.style.pointerEvents = 'none'
+      document.body.appendChild(clone)
+
+      e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top)
+
+      requestAnimationFrame(() => {
+        document.body.removeChild(clone)
+      })
+    }
+
     onCardDragStart?.(e)
   }
 
@@ -57,6 +84,7 @@ export function Pile({
 
   return (
     <div
+      ref={pileRef}
       className={`pile-slot${glowClass}${draggingClass}`}
       data-testid={testId}
       style={{ width: slotWidth, height: slotHeight, minWidth: slotWidth, minHeight: slotHeight }}
