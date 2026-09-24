@@ -13,7 +13,7 @@
 - **Genre:** Real-Time Multiplayer Top-Down Action / Maze Arena Shooter
 - **Architecture:** Client-Server model (`hunt` client, `huntd` daemon) over BSD Internet sockets (UDP discovery, TCP game streams)
 - **Upstream Source:** [`vattam/BSDGames/tree/master/hunt`](https://github.com/vattam/BSDGames/tree/master/hunt)
-- **Port Status:** 🟠 **Documentation Phase (Pre-Porting)**
+- **Port Status:** 🟢 **[`fancy-web`](./ports/fancy-web/) Released (2026-09-24)** — see [Ports](#ports). Canonical docs: 42 corrections against the C source are pending, listed in the port's [`notes.md` §3](./ports/fancy-web/docs/notes.md#3-canonical-doc-discrepancies).
 
 ---
 
@@ -46,6 +46,12 @@ All documentation is stored in [`docs/`](./docs/):
 | [`test-scenarios.md`](./docs/test-scenarios.md) | Multi-terminal verification scripts, bot stress tests, and QA template. |
 | [`references.md`](./docs/references.md) | Citations, archival source links, and historical references. |
 | [`decisions/`](./docs/decisions/) | Architecture Decision Records (ADRs) overriding root defaults. |
+
+---
+
+## Ports
+
+- [`ports/fancy-web/`](./ports/fancy-web/) — *Hunt — Ricochet*: `huntd` and Otto ported function by function and golden-tested against the real daemon code, played against 1–8 bots (Classic Otto, Novice, Sharpshooter) in a zero-raster neon 3D labyrinth where hunt's own line-of-sight rule is your flashlight; flipping mirrors, a braided Ricochet arena, a Coach ricochet preview, an Override cheat panel, classic terminal and split views, synthesised sound.
 
 ---
 
