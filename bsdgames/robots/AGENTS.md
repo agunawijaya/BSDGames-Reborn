@@ -18,9 +18,16 @@ For repository-wide instructions, see the **root
 
 ## 2. Port Status
 
-- **Current status:** 🟠 In Progress (documentation phase)
+- **Current status:** 🟢 Released — canonical docs complete; ports:
+  - [`ports/fancy-web/`](./ports/fancy-web/) 🟢 Released (2026-09-17)
+    — isometric 3D platform in space.
+  - [`ports/fancy-web-remastered/`](./ports/fancy-web-remastered/) 🟢
+    Released (2026-09-25) — a copy of `fancy-web` with a new
+    presentation: a stadium in space with a crowd, fireworks and
+    sound. Rules identical to `fancy-web`'s, file for file (its
+    ADR-003).
 - **Owner:** Agun Wijaya (with Claude Opus assistance)
-- **Baseline released?** no
+- **Baseline released?** yes (`fancy-web`)
 
 ## 3. Folder Contents
 
@@ -32,11 +39,19 @@ robots/
 ├── docs/             12 documentation files
 │   ├── decisions/    Per-game ADR overrides (empty — game defers to root defaults)
 │   └── ...
-├── src/              Implementation (empty — awaiting language ADR)
+├── src/              (empty — code lives in each port, per ADR-006)
 ├── data/             Game data (none needed — procedural)
 ├── media/            Screenshots / demos (empty)
-└── tests/            Automated tests (empty)
+├── tests/            (empty — tests live in each port)
+└── ports/
+    ├── fancy-web/             Isometric 3D platform (see its AGENTS.md)
+    └── fancy-web-remastered/  The same game in a stadium in space (see its AGENTS.md)
 ```
+
+**Two ports, one engine.** `fancy-web` and `fancy-web-remastered`
+carry identical copies of `src/game/`. A rules fix goes into both;
+`diff -r ports/fancy-web/src/game ports/fancy-web-remastered/src/game`
+should print nothing.
 
 ## 4. Design Decisions Specific to `robots`
 

@@ -48,6 +48,7 @@ see each port's `docs/diff-log.md`.
 | Port | Status | Style | Tech | Owner | Live URL |
 |---|:---:|---|---|:---:|---|
 | [`fancy-web`](./ports/fancy-web/) | 🟢 **Released 2026-09-17** | Isometric 3D "planet in space" — animated walking human, hover-bot enemies, luminous platform, zoom-adaptive halo. See [port README](./ports/fancy-web/README.md). | React 18 + `@react-three/fiber` + Three.js + Vite | Agun | *(pending deploy)* |
+| [`fancy-web-remastered`](./ports/fancy-web-remastered/) | 🟢 **Released 2026-09-25** | `fancy-web` remastered — same game, new show: a stadium in deep space that is a bright star from afar; zoom in to floodlights, full stands and a crowd of ~2,000 that cheers every crash, does the wave, sets off fireworks when you clear a level and throws rubbish when you lose. Robots that watch you, a planted-feet walk, crashes in slow motion with chain counters, a teleport arc, a hyperspace jump to a new sky every level, synthesised sound and crowd. `fancy-web` itself is unchanged. See [port README](./ports/fancy-web-remastered/README.md). | React 18 + `@react-three/fiber` + Three.js + Vite (fancy-web's stack) + Web Audio | Agun (Claude) | *(pending deploy)* |
 | `classic-web` | 🔴 Unclaimed | Faithful ASCII-in-browser, retro terminal palette | TypeScript + Vite + PWA (per ADR-005) | Reserved for delegation | — |
 
 Contribute a new port by picking a style not yet claimed, following
